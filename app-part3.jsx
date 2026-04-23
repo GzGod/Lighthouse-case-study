@@ -1,5 +1,5 @@
 /* Lighthouse — part 3: Matrix · Why · CTA · App shell */
-const { Reveal: Reveal3, useProjects: useProjects3, fmt: fmt3, useT: useT3, LangProvider: LP3 } = window.App_Part1;
+const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, fmt: fmt3, useT: useT3, LangProvider: LP3 } = window.App_Part1;
 const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
@@ -16,6 +16,7 @@ const TAG_KEYS = {
 function MatrixSection(){
   const { t } = useT3();
   const P3 = useProjects3();
+  const ds = React.useMemo(() => deriveStats3(P3), [P3]);
   const [sortKey, setSortKey] = React.useState("cpm");
   const [sortDir, setSortDir] = React.useState("asc");
   const [hovered, setHovered] = React.useState(null);
@@ -61,7 +62,7 @@ function MatrixSection(){
             </div>
           </div>
           <div className="w-full" style={{height:"520px"}}>
-            <ScatterChart rows={P3.filter(r=>r.name!=="KAIO")} stars={stars} setHovered={setHovered} tr={t}/>
+            <ScatterChart rows={P3.filter(r=>r.is_baseline !== 0)} stars={stars} setHovered={setHovered} tr={t} ds={ds}/>
           </div>
           <div className="mt-3 flex items-center justify-between gap-4 text-[11px] font-mono tracking-[0.14em] text-[var(--bone-dim)]">
             <div>{t("matrix.scatter_note")}</div>
@@ -101,15 +102,15 @@ function MatrixSection(){
               <tbody>
                 {rows.map((r,i)=>{
                   const isStar = stars.has(r.name);
-                  const isKaio = false;
+                  const isNonBase = r.is_baseline === 0;
                   const tagLabel = r.tag ? (TAG_KEYS[r.tag] ? t(TAG_KEYS[r.tag]) : r.tag) : "—";
                   return (
-                    <tr key={r.name} className="rule-t hover:bg-[var(--ink-2)] transition" style={isKaio?{background:"rgba(237,232,225,0.025)", opacity:0.85}:isStar?{background:"rgba(255,122,69,0.05)"}:{}}>
+                    <tr key={r.name} className="rule-t hover:bg-[var(--ink-2)] transition" style={isNonBase?{background:"rgba(237,232,225,0.025)", opacity:0.85}:isStar?{background:"rgba(255,122,69,0.05)"}:{}}>
                       <td className="py-4 pr-4 font-mono text-[12px] text-[var(--bone-dim)]">{String(i+1).padStart(2,"0")}</td>
-                      <td className="py-4 pr-4 font-cn text-[16px]" style={{color: isKaio?"var(--bone-dim)":isStar?"var(--ember-soft)":"var(--bone)"}}>
+                      <td className="py-4 pr-4 font-cn text-[16px]" style={{color: isNonBase?"var(--bone-dim)":isStar?"var(--ember-soft)":"var(--bone)"}}>
                         <div className="flex items-center gap-3">
-                          <img src={r.logo} alt="" className="w-[24px] h-[24px] rounded object-cover flex-shrink-0" style={{background:"var(--ink-2)", opacity:isKaio?0.5:1}}/>
-                          <span>{r.name}{isKaio && <span className="ml-2 font-mono text-[10px] tracking-[0.18em] text-[var(--bone-dim)] uppercase">· {t("matrix.nonbase")}</span>}</span>
+                          <img src={r.logo} alt="" className="w-[24px] h-[24px] rounded object-cover flex-shrink-0" style={{background:"var(--ink-2)", opacity:isNonBase?0.5:1}}/>
+                          <span>{r.name}{isNonBase && <span className="ml-2 font-mono text-[10px] tracking-[0.18em] text-[var(--bone-dim)] uppercase">· {t("matrix.nonbase")}</span>}</span>
                         </div>
                       </td>
                       <td className="py-4 pr-4 text-right font-mono">{fmt3(r.budget)}</td>
@@ -124,11 +125,11 @@ function MatrixSection(){
                 <tr className="rule-t" style={{background:"rgba(111,183,193,0.05)"}}>
                   <td className="py-5 pr-4 font-mono text-[11px] text-[var(--bone-dim)] uppercase tracking-[0.18em]">Σ</td>
                   <td className="py-5 pr-4 font-cn font-bold">{t("matrix.sum.label")}</td>
-                  <td className="py-5 pr-4 text-right font-mono font-bold">{fmt3(169550)}</td>
-                  <td className="py-5 pr-4 text-right font-mono font-bold">{fmt3(2898691)}</td>
-                  <td className="py-5 pr-4 text-right font-mono font-bold">58.49</td>
-                  <td className="py-5 pr-4 text-right font-mono font-bold">0.78%</td>
-                  <td className="py-5 pr-4 text-right font-mono font-bold">7.50</td>
+                  <td className="py-5 pr-4 text-right font-mono font-bold">{fmt3(ds.totalBudget)}</td>
+                  <td className="py-5 pr-4 text-right font-mono font-bold">{fmt3(ds.totalImp)}</td>
+                  <td className="py-5 pr-4 text-right font-mono font-bold">{ds.avgCpm.toFixed(2)}</td>
+                  <td className="py-5 pr-4 text-right font-mono font-bold">{ds.avgEr.toFixed(2)}%</td>
+                  <td className="py-5 pr-4 text-right font-mono font-bold">{ds.avgCpe.toFixed(2)}</td>
                   <td className="py-5 pr-4 text-right font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--bone-dim)]">{t("matrix.sum.tag")}</td>
                 </tr>
               </tbody>
@@ -141,7 +142,7 @@ function MatrixSection(){
   );
 }
 
-function ScatterChart({rows, stars, setHovered, tr}){
+function ScatterChart({rows, stars, setHovered, tr, ds}){
   if(!R) return <div className="h-full flex items-center justify-center text-[var(--bone-dim)] font-mono text-xs">Loading chart…</div>;
   const {ResponsiveContainer, ScatterChart:RC, CartesianGrid, XAxis, YAxis, Scatter, Tooltip, ZAxis, ReferenceLine, Label} = R;
   const starData = rows.filter(r=>stars.has(r.name));
@@ -185,10 +186,10 @@ function ScatterChart({rows, stars, setHovered, tr}){
           <Label value={tr("matrix.axis_y")} offset={-24} position="insideLeft" angle={-90} />
         </YAxis>
         <ZAxis range={[60,1200]} />
-        <ReferenceLine x={58.49} stroke="var(--ember)" strokeDasharray="3 5" strokeOpacity={0.6}>
+        <ReferenceLine x={ds.avgCpm} stroke="var(--ember)" strokeDasharray="3 5" strokeOpacity={0.6}>
           <Label value={tr("matrix.ref_cpm")} position="top" fill="var(--ember-soft)" fontFamily="JetBrains Mono" fontSize={10}/>
         </ReferenceLine>
-        <ReferenceLine y={0.78} stroke="var(--teal)" strokeDasharray="3 5" strokeOpacity={0.5}>
+        <ReferenceLine y={ds.avgEr} stroke="var(--teal)" strokeDasharray="3 5" strokeOpacity={0.5}>
           <Label value={tr("matrix.ref_er")} position="right" fill="var(--teal)" fontFamily="JetBrains Mono" fontSize={10}/>
         </ReferenceLine>
         <Tooltip content={tip} cursor={{stroke:"var(--rule-strong)", strokeDasharray:"2 4"}}/>

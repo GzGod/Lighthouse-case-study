@@ -1,19 +1,21 @@
 /* Lighthouse — part 2: KPI · Winners · Stars · ImageDivider */
-const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, fmt: fmt2, useT: useT2 } = window.App_Part1;
+const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveStats: deriveStats2, fmt: fmt2, useT: useT2 } = window.App_Part1;
 
 function KpiSection(){
   const { t } = useT2();
+  const P = useProjects2();
+  const ds = React.useMemo(() => deriveStats2(P), [P]);
   const kpis = [
-    {k:t("kpi.k1"), v:169550, d:0, suf:"", unit:t("kpi.k1u"), note:t("kpi.k1n"), tone:"ember"},
-    {k:t("kpi.k2"), v:2898691, d:0, suf:"", unit:t("kpi.k2u"), note:t("kpi.k2n"), tone:"bone"},
-    {k:t("kpi.k3"), v:22601, d:0, suf:"", unit:t("kpi.k3u"), note:t("kpi.k3n"), tone:"bone"},
-    {k:t("kpi.k4"), v:58.49, d:2, suf:"", unit:t("kpi.k4u"), note:t("kpi.k4n"), tone:"ember"},
-    {k:t("kpi.k5"), v:19.06, d:2, suf:"", unit:t("kpi.k5u"), note:t("kpi.k5n"), tone:"teal"},
-    {k:t("kpi.k6"), v:1.20, d:2, suf:"%", unit:t("kpi.k6u"), note:t("kpi.k6n"), tone:"teal"},
+    {k:t("kpi.k1"), v:ds.totalBudget, d:0, suf:"", unit:t("kpi.k1u"), note:t("kpi.k1n"), tone:"ember"},
+    {k:t("kpi.k2"), v:ds.totalImp, d:0, suf:"", unit:t("kpi.k2u"), note:t("kpi.k2n"), tone:"bone"},
+    {k:t("kpi.k3"), v:ds.totalEng, d:0, suf:"", unit:t("kpi.k3u"), note:t("kpi.k3n"), tone:"bone"},
+    {k:t("kpi.k4"), v:ds.avgCpm, d:2, suf:"", unit:t("kpi.k4u"), note:t("kpi.k4n"), tone:"ember"},
+    {k:t("kpi.k5"), v:ds.lowestCpm, d:2, suf:"", unit:t("kpi.k5u"), note:t("kpi.k5n"), tone:"teal"},
+    {k:t("kpi.k6"), v:ds.peakEr, d:2, suf:"%", unit:t("kpi.k6u"), note:t("kpi.k6n"), tone:"teal"},
   ];
   const subs = [
-    {k:t("kpi.sub1.k"), v:"2.81", unit:t("kpi.sub1.u"), who:t("kpi.sub1.who")},
-    {k:t("kpi.sub2.k"), v:"365,874", unit:t("kpi.sub2.u"), who:t("kpi.sub2.who")},
+    {k:t("kpi.sub1.k"), v:ds.lowestCpe.toFixed(2), unit:t("kpi.sub1.u"), who:t("kpi.sub1.who")},
+    {k:t("kpi.sub2.k"), v:fmt2(ds.maxImp), unit:t("kpi.sub2.u"), who:t("kpi.sub2.who")},
   ];
   return (
     <section id="kpi" className="relative py-28 md:py-36 overflow-hidden">

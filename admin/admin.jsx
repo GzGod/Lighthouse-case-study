@@ -299,19 +299,33 @@ function IPCasesPage() {
   };
 
   const openNew = () => {
+    const defaultSlug = 'new-case';
+    const tpl = generateTemplateKeys(defaultSlug);
     setEditing('new');
-    setCaseData({ slug: '', status: 'draft', texts: { zh: {}, en: {} } });
-    setTextEdits({});
+    setCaseData({ slug: defaultSlug, status: 'draft', texts: { zh: {}, en: {} } });
+    setTextEdits({ zh: { ...tpl.zh }, en: { ...tpl.en } });
   };
 
-  const applyTemplate = () => {
-    if (!caseData.slug) { toast('请先填写 Slug'); return; }
-    const tpl = generateTemplateKeys(caseData.slug);
-    setTextEdits(prev => ({
-      zh: { ...tpl.zh, ...(prev.zh || {}) },
-      en: { ...tpl.en, ...(prev.en || {}) },
-    }));
-    toast(`已生成 ${Object.keys(tpl.zh).length} 个模板字段`);
+  // When slug changes, rewrite all template key prefixes to stay in sync
+  const handleSlugChange = (newSlug) => {
+    const oldSlug = caseData.slug;
+    if (!newSlug || newSlug === oldSlug) { setCaseData({...caseData, slug: newSlug}); return; }
+    // Rewrite keys in textEdits
+    const rewrite = (obj) => {
+      const out = {};
+      for (const [k, v] of Object.entries(obj || {})) {
+        if (k.startsWith(oldSlug + '.')) out[newSlug + k.slice(oldSlug.length)] = v;
+        else out[k] = v;
+      }
+      return out;
+    };
+    // Also rewrite keys in caseData.texts (for existing cases loaded from DB)
+    const newTexts = {
+      zh: rewrite(caseData.texts?.zh),
+      en: rewrite(caseData.texts?.en),
+    };
+    setTextEdits(prev => ({ zh: rewrite(prev.zh), en: rewrite(prev.en) }));
+    setCaseData({...caseData, slug: newSlug, texts: newTexts});
   };
 
   const handleTextChange = (lang, key, val) => {
@@ -323,7 +337,23 @@ function IPCasesPage() {
     });
   };
 
+  // Required fields for publishing — must have non-empty zh value
+  const REQUIRED_FOR_PUBLISH = ['h2_a', 'h2_b', 'name', 'handle', 'lede'];
+
   const save = async () => {
+    if (!caseData.slug || caseData.slug === 'new-case') { toast('请修改 Slug 为有意义的标识'); return; }
+    // Publish validation: check required fields have content
+    if (caseData.status === 'published') {
+      const missing = REQUIRED_FOR_PUBLISH.filter(f => {
+        const k = `${caseData.slug}.${f}`;
+        const v = textEdits.zh?.[k] ?? caseData.texts?.zh?.[k] ?? '';
+        return !v.trim();
+      });
+      if (missing.length) {
+        toast(`发布失败：缺少必填字段 ${missing.join(', ')}`);
+        return;
+      }
+    }
     if (editing === 'new') {
       const res = await api('/ip-cases', { method: 'POST', body: JSON.stringify({ slug: caseData.slug, status: caseData.status }) });
       if (Object.keys(textEdits).length) {
@@ -356,7 +386,7 @@ function IPCasesPage() {
     ...Object.keys(textEdits.en || {}),
   ])].sort() : [];
 
-  // Group keys by template structure for display
+  // Group keys by template structure for display — show ALL template fields (not just existing ones)
   const slug = caseData?.slug || '';
   const templateKeySet = new Set();
   const groupedDisplay = slug ? IP_TEMPLATE_GROUPS.map(g => {
@@ -364,9 +394,9 @@ function IPCasesPage() {
       const fullKey = `${slug}.${f.key}`;
       templateKeySet.add(fullKey);
       return { ...f, fullKey };
-    }).filter(f => allKeys.includes(f.fullKey) || textEdits.zh?.[f.fullKey] !== undefined || textEdits.en?.[f.fullKey] !== undefined);
+    });
     return { ...g, fields };
-  }).filter(g => g.fields.length > 0) : [];
+  }) : [];
   const extraKeys = allKeys.filter(k => !templateKeySet.has(k));
 
   return <div>
@@ -390,17 +420,9 @@ function IPCasesPage() {
       <div className="modal" style={{maxWidth:960}} onClick={e=>e.stopPropagation()}>
         <h2>{editing==='new'?'新建 IP 案例':'编辑 IP 案例'}</h2>
         <div className="form-row">
-          <div className="form-group"><label>Slug（唯一标识）</label><input value={caseData.slug} onChange={e=>setCaseData({...caseData,slug:e.target.value})} placeholder="例如: nova" /></div>
+          <div className="form-group"><label>Slug（唯一标识）</label><input value={caseData.slug} onChange={e=>handleSlugChange(e.target.value)} placeholder="例如: nova" disabled={editing !== 'new' && Object.keys(caseData.texts?.zh || {}).length > 0} />{editing !== 'new' && Object.keys(caseData.texts?.zh || {}).length > 0 && <div style={{fontSize:11,color:'#888',marginTop:4}}>已有内容的案例不可修改 Slug</div>}</div>
           <div className="form-group"><label>状态</label><select value={caseData.status} onChange={e=>setCaseData({...caseData,status:e.target.value})}><option value="draft">草稿</option><option value="published">已发布</option></select></div>
         </div>
-
-        {allKeys.length === 0 && caseData.slug && <div style={{margin:'16px 0'}}>
-          <button className="btn btn-primary" onClick={applyTemplate}>🪄 一键生成模板字段</button>
-          <span style={{fontSize:12,color:'#888',marginLeft:8}}>基于 Slug「{caseData.slug}」生成完整案例模板</span>
-        </div>}
-        {allKeys.length > 0 && groupedDisplay.length === 0 && caseData.slug && <div style={{margin:'16px 0'}}>
-          <button className="btn btn-ghost btn-sm" onClick={applyTemplate}>补充模板字段</button>
-        </div>}
 
         {groupedDisplay.map(g => <div key={g.label} className="card" style={{marginTop:16}}>
           <h3>{g.label}</h3>

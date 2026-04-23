@@ -38,6 +38,35 @@ module.exports = function(pool) {
 
   router.put('/:id', authMiddleware, async (req, res) => {
     const { slug, sort_order, status } = req.body;
+
+    // Bug 5: Block slug change if case already has i18n content
+    if (slug !== undefined) {
+      const { rows: current } = await pool.query('SELECT slug FROM ip_cases WHERE id = $1', [req.params.id]);
+      if (current[0] && current[0].slug !== slug) {
+        const { rows: contentCount } = await pool.query('SELECT COUNT(*) as c FROM ip_case_i18n WHERE case_id = $1', [req.params.id]);
+        if (parseInt(contentCount[0].c) > 0) {
+          return res.status(400).json({ error: '已有内容的案例不可修改 Slug，否则会导致内容断链' });
+        }
+      }
+    }
+
+    // Bug 6: Validate required fields before allowing publish
+    if (status === 'published') {
+      const { rows: current } = await pool.query('SELECT slug FROM ip_cases WHERE id = $1', [req.params.id]);
+      const caseSlug = slug || (current[0] && current[0].slug) || '';
+      const requiredSuffixes = ['h2_a', 'h2_b', 'name', 'handle', 'lede'];
+      const requiredKeys = requiredSuffixes.map(s => `${caseSlug}.${s}`);
+      const { rows: existing } = await pool.query(
+        "SELECT key FROM ip_case_i18n WHERE case_id = $1 AND lang = 'zh' AND key = ANY($2) AND value != ''",
+        [req.params.id, requiredKeys]
+      );
+      const foundKeys = new Set(existing.map(r => r.key));
+      const missing = requiredKeys.filter(k => !foundKeys.has(k));
+      if (missing.length > 0) {
+        return res.status(400).json({ error: `发布失败：缺少必填字段 ${missing.map(k => k.split('.').pop()).join(', ')}` });
+      }
+    }
+
     const sets = []; const vals = []; let idx = 1;
     if (slug !== undefined) { sets.push(`slug = $${idx}`); vals.push(slug); idx++; }
     if (sort_order !== undefined) { sets.push(`sort_order = $${idx}`); vals.push(sort_order); idx++; }

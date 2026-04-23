@@ -10,7 +10,7 @@ function loadProjectsFromAPI() {
   if (!_projectsReady) {
     _projectsReady = fetch('/api/projects').then(r => r.ok ? r.json() : null).then(data => {
       if (data && data.length) {
-        PROJECTS = data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag }));
+        PROJECTS = data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag, is_baseline: p.is_baseline ?? 1 }));
       }
       return PROJECTS;
     }).catch(() => PROJECTS);
@@ -21,6 +21,26 @@ loadProjectsFromAPI();
 
 // Getter so other parts always read the latest reference
 function getProjects() { return PROJECTS; }
+
+// Derive aggregate stats from live project data
+function deriveStats(projects) {
+  const base = projects.filter(p => p.is_baseline !== 0);
+  const totalBudget = base.reduce((s, p) => s + (p.budget || 0), 0);
+  const totalImp = base.reduce((s, p) => s + (p.imp || 0), 0);
+  const avgCpm = totalImp > 0 ? (totalBudget / totalImp * 1000) : 0;
+  const totalEng = base.reduce((s, p) => s + Math.round((p.imp || 0) * (p.er || 0) / 100), 0);
+  const avgEr = totalImp > 0 ? (totalEng / totalImp * 100) : 0;
+  const avgCpe = totalEng > 0 ? (totalBudget / totalEng) : 0;
+  const peakEr = Math.max(...projects.map(p => p.er || 0));
+  const peakErProject = projects.find(p => p.er === peakEr);
+  const lowestCpm = Math.min(...base.map(p => p.cpm || Infinity));
+  const lowestCpmProject = base.find(p => p.cpm === lowestCpm);
+  const lowestCpe = Math.min(...base.map(p => p.cpe || Infinity));
+  const lowestCpeProject = base.find(p => p.cpe === lowestCpe);
+  const maxImp = Math.max(...base.map(p => p.imp || 0));
+  const maxImpProject = base.find(p => p.imp === maxImp);
+  return { totalBudget, totalImp, avgCpm, avgEr, avgCpe, peakEr, peakErProject, lowestCpm, lowestCpmProject, lowestCpe, lowestCpeProject, maxImp, maxImpProject, baselineCount: base.length, totalEng };
+}
 
 // Hook for components that need to re-render when projects load from API
 function useProjects() {
@@ -154,6 +174,8 @@ function Footer(){
 
 function Hero(){
   const { t } = useT();
+  const P = useProjects();
+  const stats = useMemo(() => deriveStats(P), [P]);
   const sub = t("hero.sub");
   return (
     <section id="top" className="relative min-h-[100vh] flex flex-col overflow-hidden">
@@ -185,21 +207,21 @@ function Hero(){
             <Reveal delay={2}>
               <div className="kicker">{t("hero.stat1.k")}</div>
               <div className="mt-3 font-display font-black ember-glow tnum" style={{fontSize:"clamp(36px, 5.5vw, 78px)", color:"var(--ember-soft)", letterSpacing:"-0.02em"}}>
-                <CountUp to={169550} />
+                <CountUp to={stats.totalBudget} />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{t("hero.stat1.u")}</div>
             </Reveal>
             <Reveal delay={3} className="rule-l pl-4 md:pl-10">
               <div className="kicker">{t("hero.stat2.k")}</div>
               <div className="mt-3 font-display font-black bone-glow tnum" style={{fontSize:"clamp(36px, 5.5vw, 78px)", letterSpacing:"-0.02em"}}>
-                <CountUp to={2898691} />
+                <CountUp to={stats.totalImp} />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{t("hero.stat2.u")}</div>
             </Reveal>
             <Reveal delay={4} className="rule-l pl-4 md:pl-10">
               <div className="kicker">{t("hero.stat3.k")}</div>
               <div className="mt-3 font-display font-black teal-glow tnum" style={{fontSize:"clamp(36px, 5.5vw, 78px)", color:"var(--teal)", letterSpacing:"-0.02em"}}>
-                <CountUp to={1.20} decimals={2} suffix="%" />
+                <CountUp to={stats.peakEr} decimals={2} suffix="%" />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{t("hero.stat3.u")}</div>
             </Reveal>
@@ -263,4 +285,4 @@ function AboutSection(){
   );
 }
 
-window.App_Part1 = { Nav, Footer, Hero, AboutSection, CountUp, Reveal, PROJECTS, getProjects, useProjects, loadProjectsFromAPI, fmt, useT, LangProvider };
+window.App_Part1 = { Nav, Footer, Hero, AboutSection, CountUp, Reveal, PROJECTS, getProjects, useProjects, loadProjectsFromAPI, deriveStats, fmt, useT, LangProvider };

@@ -132,10 +132,21 @@ function IPHero() {
 }
 
 /* ------ Generic IP Case Section (data-driven) ------ */
+// Minimum required keys for a case to be renderable
+const IP_REQUIRED_KEYS = ['h2_a', 'h2_b', 'name', 'handle', 'lede'];
+
+function isCaseComplete(slug, t) {
+  return IP_REQUIRED_KEYS.every(k => {
+    const v = t(`${slug}.${k}`);
+    return v && v !== `${slug}.${k}`;
+  });
+}
+
 function IPCaseSection({ slug, index }) {
-  const { t } = useTIP();
-  const s = (key) => t(`${slug}.${key}`);
-  const hasKey = (key) => { const v = s(key); return v && v !== `${slug}.${key}`; };
+  const { t, lang } = useTIP();
+  // Safe accessor: returns empty string instead of raw key
+  const s = (key) => { const v = t(`${slug}.${key}`); return (v && v !== `${slug}.${key}`) ? v : ''; };
+  const hasKey = (key) => !!s(key);
   const num = String(index + 1).padStart(2, '0');
 
   // Evidence cards: render only those that have data
@@ -330,15 +341,28 @@ function IPCTA() {
 
 function PageIP() {
   const { cases, ready } = useIPCases();
+  const { t } = useTIP();
   React.useEffect(() => {document.documentElement.style.scrollBehavior = "smooth";}, []);
   const [, forceUpdate] = useStateIP(0);
   useEffectIP(() => { if (ready) forceUpdate(n => n + 1); }, [ready]);
+
+  // Filter: only render cases that have all required fields filled
+  const validCases = ready ? cases.filter(c => isCaseComplete(c.slug, t)) : [];
+  // Fallback: if API loaded but no valid cases, try hardcoded astra from i18n dict
+  const showAstraFallback = ready && validCases.length === 0 && isCaseComplete('astra', t);
+
   return (
     <div id="top" className="relative">
       <NavIP />
       <IPHero />
-      {cases.map((c, i) => <IPCaseSection key={c.slug} slug={c.slug} index={i} />)}
-      {!ready && <IPCaseSection slug="astra" index={0} />}
+      {!ready && <div className="max-w-[1360px] mx-auto px-6 md:px-10 py-20 text-center">
+        <div className="font-mono text-[12px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">Loading cases…</div>
+      </div>}
+      {validCases.map((c, i) => <IPCaseSection key={c.slug} slug={c.slug} index={i} />)}
+      {showAstraFallback && <IPCaseSection slug="astra" index={0} />}
+      {ready && validCases.length === 0 && !showAstraFallback && <div className="max-w-[1360px] mx-auto px-6 md:px-10 py-20 text-center">
+        <div className="font-mono text-[12px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{t("ip.empty") || "Coming soon"}</div>
+      </div>}
       <IPCTA />
       <FooterIP />
     </div>);
