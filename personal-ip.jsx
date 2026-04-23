@@ -131,9 +131,29 @@ function IPHero() {
 
 }
 
-/* ------ Astra Case (featured) ------ */
-function AstraCase() {
+/* ------ Generic IP Case Section (data-driven) ------ */
+function IPCaseSection({ slug, index }) {
   const { t } = useTIP();
+  const s = (key) => t(`${slug}.${key}`);
+  const hasKey = (key) => { const v = s(key); return v && v !== `${slug}.${key}`; };
+  const num = String(index + 1).padStart(2, '0');
+
+  // Evidence cards: render only those that have data
+  const cards = [1,2,3,4].map(n => ({
+    step: String(n).padStart(2,'0'),
+    title: s(`b${n}.title`),
+    note: s(`b${n}.note`),
+    badge: s(`b${n}.badge`),
+    img: s(`b${n}.img`),
+    highlight: s(`b${n}.highlight`) === '1',
+    hasData: hasKey(`b${n}.title`),
+  })).filter(c => c.hasData);
+
+  const card4 = cards.length >= 4 ? cards[3] : null;
+  const topCards = card4 ? cards.slice(0, 3) : cards;
+  const leftCards = topCards.filter((_, i) => i === 0);
+  const rightCards = topCards.filter((_, i) => i > 0);
+
   return (
     <section className="relative py-20 md:py-28 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 40% at 10% 50%, rgba(255,122,69,0.08), transparent 60%)" }} />
@@ -143,132 +163,103 @@ function AstraCase() {
         <RevealIP className="grid md:grid-cols-12 gap-6 items-end mb-12">
           <div className="md:col-span-8">
             <div className="flex items-center gap-4 mb-5">
-              <span className="font-mono text-[10px] tracking-[0.28em] text-[var(--ember)] uppercase">IP · 01</span>
+              <span className="font-mono text-[10px] tracking-[0.28em] text-[var(--ember)] uppercase">IP · {num}</span>
               <span className="h-px w-10 bg-[var(--rule-strong)]" />
-              <span className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{t("astra.badge")}</span>
+              <span className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{s('badge')}</span>
             </div>
-            <h2 className="font-display font-black leading-[1.02]" style={{ fontSize: "clamp(36px, 5.5vw, 80px)", letterSpacing: "-0.02em", width: "900.333px" }}>
-              {t("astra.h2_a")}<br />
-              <span className="text-[var(--ember)] ember-glow">{t("astra.h2_b")}</span>
+            <h2 className="font-display font-black leading-[1.02]" style={{ fontSize: "clamp(36px, 5.5vw, 80px)", letterSpacing: "-0.02em" }}>
+              {s('h2_a')}<br />
+              <span className="text-[var(--ember)] ember-glow">{s('h2_b')}</span>
             </h2>
           </div>
           <div className="md:col-span-4 md:text-right">
-            <p className="font-cn text-[16px] leading-[1.75] text-[var(--bone-dim)]" style={{ width: "420.667px" }}>{t("astra.lede")}</p>
+            <p className="font-cn text-[16px] leading-[1.75] text-[var(--bone-dim)]">{s('lede')}</p>
           </div>
         </RevealIP>
 
         {/* Profile strip */}
-        <RevealIP delay={80}>
+        {hasKey('name') && <RevealIP delay={80}>
           <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-10 p-6 md:p-7 rule-t rule-b" style={{ borderTop: "1px solid var(--rule-strong)", borderBottom: "1px solid var(--rule-strong)" }}>
             <div className="flex items-center gap-5 shrink-0">
-              <img src="assets/ip/astra-avatar.jpg" alt="Astra" className="w-16 h-16 rounded-full object-cover" style={{ border: "1px solid var(--rule-strong)" }} />
+              {hasKey('avatar') && <img src={s('avatar')} alt={s('name')} className="w-16 h-16 rounded-full object-cover" style={{ border: "1px solid var(--rule-strong)" }} />}
               <div>
-                <div className="font-display text-[22px] font-bold leading-none">Astra</div>
-                <div className="font-mono text-[12px] tracking-[0.06em] text-[var(--bone-dim)] mt-1.5">@0xAstraSpark</div>
+                <div className="font-display text-[22px] font-bold leading-none">{s('name')}</div>
+                <div className="font-mono text-[12px] tracking-[0.06em] text-[var(--bone-dim)] mt-1.5">{s('handle')}</div>
               </div>
             </div>
             <div className="h-px md:h-10 md:w-px bg-[var(--rule-strong)]" />
             <div className="flex-1 grid grid-cols-3 gap-4">
-              <AstraStat k={t("astra.stat.budget")} v="500" u="USDC" tone="var(--bone)" />
-              <AstraStat k={t("astra.stat.campaign")} v={t("astra.stat.campaign.v")} u="" tone="var(--bone)" />
-              <AstraStat k={t("astra.stat.roi")} v="∞" u={t("astra.stat.roi.u")} tone="var(--ember)" />
+              <AstraStat k={s('stat.budget')} v={s('stat.budget.v')} u={s('stat.budget.u')} tone="var(--bone)" />
+              <AstraStat k={s('stat.campaign')} v={s('stat.campaign.v')} u="" tone="var(--bone)" />
+              <AstraStat k={s('stat.roi')} v={s('stat.roi.v')} u={s('stat.roi.u')} tone="var(--ember)" />
             </div>
           </div>
-        </RevealIP>
+        </RevealIP>}
 
-        {/* Story band — full width, split heading / body */}
-        <RevealIP className="mt-14 md:mt-20">
+        {/* Story band */}
+        {hasKey('story.h') && <RevealIP className="mt-14 md:mt-20">
           <div className="grid md:grid-cols-12 gap-8 md:gap-12 items-start">
             <div className="md:col-span-5">
-              <div className="kicker mb-4">{t("astra.story.kicker")}</div>
-              <h3 className="font-display font-bold leading-[1.08]" style={{ fontSize: "clamp(28px, 3.6vw, 44px)", letterSpacing: "-0.01em" }}>{t("astra.story.h")}</h3>
-              <div className="mt-8 p-5" style={{ background: "linear-gradient(180deg, rgba(255,122,69,0.08), rgba(255,122,69,0.02))", border: "1px solid rgba(255,122,69,0.35)" }}>
-                <div className="font-mono text-[10px] tracking-[0.22em] uppercase text-[var(--ember)] mb-2">{t("astra.takeaway.k")}</div>
-                <div className="font-cn text-[17px] leading-[1.7] text-[var(--bone)]">{t("astra.takeaway.v")}</div>
-              </div>
+              <div className="kicker mb-4">{s('story.kicker')}</div>
+              <h3 className="font-display font-bold leading-[1.08]" style={{ fontSize: "clamp(28px, 3.6vw, 44px)", letterSpacing: "-0.01em" }}>{s('story.h')}</h3>
+              {hasKey('takeaway.v') && <div className="mt-8 p-5" style={{ background: "linear-gradient(180deg, rgba(255,122,69,0.08), rgba(255,122,69,0.02))", border: "1px solid rgba(255,122,69,0.35)" }}>
+                <div className="font-mono text-[10px] tracking-[0.22em] uppercase text-[var(--ember)] mb-2">{s('takeaway.k')}</div>
+                <div className="font-cn text-[17px] leading-[1.7] text-[var(--bone)]">{s('takeaway.v')}</div>
+              </div>}
             </div>
             <div className="md:col-span-7 space-y-5 font-cn text-[16px] md:text-[17px] leading-[1.85] text-[var(--bone-dim)]">
-              <p>{t("astra.story.p1")}</p>
-              <p>{t("astra.story.p2")}</p>
-              <p><span className="text-[var(--bone)]">{t("astra.story.p3a")}</span>{t("astra.story.p3b")}</p>
+              {hasKey('story.p1') && <p>{s('story.p1')}</p>}
+              {hasKey('story.p2') && <p>{s('story.p2')}</p>}
+              {(hasKey('story.p3a') || hasKey('story.p3b')) && <p><span className="text-[var(--bone)]">{s('story.p3a')}</span>{s('story.p3b')}</p>}
             </div>
           </div>
-        </RevealIP>
+        </RevealIP>}
 
-        {/* Evidence beats — 01 on left, 02 + 03 stacked on right */}
-        <div className="mt-12 md:mt-16 grid md:grid-cols-2 gap-6 md:gap-7 items-start">
-          <RevealIP>
-            <EvidenceCard
-              step="01"
-              title={t("astra.b1.title")}
-              note={t("astra.b1.note")}
-              badge={t("astra.b1.badge")}
-              img="assets/ip/astra-xhunt.jpg"
-              aspect="auto" />
-          </RevealIP>
-          <div className="space-y-6 md:space-y-7">
-            <RevealIP delay={80}>
-              <EvidenceCard
-                step="02"
-                title={t("astra.b2.title")}
-                note={t("astra.b2.note")}
-                badge={t("astra.b2.badge")}
-                img="assets/ip/astra-justin-follow.png"
-                aspect="auto"
-                highlight />
-            </RevealIP>
-            <RevealIP delay={140}>
-              <EvidenceCard
-                step="03"
-                title={t("astra.b3.title")}
-                note={t("astra.b3.note")}
-                badge={t("astra.b3.badge")}
-                img="assets/ip/astra-justin-quote.png"
-                aspect="auto"
-                highlight />
-            </RevealIP>
-          </div>
-        </div>
+        {/* Evidence cards */}
+        {topCards.length > 0 && <div className="mt-12 md:mt-16 grid md:grid-cols-2 gap-6 md:gap-7 items-start">
+          {leftCards.map(c => <RevealIP key={c.step}>
+            <EvidenceCard step={c.step} title={c.title} note={c.note} badge={c.badge} img={c.img} highlight={c.highlight} />
+          </RevealIP>)}
+          {rightCards.length > 0 && <div className="space-y-6 md:space-y-7">
+            {rightCards.map((c, i) => <RevealIP key={c.step} delay={80 * (i + 1)}>
+              <EvidenceCard step={c.step} title={c.title} note={c.note} badge={c.badge} img={c.img} highlight={c.highlight} />
+            </RevealIP>)}
+          </div>}
+        </div>}
 
-        {/* Finale: final screenshot + ROI math, full width */}
-        <RevealIP delay={100} className="mt-14 md:mt-20">
+        {/* Card 04 + ROI math (full width) */}
+        {card4 && hasKey('math.kicker') && <RevealIP delay={100} className="mt-14 md:mt-20">
           <div className="grid md:grid-cols-12 gap-6 md:gap-8 items-stretch">
-            {/* 04 — final screenshot */}
             <div className="md:col-span-5">
               <div className="relative h-full flex flex-col" style={{ border: "1px solid rgba(255,122,69,0.4)", background: "var(--ink-2)" }}>
                 <div className="flex items-start justify-between gap-3 p-5" style={{ borderBottom: "1px solid var(--rule)" }}>
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="font-display text-[28px] font-black leading-none shrink-0 text-[var(--ember)]">04</div>
-                    <div className="min-w-0">
-                      <div className="font-display text-[15px] md:text-[16px] font-bold leading-tight">{t("astra.b4.title")}</div>
-                    </div>
+                    <div className="font-display text-[28px] font-black leading-none shrink-0 text-[var(--ember)]">{card4.step}</div>
+                    <div className="min-w-0"><div className="font-display text-[15px] md:text-[16px] font-bold leading-tight">{card4.title}</div></div>
                   </div>
-                  <div className="shrink-0 font-mono text-[9px] tracking-[0.22em] uppercase px-2 py-1" style={{ border: "1px solid rgba(255,122,69,0.5)", color: "var(--ember)" }}>{t("astra.b4.badge")}</div>
+                  {card4.badge && <div className="shrink-0 font-mono text-[9px] tracking-[0.22em] uppercase px-2 py-1" style={{ border: "1px solid rgba(255,122,69,0.5)", color: "var(--ember)" }}>{card4.badge}</div>}
                 </div>
                 <div className="relative flex-1 flex items-center justify-center" style={{ background: "#000" }}>
-                  <img src="assets/ip/astra-final-tweet.png" alt={t("astra.b4.title")} className="w-full block" style={{ maxHeight: 460, objectFit: "contain" }} />
+                  <img src={card4.img} alt={card4.title} className="w-full block" style={{ maxHeight: 460, objectFit: "contain" }} />
                 </div>
               </div>
             </div>
-
-            {/* ROI math */}
             <div className="md:col-span-7">
               <div className="p-7 md:p-9 h-full flex flex-col" style={{ background: "var(--ink-2)", border: "1px solid var(--rule-strong)" }}>
-                <div className="kicker mb-6">{t("astra.math.kicker")}</div>
+                <div className="kicker mb-6">{s('math.kicker')}</div>
                 <div className="grid grid-cols-2 gap-6 md:gap-7">
-                  <ValueStat label={t("astra.math.k1")} v="500" u="USDC" mute />
-                  <ValueStat label={t("astra.math.k2")} v="100,000+" u={t("astra.math.k2.u")} />
-                  <ValueStat label={t("astra.math.k3")} v="280 · 244 · 77" u="" compact />
-                  <ValueStat label={t("astra.math.k4")} v={t("astra.math.k4.v")} u="" tone="ember" />
+                  <ValueStat label={s('math.k1')} v={s('math.k1.v')} u={s('math.k1.u')} mute />
+                  <ValueStat label={s('math.k2')} v={s('math.k2.v')} u={s('math.k2.u')} />
+                  <ValueStat label={s('math.k3')} v={s('math.k3.v')} u={s('math.k3.u')} compact />
+                  <ValueStat label={s('math.k4')} v={s('math.k4.v')} u="" tone="ember" />
                 </div>
-                <p className="mt-auto pt-6 font-cn text-[14px] leading-[1.75] text-[var(--bone-dim)]">{t("astra.math.note")}</p>
+                {hasKey('math.note') && <p className="mt-auto pt-6 font-cn text-[14px] leading-[1.75] text-[var(--bone-dim)]">{s('math.note')}</p>}
               </div>
             </div>
           </div>
-        </RevealIP>
+        </RevealIP>}
       </div>
     </section>);
-
 }
 
 function AstraStat({ k, v, u, tone }) {
@@ -340,14 +331,14 @@ function IPCTA() {
 function PageIP() {
   const { cases, ready } = useIPCases();
   React.useEffect(() => {document.documentElement.style.scrollBehavior = "smooth";}, []);
-  // Force re-render after API data merges into DICT
   const [, forceUpdate] = useStateIP(0);
   useEffectIP(() => { if (ready) forceUpdate(n => n + 1); }, [ready]);
   return (
     <div id="top" className="relative">
       <NavIP />
       <IPHero />
-      <AstraCase />
+      {cases.map((c, i) => <IPCaseSection key={c.slug} slug={c.slug} index={i} />)}
+      {!ready && <IPCaseSection slug="astra" index={0} />}
       <IPCTA />
       <FooterIP />
     </div>);

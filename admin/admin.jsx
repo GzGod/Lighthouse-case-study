@@ -203,6 +203,84 @@ function ProjectsPage() {
 }
 
 /* ── IP Cases Page ── */
+// IP Case template: defines all fields grouped by section
+const IP_TEMPLATE_GROUPS = [
+  { label: '基本信息', fields: [
+    { key: 'badge', zh: '标签（如：灯塔推文引用池 · 2026.04）' },
+    { key: 'h2_a', zh: '大标题前半' }, { key: 'h2_b', zh: '大标题高亮部分' },
+    { key: 'lede', zh: '导语（2-3句概述）' },
+    { key: 'name', zh: 'KOL 名称' }, { key: 'handle', zh: 'X 账号（如 @xxx）' },
+    { key: 'avatar', zh: '头像图片路径', isImg: true },
+    { key: 'stat.budget', zh: '预算标签' }, { key: 'stat.budget.v', zh: '预算数值' }, { key: 'stat.budget.u', zh: '预算单位' },
+    { key: 'stat.campaign', zh: '活动类型标签' }, { key: 'stat.campaign.v', zh: '活动类型值' },
+    { key: 'stat.roi', zh: 'ROI 标签' }, { key: 'stat.roi.v', zh: 'ROI 数值' }, { key: 'stat.roi.u', zh: 'ROI 单位' },
+  ]},
+  { label: '故事', fields: [
+    { key: 'story.kicker', zh: '板块标签（如：故事线）' }, { key: 'story.h', zh: '故事标题' },
+    { key: 'story.p1', zh: '段落1', rows: 3 }, { key: 'story.p2', zh: '段落2', rows: 3 },
+    { key: 'story.p3a', zh: '段落3高亮部分' }, { key: 'story.p3b', zh: '段落3正文', rows: 3 },
+    { key: 'takeaway.k', zh: 'Takeaway 标签' }, { key: 'takeaway.v', zh: 'Takeaway 内容', rows: 2 },
+  ]},
+  { label: '证据卡片 01', fields: [
+    { key: 'b1.title', zh: '标题' }, { key: 'b1.note', zh: '说明' },
+    { key: 'b1.badge', zh: '徽章' }, { key: 'b1.img', zh: '图片路径', isImg: true }, { key: 'b1.highlight', zh: '高亮（1/0）' },
+  ]},
+  { label: '证据卡片 02', fields: [
+    { key: 'b2.title', zh: '标题' }, { key: 'b2.note', zh: '说明' },
+    { key: 'b2.badge', zh: '徽章' }, { key: 'b2.img', zh: '图片路径', isImg: true }, { key: 'b2.highlight', zh: '高亮（1/0）' },
+  ]},
+  { label: '证据卡片 03', fields: [
+    { key: 'b3.title', zh: '标题' }, { key: 'b3.note', zh: '说明' },
+    { key: 'b3.badge', zh: '徽章' }, { key: 'b3.img', zh: '图片路径', isImg: true }, { key: 'b3.highlight', zh: '高亮（1/0）' },
+  ]},
+  { label: '证据卡片 04', fields: [
+    { key: 'b4.title', zh: '标题' }, { key: 'b4.note', zh: '说明' },
+    { key: 'b4.badge', zh: '徽章' }, { key: 'b4.img', zh: '图片路径', isImg: true }, { key: 'b4.highlight', zh: '高亮（1/0）' },
+  ]},
+  { label: '投产比', fields: [
+    { key: 'math.kicker', zh: '板块标签' },
+    { key: 'math.k1', zh: '指标1标签' }, { key: 'math.k1.v', zh: '指标1数值' }, { key: 'math.k1.u', zh: '指标1单位' },
+    { key: 'math.k2', zh: '指标2标签' }, { key: 'math.k2.v', zh: '指标2数值' }, { key: 'math.k2.u', zh: '指标2单位' },
+    { key: 'math.k3', zh: '指标3标签' }, { key: 'math.k3.v', zh: '指标3数值' }, { key: 'math.k3.u', zh: '指标3单位' },
+    { key: 'math.k4', zh: '指标4标签' }, { key: 'math.k4.v', zh: '指标4数值' },
+    { key: 'math.note', zh: '说明段落', rows: 2 },
+  ]},
+];
+
+function generateTemplateKeys(slug) {
+  const texts = { zh: {}, en: {} };
+  for (const group of IP_TEMPLATE_GROUPS) {
+    for (const f of group.fields) {
+      const fullKey = `${slug}.${f.key}`;
+      texts.zh[fullKey] = '';
+      texts.en[fullKey] = '';
+    }
+  }
+  return texts;
+}
+
+function ImagePicker({ value, onChange }) {
+  const [images, setImages] = useState([]);
+  const [open, setOpen] = useState(false);
+  const loadImages = () => { if (!images.length) api('/upload').then(setImages); };
+  return <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+    <div style={{flex:1}}>
+      <input value={value} onChange={e=>onChange(e.target.value)} placeholder="图片路径" style={{width:'100%'}} />
+      {value && <img src={value.startsWith('http')?value:'/'+value} alt="" style={{marginTop:6,maxHeight:80,maxWidth:160,objectFit:'contain',borderRadius:4,border:'1px solid #333'}} onError={e=>{e.target.style.display='none'}} />}
+    </div>
+    <div style={{position:'relative'}}>
+      <button className="btn btn-ghost btn-sm" onClick={()=>{loadImages();setOpen(!open)}}>图片库</button>
+      {open && <div style={{position:'absolute',right:0,top:'100%',zIndex:50,background:'#1a1a1a',border:'1px solid #333',borderRadius:6,padding:8,width:320,maxHeight:280,overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
+        {images.map(img => <div key={img.id} style={{cursor:'pointer',borderRadius:4,overflow:'hidden',border:value===img.path?'2px solid #ff7a45':'2px solid transparent'}} onClick={()=>{onChange(img.path);setOpen(false)}}>
+          <img src={'/'+img.path} alt={img.original_name} style={{width:'100%',height:64,objectFit:'cover'}} />
+          <div style={{fontSize:9,color:'#888',padding:'2px 4px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{img.original_name}</div>
+        </div>)}
+        {!images.length && <div style={{gridColumn:'1/-1',color:'#666',fontSize:12,padding:8}}>暂无图片</div>}
+      </div>}
+    </div>
+  </div>;
+}
+
 function IPCasesPage() {
   const toast = useToast();
   const [cases, setCases] = useState([]);
@@ -224,6 +302,16 @@ function IPCasesPage() {
     setEditing('new');
     setCaseData({ slug: '', status: 'draft', texts: { zh: {}, en: {} } });
     setTextEdits({});
+  };
+
+  const applyTemplate = () => {
+    if (!caseData.slug) { toast('请先填写 Slug'); return; }
+    const tpl = generateTemplateKeys(caseData.slug);
+    setTextEdits(prev => ({
+      zh: { ...tpl.zh, ...(prev.zh || {}) },
+      en: { ...tpl.en, ...(prev.en || {}) },
+    }));
+    toast(`已生成 ${Object.keys(tpl.zh).length} 个模板字段`);
   };
 
   const handleTextChange = (lang, key, val) => {
@@ -268,6 +356,19 @@ function IPCasesPage() {
     ...Object.keys(textEdits.en || {}),
   ])].sort() : [];
 
+  // Group keys by template structure for display
+  const slug = caseData?.slug || '';
+  const templateKeySet = new Set();
+  const groupedDisplay = slug ? IP_TEMPLATE_GROUPS.map(g => {
+    const fields = g.fields.map(f => {
+      const fullKey = `${slug}.${f.key}`;
+      templateKeySet.add(fullKey);
+      return { ...f, fullKey };
+    }).filter(f => allKeys.includes(f.fullKey) || textEdits.zh?.[f.fullKey] !== undefined || textEdits.en?.[f.fullKey] !== undefined);
+    return { ...g, fields };
+  }).filter(g => g.fields.length > 0) : [];
+  const extraKeys = allKeys.filter(k => !templateKeySet.has(k));
+
   return <div>
     <h1>IP 案例管理</h1>
     <p className="page-desc">管理个人 IP 案例页面的内容</p>
@@ -286,18 +387,54 @@ function IPCasesPage() {
     </div>
 
     {editing !== null && caseData && <div className="modal-overlay" onClick={()=>setEditing(null)}>
-      <div className="modal" style={{maxWidth:900}} onClick={e=>e.stopPropagation()}>
+      <div className="modal" style={{maxWidth:960}} onClick={e=>e.stopPropagation()}>
         <h2>{editing==='new'?'新建 IP 案例':'编辑 IP 案例'}</h2>
         <div className="form-row">
-          <div className="form-group"><label>Slug（唯一标识）</label><input value={caseData.slug} onChange={e=>setCaseData({...caseData,slug:e.target.value})} /></div>
+          <div className="form-group"><label>Slug（唯一标识）</label><input value={caseData.slug} onChange={e=>setCaseData({...caseData,slug:e.target.value})} placeholder="例如: nova" /></div>
           <div className="form-group"><label>状态</label><select value={caseData.status} onChange={e=>setCaseData({...caseData,status:e.target.value})}><option value="draft">草稿</option><option value="published">已发布</option></select></div>
         </div>
 
-        <h3 style={{marginTop:20,marginBottom:12}}>案例文案（{allKeys.length} 条）</h3>
-          <div className="form-group">
-            <label>添加新 key</label>
+        {allKeys.length === 0 && caseData.slug && <div style={{margin:'16px 0'}}>
+          <button className="btn btn-primary" onClick={applyTemplate}>🪄 一键生成模板字段</button>
+          <span style={{fontSize:12,color:'#888',marginLeft:8}}>基于 Slug「{caseData.slug}」生成完整案例模板</span>
+        </div>}
+        {allKeys.length > 0 && groupedDisplay.length === 0 && caseData.slug && <div style={{margin:'16px 0'}}>
+          <button className="btn btn-ghost btn-sm" onClick={applyTemplate}>补充模板字段</button>
+        </div>}
+
+        {groupedDisplay.map(g => <div key={g.label} className="card" style={{marginTop:16}}>
+          <h3>{g.label}</h3>
+          {g.fields.map(f => <div className="i18n-pair" key={f.fullKey}>
+            <div className="i18n-key"><div>{f.fullKey}</div><div style={{fontSize:10,color:'#aaa',marginTop:2}}>{f.zh}</div></div>
+            {f.isImg ? <div className="i18n-val" style={{flex:'1 1 100%'}}>
+              <div className="lang-tag">图片（中英共用）</div>
+              <ImagePicker value={getVal('zh',f.fullKey)} onChange={v=>{handleTextChange('zh',f.fullKey,v);handleTextChange('en',f.fullKey,v)}} />
+            </div> : <>
+            <div className="i18n-val">
+              <div className="lang-tag">中文</div>
+              <textarea value={getVal('zh',f.fullKey)} onChange={e=>handleTextChange('zh',f.fullKey,e.target.value)} rows={f.rows||1} />
+            </div>
+            <div className="i18n-val">
+              <div className="lang-tag">English</div>
+              <textarea value={getVal('en',f.fullKey)} onChange={e=>handleTextChange('en',f.fullKey,e.target.value)} rows={f.rows||1} />
+            </div>
+            </>}
+          </div>)}
+        </div>)}
+
+        {extraKeys.length > 0 && <div className="card" style={{marginTop:16}}>
+          <h3>其他字段（{extraKeys.length}）</h3>
+          {extraKeys.map(k => <div className="i18n-pair" key={k}>
+            <div className="i18n-key">{k}</div>
+            <div className="i18n-val"><div className="lang-tag">中文</div><textarea value={getVal('zh',k)} onChange={e=>handleTextChange('zh',k,e.target.value)} rows={1} /></div>
+            <div className="i18n-val"><div className="lang-tag">English</div><textarea value={getVal('en',k)} onChange={e=>handleTextChange('en',k,e.target.value)} rows={1} /></div>
+          </div>)}
+        </div>}
+
+        <div style={{margin:'16px 0'}}>
+          <div className="form-group"><label>添加自定义 key</label>
             <div style={{display:'flex',gap:8}}>
-              <input id="new-key-input" placeholder="例如: newcase.title" style={{flex:1}} />
+              <input id="new-key-input" placeholder={slug ? `${slug}.custom_field` : 'slug.field_name'} style={{flex:1}} />
               <button className="btn btn-ghost btn-sm" onClick={() => {
                 const k = document.getElementById('new-key-input').value.trim();
                 if (!k) return;
@@ -307,17 +444,7 @@ function IPCasesPage() {
               }}>添加</button>
             </div>
           </div>
-          {allKeys.map(k => <div className="i18n-pair" key={k}>
-            <div className="i18n-key">{k}</div>
-            <div className="i18n-val">
-              <div className="lang-tag">中文</div>
-              <textarea value={getVal('zh',k)} onChange={e=>handleTextChange('zh',k,e.target.value)} rows={2} />
-            </div>
-            <div className="i18n-val">
-              <div className="lang-tag">English</div>
-              <textarea value={getVal('en',k)} onChange={e=>handleTextChange('en',k,e.target.value)} rows={2} />
-            </div>
-          </div>)}
+        </div>
 
         <div className="btn-group"><button className="btn btn-primary" onClick={save}>保存</button><button className="btn btn-ghost" onClick={()=>setEditing(null)}>取消</button></div>
       </div>
