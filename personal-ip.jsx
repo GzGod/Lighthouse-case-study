@@ -349,6 +349,7 @@ function PageIP() {
   const { t } = useTIP();
   React.useEffect(() => {document.documentElement.style.scrollBehavior = "smooth";}, []);
   const [, forceUpdate] = useStateIP(0);
+  const [previewSlug, setPreviewSlug] = useStateIP(null);
   useEffectIP(() => { if (ready) forceUpdate(n => n + 1); }, [ready]);
 
   // Listen for IP case draft overrides from admin iframe parent
@@ -356,25 +357,29 @@ function PageIP() {
     function onMsg(e) {
       if (!e.data || e.data.type !== 'lh-preview') return;
       if (e.data.action === 'ip-draft') {
-        // Merge draft texts into DICT_IP for preview (iframe is isolated, so this is safe)
         const drafts = e.data.drafts;
         if (drafts) {
           for (const [lang, entries] of Object.entries(drafts)) {
             if (DICT_IP[lang]) Object.assign(DICT_IP[lang], entries);
           }
+          if (e.data.slug) setPreviewSlug(e.data.slug);
           forceUpdate(n => n + 1);
         }
-      } else if (e.data.action === 'set-lang') {
-        // handled by LangProvider
+      } else if (e.data.action === 'clear-draft') {
+        setPreviewSlug(null);
       }
     }
     window.addEventListener('message', onMsg);
     return () => window.removeEventListener('message', onMsg);
   }, []);
 
-  // Filter: only render cases that have all required fields filled
+  // Build render list: published cases + preview slug if not already present
   const validCases = ready ? cases.filter(c => isCaseComplete(c.slug)) : [];
-  const showAstraFallback = ready && validCases.length === 0 && isCaseComplete('astra');
+  const renderSlugs = validCases.map(c => c.slug);
+  if (previewSlug && !renderSlugs.includes(previewSlug) && isCaseComplete(previewSlug)) {
+    renderSlugs.push(previewSlug);
+  }
+  const showAstraFallback = ready && renderSlugs.length === 0 && isCaseComplete('astra');
 
   return (
     <div id="top" className="relative">
@@ -383,9 +388,9 @@ function PageIP() {
       {!ready && <div className="max-w-[1360px] mx-auto px-6 md:px-10 py-20 text-center">
         <div className="font-mono text-[12px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">Loading cases…</div>
       </div>}
-      {validCases.map((c, i) => <IPCaseSection key={c.slug} slug={c.slug} index={i} />)}
+      {renderSlugs.map((slug, i) => <IPCaseSection key={slug} slug={slug} index={i} />)}
       {showAstraFallback && <IPCaseSection slug="astra" index={0} />}
-      {ready && validCases.length === 0 && !showAstraFallback && <div className="max-w-[1360px] mx-auto px-6 md:px-10 py-20 text-center">
+      {ready && renderSlugs.length === 0 && !showAstraFallback && <div className="max-w-[1360px] mx-auto px-6 md:px-10 py-20 text-center">
         <div className="font-mono text-[12px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{(() => { const v = t("ip.empty"); return (v && v !== "ip.empty") ? v : "Coming soon"; })()}</div>
       </div>}
       <IPCTA />

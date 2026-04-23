@@ -478,12 +478,12 @@ const DICT = {
     "why.h2_a": "The more you work together,",
     "why.h2_b": "the steadier the judgment, and the smoother the delivery.",
     "why.principle": "PRINCIPLE",
-    "why.w1.t": "Reviewable data', \"why.w1.d\": 'Impressions, engagements, and settlements are all on record, giving teams something concrete to work with during reviews and expectation alignment.",
+    "why.w1.t": "Reviewable data", "why.w1.d": "Impressions, engagements, and settlements are all on record, giving teams something concrete to work with during reviews and expectation alignment.",
     "why.w2.t": "Budget references", "why.w2.d": "{baselineCount} baseline projects and {baselineTweets} tweets have built a reference line that makes it easier to land on specific ranges in future budget discussions.",
-    "why.w3.t": "Clearer selection', \"why.w3.d\": 'KOL performance history keeps accumulating. The longer you work together, the clearer it becomes which KOLs fit your project best.",
-    "why.w4.t": "Adjustable pacing', \"why.w4.d\": 'A single project can be split across multiple KOL tiers for testing, so teams learn earlier where to scale budget.",
-    "why.w5.t": "Anomalies filtered out', \"why.w5.d\": 'Abnormal interactions and distorted data are identified separately, so the results teams see stay closer to real performance.",
-    "why.w6.t": "Experience compounds', \"why.w6.d\": 'The data and judgment from each campaign become the starting point for the next, making every subsequent decision faster.",
+    "why.w3.t": "Clearer selection", "why.w3.d": "KOL performance history keeps accumulating. The longer you work together, the clearer it becomes which KOLs fit your project best.",
+    "why.w4.t": "Adjustable pacing", "why.w4.d": "A single project can be split across multiple KOL tiers for testing, so teams learn earlier where to scale budget.",
+    "why.w5.t": "Anomalies filtered out", "why.w5.d": "Abnormal interactions and distorted data are identified separately, so the results teams see stay closer to real performance.",
+    "why.w6.t": "Experience compounds", "why.w6.d": "The data and judgment from each campaign become the starting point for the next, making every subsequent decision faster.",
 
     "cta.kicker": "READY FOR LONGER-TERM GROWTH",
     "cta.h2_a": "Build your next collaboration",
@@ -522,6 +522,13 @@ function LangProvider({children}){
   const [ready, setReady] = React.useState(false);
   const [draftOverrides, setDraftOverrides] = React.useState(null);
   React.useEffect(() => { loadLiveDict().then(() => setReady(true)); }, []);
+
+  // Signal to parent that this iframe is ready for preview messages
+  React.useEffect(() => {
+    if (ready && window.parent !== window) {
+      window.parent.postMessage({ type: 'lh-preview-ready', page: window.location.pathname }, '*');
+    }
+  }, [ready]);
 
   // Listen for preview draft messages from admin iframe parent
   React.useEffect(() => {

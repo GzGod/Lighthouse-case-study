@@ -10,7 +10,7 @@ function loadProjectsFromAPI() {
   if (!_projectsReady) {
     _projectsReady = fetch('/api/projects').then(r => r.ok ? r.json() : null).then(data => {
       if (data && data.length) {
-        PROJECTS = data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag, is_baseline: p.is_baseline ?? 1, tweets: p.tweets ?? 0 }));
+        PROJECTS = data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag, is_baseline: p.is_baseline ?? 1, tweets: p.tweets ?? 0, slug: p.slug || '' }));
       }
       return PROJECTS;
     }).catch(() => PROJECTS);
@@ -74,6 +74,8 @@ function useProjects() {
       if (!e.data || e.data.type !== 'lh-preview') return;
       if (e.data.action === 'projects-draft') {
         setData(e.data.projects);
+      } else if (e.data.action === 'projects-clear') {
+        setData([...PROJECTS]);
       }
     }
     window.addEventListener('message', onMsg);

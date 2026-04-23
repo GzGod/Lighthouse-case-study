@@ -120,15 +120,39 @@ function I18nPage() {
     setEdits(prev => ({ ...prev, [`${lang}:${key}`]: { lang, key, value: val } }));
   };
 
-  // Send draft overrides to iframe whenever edits change
-  useEffect(() => {
-    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+  const sendToIframe = useCallback((msg) => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(msg, '*');
+    }
+  }, []);
+
+  // Build current draft snapshot
+  const buildI18nDraft = useCallback(() => {
     const drafts = { zh: {}, en: {} };
     for (const e of Object.values(edits)) {
       drafts[e.lang][e.key] = e.value;
     }
-    iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'i18n-draft', drafts }, '*');
+    return drafts;
   }, [edits]);
+
+  // Send draft overrides to iframe whenever edits change
+  useEffect(() => {
+    if (Object.keys(edits).length) {
+      sendToIframe({ type: 'lh-preview', action: 'i18n-draft', drafts: buildI18nDraft() });
+    }
+  }, [edits, sendToIframe, buildI18nDraft]);
+
+  // Listen for iframe ready signal to replay current draft
+  useEffect(() => {
+    function onReady(e) {
+      if (!e.data || e.data.type !== 'lh-preview-ready') return;
+      if (Object.keys(edits).length) {
+        sendToIframe({ type: 'lh-preview', action: 'i18n-draft', drafts: buildI18nDraft() });
+      }
+    }
+    window.addEventListener('message', onReady);
+    return () => window.removeEventListener('message', onReady);
+  }, [edits, sendToIframe, buildI18nDraft]);
 
   // Scroll iframe to relevant section when switching tabs
   useEffect(() => {
@@ -204,21 +228,49 @@ function ProjectsPage() {
   const load = () => api('/projects').then(setProjects);
   useEffect(() => { load(); }, []);
 
-  const openNew = () => { setForm({ name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1, tweets:0 }); setEditing('new'); };
+  const openNew = () => { setForm({ name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1, tweets:0, slug:'' }); setEditing('new'); };
   const openEdit = (p) => { setForm({...p}); setEditing(p.id); };
+
+  // Build draft projects array from current state
+  const buildDraftProjects = (currentForm, currentEditing) => {
+    if (currentEditing === null) return null;
+    const draftProjects = projects.map(p => {
+      const proj = p.id === currentEditing ? currentForm : p;
+      return { name:proj.name, logo:proj.logo, budget:proj.budget, imp:proj.impressions, cpm:proj.cpm, er:proj.er, cpe:proj.cpe, tag:proj.tag, is_baseline: proj.is_baseline ?? 1, tweets: proj.tweets ?? 0, slug: proj.slug || '' };
+    });
+    if (currentEditing === 'new') {
+      draftProjects.push({ name:currentForm.name, logo:currentForm.logo, budget:currentForm.budget, imp:currentForm.impressions, cpm:currentForm.cpm, er:currentForm.er, cpe:currentForm.cpe, tag:currentForm.tag, is_baseline: currentForm.is_baseline ?? 1, tweets: currentForm.tweets ?? 0, slug: currentForm.slug || '' });
+    }
+    return draftProjects;
+  };
+
+  const sendToIframe = (msg) => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(msg, '*');
+    }
+  };
 
   // Send project draft to iframe whenever form changes
   useEffect(() => {
-    if (!iframeRef.current || !iframeRef.current.contentWindow || editing === null) return;
-    const draftProjects = projects.map(p => {
-      const proj = p.id === editing ? form : p;
-      return { name:proj.name, logo:proj.logo, budget:proj.budget, imp:proj.impressions, cpm:proj.cpm, er:proj.er, cpe:proj.cpe, tag:proj.tag, is_baseline: proj.is_baseline ?? 1, tweets: proj.tweets ?? 0 };
-    });
-    if (editing === 'new') {
-      draftProjects.push({ name:form.name, logo:form.logo, budget:form.budget, imp:form.impressions, cpm:form.cpm, er:form.er, cpe:form.cpe, tag:form.tag, is_baseline: form.is_baseline ?? 1, tweets: form.tweets ?? 0 });
-    }
-    iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'projects-draft', projects: draftProjects }, '*');
+    const draft = buildDraftProjects(form, editing);
+    if (draft) sendToIframe({ type: 'lh-preview', action: 'projects-draft', projects: draft });
   }, [form, editing, projects]);
+
+  // Listen for iframe ready signal to replay current draft
+  useEffect(() => {
+    function onReady(e) {
+      if (!e.data || e.data.type !== 'lh-preview-ready') return;
+      const draft = buildDraftProjects(form, editing);
+      if (draft) sendToIframe({ type: 'lh-preview', action: 'projects-draft', projects: draft });
+    }
+    window.addEventListener('message', onReady);
+    return () => window.removeEventListener('message', onReady);
+  }, [form, editing, projects]);
+
+  const cancelEdit = () => {
+    setEditing(null);
+    sendToIframe({ type: 'lh-preview', action: 'projects-clear' });
+  };
 
   const save = async () => {
     if (editing === 'new') {
@@ -270,6 +322,7 @@ function ProjectsPage() {
         <h3>{editing==='new'?'添加项目':'编辑项目'}</h3>
         <div className="form-row">
           <div className="form-group"><label>项目名称</label><input value={form.name||''} onChange={e=>setForm({...form,name:e.target.value})} /></div>
+          <div className="form-group"><label>Slug（稳定标识）</label><input value={form.slug||''} onChange={e=>setForm({...form,slug:e.target.value})} placeholder="如 portals" disabled={editing !== 'new' && !!form.slug} />{editing !== 'new' && !!form.slug && <div style={{fontSize:11,color:'#888',marginTop:4}}>已有 slug 不可修改</div>}</div>
           <div className="form-group"><label>Logo 路径</label><input value={form.logo||''} onChange={e=>setForm({...form,logo:e.target.value})} /></div>
         </div>
         <div className="form-row">
@@ -286,7 +339,7 @@ function ProjectsPage() {
           <div className="form-group"><label>推文数</label><input type="number" value={form.tweets||0} onChange={e=>setForm({...form,tweets:+e.target.value})} /></div>
           <div className="form-group"><label>进入基准</label><select value={form.is_baseline??1} onChange={e=>setForm({...form,is_baseline:+e.target.value})}><option value={1}>是</option><option value={0}>否</option></select></div>
         </div>
-        <div className="btn-group"><button className="btn btn-primary" onClick={save}>保存</button><button className="btn btn-ghost" onClick={()=>setEditing(null)}>取消</button></div>
+        <div className="btn-group"><button className="btn btn-primary" onClick={save}>保存</button><button className="btn btn-ghost" onClick={cancelEdit}>取消</button></div>
       </div>}
     </div>
     {showPreview && <div className="i18n-preview-col">
@@ -414,24 +467,56 @@ function IPCasesPage() {
     setTextEdits(prev => ({ ...prev, [lang]: { ...(prev[lang]||{}), [key]: val } }));
   };
 
-  // Send IP draft to iframe whenever edits change
-  useEffect(() => {
-    if (!iframeRef.current || !iframeRef.current.contentWindow || !caseData) return;
-    const drafts = {
+  const sendToIpIframe = useCallback((msg) => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(msg, '*');
+    }
+  }, []);
+
+  // Build current IP draft snapshot
+  const buildIpDraft = useCallback(() => {
+    if (!caseData) return null;
+    return {
       zh: { ...(caseData.texts?.zh || {}), ...(textEdits.zh || {}) },
       en: { ...(caseData.texts?.en || {}), ...(textEdits.en || {}) },
     };
-    iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'ip-draft', drafts }, '*');
-    iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'i18n-draft', drafts }, '*');
-  }, [textEdits, caseData]);
+  }, [caseData, textEdits]);
+
+  // Send IP draft to iframe whenever edits change
+  useEffect(() => {
+    const drafts = buildIpDraft();
+    if (!drafts) return;
+    sendToIpIframe({ type: 'lh-preview', action: 'ip-draft', drafts, slug: caseData?.slug, status: caseData?.status });
+    sendToIpIframe({ type: 'lh-preview', action: 'i18n-draft', drafts });
+  }, [textEdits, caseData, sendToIpIframe, buildIpDraft]);
+
+  // Listen for iframe ready signal to replay current draft
+  useEffect(() => {
+    function onReady(e) {
+      if (!e.data || e.data.type !== 'lh-preview-ready') return;
+      const drafts = buildIpDraft();
+      if (!drafts) return;
+      sendToIpIframe({ type: 'lh-preview', action: 'ip-draft', drafts, slug: caseData?.slug, status: caseData?.status });
+      sendToIpIframe({ type: 'lh-preview', action: 'i18n-draft', drafts });
+      sendToIpIframe({ type: 'lh-preview', action: 'set-lang', lang: previewLang });
+    }
+    window.addEventListener('message', onReady);
+    return () => window.removeEventListener('message', onReady);
+  }, [caseData, textEdits, previewLang, sendToIpIframe, buildIpDraft]);
 
   // Send lang to iframe
   useEffect(() => {
-    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
-    iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'set-lang', lang: previewLang }, '*');
-  }, [previewLang]);
+    sendToIpIframe({ type: 'lh-preview', action: 'set-lang', lang: previewLang });
+  }, [previewLang, sendToIpIframe]);
 
   const REQUIRED_FOR_PUBLISH = ['h2_a', 'h2_b', 'name', 'handle', 'lede'];
+
+  const closeIPEditor = () => {
+    sendToIpIframe({ type: 'lh-preview', action: 'clear-draft' });
+    setEditing(null);
+    setCaseData(null);
+    setTextEdits({});
+  };
 
   const save = async () => {
     if (!caseData.slug || caseData.slug === 'new-case') { toast('请修改 Slug 为有意义的标识'); return; }
@@ -461,7 +546,7 @@ function IPCasesPage() {
         await api(`/ip-cases/${editing}`, { method: 'PUT', body: JSON.stringify({ slug: caseData.slug, status: caseData.status }) });
         toast('案例已更新');
       }
-      setEditing(null); load();
+      closeIPEditor(); load();
     } catch (err) { toast('保存失败：' + err.message); }
   };
 
@@ -513,7 +598,7 @@ function IPCasesPage() {
           <button className={`mode-btn ${previewLang==='en'?'active':''}`} onClick={()=>setPreviewLang('en')}>EN</button>
           <span style={{width:1,height:20,background:'#555',margin:'0 4px'}} />
           <button className="btn btn-primary btn-sm" onClick={save}>保存</button>
-          <button className="mode-btn" onClick={()=>setEditing(null)}>关闭</button>
+          <button className="mode-btn" onClick={closeIPEditor}>关闭</button>
         </div>
       </div>
       <div className={`ip-editor-body mode-${viewMode}`}>
@@ -568,7 +653,7 @@ function IPCasesPage() {
 
           <div className="btn-group" style={{paddingBottom:40}}>
             <button className="btn btn-primary" onClick={save}>保存</button>
-            <button className="btn btn-ghost" onClick={()=>setEditing(null)}>关闭</button>
+            <button className="btn btn-ghost" onClick={closeIPEditor}>关闭</button>
           </div>
         </div>
         <div className="ip-editor-preview">

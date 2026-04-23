@@ -1,14 +1,14 @@
 /* Lighthouse — part 2: KPI · Winners · Stars · ImageDivider */
 const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveStats: deriveStats2, buildStatsVars: buildStatsVars2, fmt: fmt2, useT: useT2, tpl: tpl2 } = window.App_Part1;
 
-// Curated star samples — fixed set matching hand-written narratives in i18n
+// Curated star samples — bound to stable slug, not mutable display name
 const CURATED_STARS = [
-  { name: "Portals",          slotKey: "s1" },
-  { name: "zkVerify",         slotKey: "s2" },
-  { name: "Sentient",         slotKey: "s3" },
-  { name: "HashKey Exchange",  slotKey: "s4" },
+  { slug: "portals",          slotKey: "s1" },
+  { slug: "zkverify",         slotKey: "s2" },
+  { slug: "sentient",         slotKey: "s3" },
+  { slug: "hashkey-exchange",  slotKey: "s4" },
 ];
-const CURATED_STAR_NAMES = new Set(CURATED_STARS.map(s => s.name));
+const CURATED_STAR_SLUGS = new Set(CURATED_STARS.map(s => s.slug));
 
 function KpiSection(){
   const { t } = useT2();
@@ -207,7 +207,7 @@ function StarsSection(){
     const tones = ["ember","teal","ember","teal"];
     const bgs = ["divider-img-2","divider-img-3","divider-img-1","divider-img-4"];
     return CURATED_STARS.map((cs, i) => {
-      const p = P.find(proj => proj.name === cs.name);
+      const p = P.find(proj => (proj.slug || '') === cs.slug);
       const budget = p?.budget || 0;
       const imp = p?.imp || 0;
       const cpm = p?.cpm || 0;
@@ -394,4 +394,4 @@ function IPCard({ caseData, index, t }){
   );
 }
 
-window.App_Part2 = { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, CURATED_STAR_NAMES };
+window.App_Part2 = { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, CURATED_STAR_SLUGS };

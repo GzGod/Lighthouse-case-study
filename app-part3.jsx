@@ -1,6 +1,6 @@
 /* Lighthouse — part 3: Matrix · Why · CTA · App shell */
 const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3 } = window.App_Part1;
-const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, CURATED_STAR_NAMES } = window.App_Part2;
+const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, CURATED_STAR_SLUGS } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
 
@@ -36,7 +36,7 @@ function MatrixSection(){
     else { setSortKey(k); setSortDir("asc"); }
   }
   const arrow = (k)=> sortKey===k ? (sortDir==="asc"?"↑":"↓") : "·";
-  const stars = CURATED_STAR_NAMES;
+  const stars = CURATED_STAR_SLUGS;
 
   return (
     <section id="matrix" className="relative py-28 md:py-36 overflow-hidden">
@@ -103,7 +103,7 @@ function MatrixSection(){
               </thead>
               <tbody>
                 {rows.map((r,i)=>{
-                  const isStar = stars.has(r.name);
+                  const isStar = stars.has(r.slug || '');
                   const isNonBase = r.is_baseline === 0;
                   const tagLabel = r.tag ? (TAG_KEYS[r.tag] ? t(TAG_KEYS[r.tag]) : r.tag) : "—";
                   return (
@@ -147,14 +147,14 @@ function MatrixSection(){
 function ScatterChart({rows, stars, setHovered, tr, ds}){
   if(!R) return <div className="h-full flex items-center justify-center text-[var(--bone-dim)] font-mono text-xs">Loading chart…</div>;
   const {ResponsiveContainer, ScatterChart:RC, CartesianGrid, XAxis, YAxis, Scatter, Tooltip, ZAxis, ReferenceLine, Label} = R;
-  const starData = rows.filter(r=>stars.has(r.name));
-  const otherData = rows.filter(r=>!stars.has(r.name));
+  const starData = rows.filter(r=>stars.has(r.slug || ''));
+  const otherData = rows.filter(r=>!stars.has(r.slug || ''));
   const tip = ({active, payload})=>{
     if(!active || !payload || !payload.length) return null;
     const d = payload[0].payload;
     return (
       <div className="p-4 font-mono text-[11px]" style={{background:"var(--ink)", border:"1px solid var(--rule-strong)", minWidth:220}}>
-        <div className="font-cn font-bold text-[14px] mb-2" style={{color: stars.has(d.name)?"var(--ember)":"var(--teal)"}}>{d.name}</div>
+        <div className="font-cn font-bold text-[14px] mb-2" style={{color: stars.has(d.slug || '')?"var(--ember)":"var(--teal)"}}>{d.name}</div>
         <div className="flex justify-between py-0.5"><span className="text-[var(--bone-dim)]">{tr("matrix.tip.budget")}</span><span className="tnum">{d.budget.toLocaleString()} USDC</span></div>
         <div className="flex justify-between py-0.5"><span className="text-[var(--bone-dim)]">{tr("matrix.tip.imp")}</span><span className="tnum">{d.imp.toLocaleString()}</span></div>
         <div className="flex justify-between py-0.5"><span className="text-[var(--bone-dim)]">{tr("matrix.tip.cpm")}</span><span className="tnum">{d.cpm.toFixed(2)} USDC</span></div>
@@ -166,7 +166,7 @@ function ScatterChart({rows, stars, setHovered, tr, ds}){
   const cell = (p, color)=>{
     const {cx, cy, payload} = p;
     const rr = Math.max(6, Math.min(34, Math.sqrt(payload.imp/1000)*1.05));
-    const isStar = stars.has(payload.name);
+    const isStar = stars.has(payload.slug || '');
     return (
       <g>
         <circle cx={cx} cy={cy} r={rr+10} fill={color} opacity={isStar?0.12:0.05}/>
