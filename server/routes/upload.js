@@ -16,22 +16,21 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-module.exports = function(db) {
-  router.post('/', authMiddleware, upload.single('file'), (req, res) => {
+module.exports = function(pool) {
+  router.post('/', authMiddleware, upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file' });
     const relPath = `assets/uploads/${req.file.filename}`;
-    db.prepare('INSERT INTO images (filename, original_name, path) VALUES (?, ?, ?)')
-      .run(req.file.filename, req.file.originalname, relPath);
+    await pool.query('INSERT INTO images (filename, original_name, path) VALUES ($1,$2,$3)', [req.file.filename, req.file.originalname, relPath]);
     res.json({ path: relPath, filename: req.file.filename });
   });
 
-  router.get('/', authMiddleware, (req, res) => {
-    const rows = db.prepare('SELECT * FROM images ORDER BY uploaded_at DESC').all();
+  router.get('/', authMiddleware, async (req, res) => {
+    const { rows } = await pool.query('SELECT * FROM images ORDER BY uploaded_at DESC');
     res.json(rows);
   });
 
-  router.delete('/:id', authMiddleware, (req, res) => {
-    db.prepare('DELETE FROM images WHERE id = ?').run(req.params.id);
+  router.delete('/:id', authMiddleware, async (req, res) => {
+    await pool.query('DELETE FROM images WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
   });
 

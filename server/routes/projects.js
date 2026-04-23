@@ -2,49 +2,42 @@ const express = require('express');
 const { authMiddleware } = require('../auth');
 const router = express.Router();
 
-module.exports = function(db) {
-  // Public
-  router.get('/', (req, res) => {
-    const rows = db.prepare('SELECT * FROM projects ORDER BY sort_order').all();
+module.exports = function(pool) {
+  router.get('/', async (req, res) => {
+    const { rows } = await pool.query('SELECT * FROM projects ORDER BY sort_order');
     res.json(rows);
   });
 
-  // Admin: create
-  router.post('/', authMiddleware, (req, res) => {
+  router.post('/', authMiddleware, async (req, res) => {
     const { name, logo, budget, impressions, cpm, er, cpe, tag, is_baseline } = req.body;
-    const maxOrder = db.prepare('SELECT MAX(sort_order) as m FROM projects').get().m || 0;
-    const result = db.prepare(
-      'INSERT INTO projects (name, logo, budget, impressions, cpm, er, cpe, tag, is_baseline, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?)'
-    ).run(name, logo || '', budget || 0, impressions || 0, cpm || 0, er || 0, cpe || 0, tag || '', is_baseline ?? 1, maxOrder + 1);
-    res.json({ id: result.lastInsertRowid });
+    const { rows: mx } = await pool.query('SELECT COALESCE(MAX(sort_order),0) as m FROM projects');
+    const { rows } = await pool.query(
+      'INSERT INTO projects (name,logo,budget,impressions,cpm,er,cpe,tag,is_baseline,sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',
+      [name, logo||'', budget||0, impressions||0, cpm||0, er||0, cpe||0, tag||'', is_baseline??1, mx[0].m+1]
+    );
+    res.json({ id: rows[0].id });
   });
 
-  // Admin: update
-  router.put('/:id', authMiddleware, (req, res) => {
-    const fields = ['name', 'logo', 'budget', 'impressions', 'cpm', 'er', 'cpe', 'tag', 'is_baseline', 'sort_order'];
-    const sets = [];
-    const vals = [];
+  router.put('/:id', authMiddleware, async (req, res) => {
+    const fields = ['name','logo','budget','impressions','cpm','er','cpe','tag','is_baseline','sort_order'];
+    const sets = []; const vals = []; let idx = 1;
     for (const f of fields) {
-      if (req.body[f] !== undefined) { sets.push(`${f} = ?`); vals.push(req.body[f]); }
+      if (req.body[f] !== undefined) { sets.push(`${f} = $${idx}`); vals.push(req.body[f]); idx++; }
     }
-    if (sets.length === 0) return res.status(400).json({ error: 'No fields' });
+    if (!sets.length) return res.status(400).json({ error: 'No fields' });
     vals.push(req.params.id);
-    db.prepare(`UPDATE projects SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+    await pool.query(`UPDATE projects SET ${sets.join(', ')} WHERE id = $${idx}`, vals);
     res.json({ ok: true });
   });
 
-  // Admin: delete
-  router.delete('/:id', authMiddleware, (req, res) => {
-    db.prepare('DELETE FROM projects WHERE id = ?').run(req.params.id);
+  router.delete('/:id', authMiddleware, async (req, res) => {
+    await pool.query('DELETE FROM projects WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
   });
 
-  // Admin: reorder
-  router.put('/reorder/batch', authMiddleware, (req, res) => {
-    const { order } = req.body; // [{id, sort_order}]
-    const stmt = db.prepare('UPDATE projects SET sort_order = ? WHERE id = ?');
-    const tx = db.transaction(() => { for (const o of order) stmt.run(o.sort_order, o.id); });
-    tx();
+  router.put('/reorder/batch', authMiddleware, async (req, res) => {
+    const { order } = req.body;
+    for (const o of order) await pool.query('UPDATE projects SET sort_order = $1 WHERE id = $2', [o.sort_order, o.id]);
     res.json({ ok: true });
   });
 

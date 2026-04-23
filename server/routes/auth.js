@@ -3,11 +3,12 @@ const bcrypt = require('bcryptjs');
 const { signToken } = require('../auth');
 const router = express.Router();
 
-module.exports = function(db) {
-  router.post('/login', (req, res) => {
+module.exports = function(pool) {
+  router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+    const { rows } = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const user = rows[0];
     if (!user || !bcrypt.compareSync(password, user.password_hash)) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -19,14 +20,14 @@ module.exports = function(db) {
     res.json({ id: req.user.id, username: req.user.username });
   });
 
-  router.put('/password', require('../auth').authMiddleware, (req, res) => {
+  router.put('/password', require('../auth').authMiddleware, async (req, res) => {
     const { oldPassword, newPassword } = req.body;
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-    if (!bcrypt.compareSync(oldPassword, user.password_hash)) {
+    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
+    if (!bcrypt.compareSync(oldPassword, rows[0].password_hash)) {
       return res.status(400).json({ error: 'Wrong current password' });
     }
     const hash = bcrypt.hashSync(newPassword, 10);
-    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, req.user.id);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
     res.json({ ok: true });
   });
 
