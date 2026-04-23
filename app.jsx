@@ -10,7 +10,7 @@ function loadProjectsFromAPI() {
   if (!_projectsReady) {
     _projectsReady = fetch('/api/projects').then(r => r.ok ? r.json() : null).then(data => {
       if (data && data.length) {
-        PROJECTS = data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag, is_baseline: p.is_baseline ?? 1 }));
+        PROJECTS = data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag, is_baseline: p.is_baseline ?? 1, tweets: p.tweets ?? 0 }));
       }
       return PROJECTS;
     }).catch(() => PROJECTS);
@@ -29,6 +29,8 @@ function deriveStats(projects) {
   const totalImp = base.reduce((s, p) => s + (p.imp || 0), 0);
   const avgCpm = totalImp > 0 ? (totalBudget / totalImp * 1000) : 0;
   const totalEng = base.reduce((s, p) => s + Math.round((p.imp || 0) * (p.er || 0) / 100), 0);
+  const baselineTweets = base.reduce((s, p) => s + (p.tweets || 0), 0);
+  const totalTweets = projects.reduce((s, p) => s + (p.tweets || 0), 0);
   const avgEr = totalImp > 0 ? (totalEng / totalImp * 100) : 0;
   const avgCpe = totalEng > 0 ? (totalBudget / totalEng) : 0;
   const peakEr = Math.max(...projects.map(p => p.er || 0));
@@ -39,7 +41,7 @@ function deriveStats(projects) {
   const lowestCpeProject = base.find(p => p.cpe === lowestCpe);
   const maxImp = Math.max(...base.map(p => p.imp || 0));
   const maxImpProject = base.find(p => p.imp === maxImp);
-  return { totalBudget, totalImp, avgCpm, avgEr, avgCpe, peakEr, peakErProject, lowestCpm, lowestCpmProject, lowestCpe, lowestCpeProject, maxImp, maxImpProject, baselineCount: base.length, totalEng };
+  return { totalBudget, totalImp, avgCpm, avgEr, avgCpe, peakEr, peakErProject, lowestCpm, lowestCpmProject, lowestCpe, lowestCpeProject, maxImp, maxImpProject, baselineCount: base.length, totalEng, baselineTweets, totalTweets };
 }
 
 function buildStatsVars(projects, stats) {
@@ -51,6 +53,8 @@ function buildStatsVars(projects, stats) {
     totalBudgetLabel: budgetK,
     totalImpFmt: new Intl.NumberFormat('en-US').format(stats.totalImp),
     totalImpLabel: impM,
+    totalTweets: stats.totalTweets,
+    baselineTweets: stats.baselineTweets,
     peakErWho: stats.peakErProject?.name || '—',
     lowestCpmWho: stats.lowestCpmProject?.name || '—',
     lowestCpeWho: stats.lowestCpeProject?.name || '—',
