@@ -1,5 +1,5 @@
 /* Lighthouse — part 3: Matrix · Why · CTA · App shell */
-const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, fmt: fmt3, useT: useT3, LangProvider: LP3 } = window.App_Part1;
+const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3 } = window.App_Part1;
 const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
@@ -17,6 +17,8 @@ function MatrixSection(){
   const { t } = useT3();
   const P3 = useProjects3();
   const ds = React.useMemo(() => deriveStats3(P3), [P3]);
+  const sv = React.useMemo(() => buildStatsVars3(P3, ds), [P3, ds]);
+  const tp = (k) => tpl3(t(k), sv);
   const [sortKey, setSortKey] = React.useState("cpm");
   const [sortDir, setSortDir] = React.useState("asc");
   const [hovered, setHovered] = React.useState(null);
@@ -45,7 +47,7 @@ function MatrixSection(){
           <div className="md:col-span-2 kicker">{t("matrix.kicker")}</div>
           <div className="md:col-span-10">
             <h2 className="font-display font-black leading-[1.02]" style={{fontSize:"clamp(32px, 5vw, 68px)", letterSpacing:"-0.015em"}}>
-              {t("matrix.h2_a")}<span className="text-[var(--teal)] teal-glow">{t("matrix.h2_b")}</span>
+              {tp("matrix.h2_a")}<span className="text-[var(--teal)] teal-glow">{t("matrix.h2_b")}</span>
             </h2>
             <p className="mt-6 max-w-2xl font-cn text-[17px] leading-[1.75] text-[var(--bone-dim)]">{t("matrix.p")}</p>
           </div>
@@ -65,7 +67,7 @@ function MatrixSection(){
             <ScatterChart rows={P3.filter(r=>r.is_baseline !== 0)} stars={stars} setHovered={setHovered} tr={t} ds={ds}/>
           </div>
           <div className="mt-3 flex items-center justify-between gap-4 text-[11px] font-mono tracking-[0.14em] text-[var(--bone-dim)]">
-            <div>{t("matrix.scatter_note")}</div>
+            <div>{tp("matrix.scatter_note")}</div>
             <div className="text-[var(--bone-dim)]">{t("matrix.kaio_note")}</div>
           </div>
           <div className="mt-5 hairline"/>
@@ -80,7 +82,7 @@ function MatrixSection(){
         <Reveal3 delay={2} className="mt-16">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <div className="kicker">{t("matrix.table.title")}</div>
+              <div className="kicker">{tp("matrix.table.title")}</div>
               <div className="mt-2 font-display text-[22px] font-bold">{t("matrix.table.sub")}</div>
             </div>
             <div className="font-mono text-[11px] tracking-[0.2em] text-[var(--bone-dim)] uppercase hide-sm">{t("matrix.table.compiled")}</div>
@@ -202,7 +204,11 @@ function ScatterChart({rows, stars, setHovered, tr, ds}){
 
 function WhyCta(){
   const { t } = useT3();
-  const whys = ["w1","w2","w3","w4","w5","w6"].map((k,i)=>({n:String(i+1).padStart(2,"0"), t:t("why."+k+".t"), d:t("why."+k+".d")}));
+  const P3 = useProjects3();
+  const ds = React.useMemo(() => deriveStats3(P3), [P3]);
+  const sv = React.useMemo(() => buildStatsVars3(P3, ds), [P3, ds]);
+  const tp = (k) => tpl3(t(k), sv);
+  const whys = ["w1","w2","w3","w4","w5","w6"].map((k,i)=>({n:String(i+1).padStart(2,"0"), t:t("why."+k+".t"), d:tp("why."+k+".d")}));
   return (
     <>
       <section id="why" className="relative py-28 md:py-36 overflow-hidden">

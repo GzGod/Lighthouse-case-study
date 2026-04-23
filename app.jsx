@@ -1,6 +1,6 @@
 /* Lighthouse Case Study — part 1: helpers + Nav + Hero + About */
 const { useEffect, useRef, useState, useMemo } = React;
-const { LangProvider, useT } = window.i18n;
+const { LangProvider, useT, tpl } = window.i18n;
 
 let PROJECTS = JSON.parse(document.getElementById('projects-data').textContent);
 let _projectsReady = null; // Promise that resolves when API data is loaded
@@ -40,6 +40,20 @@ function deriveStats(projects) {
   const maxImp = Math.max(...base.map(p => p.imp || 0));
   const maxImpProject = base.find(p => p.imp === maxImp);
   return { totalBudget, totalImp, avgCpm, avgEr, avgCpe, peakEr, peakErProject, lowestCpm, lowestCpmProject, lowestCpe, lowestCpeProject, maxImp, maxImpProject, baselineCount: base.length, totalEng };
+}
+
+function buildStatsVars(projects, stats) {
+  const impM = stats.totalImp >= 1e6 ? Math.round(stats.totalImp / 1e5) / 10 + 'M' : new Intl.NumberFormat('en-US').format(stats.totalImp);
+  return {
+    totalCount: projects.length,
+    baselineCount: stats.baselineCount,
+    totalImpFmt: new Intl.NumberFormat('en-US').format(stats.totalImp),
+    totalImpLabel: impM,
+    peakErWho: stats.peakErProject?.name || '—',
+    lowestCpmWho: stats.lowestCpmProject?.name || '—',
+    lowestCpeWho: stats.lowestCpeProject?.name || '—',
+    maxImpWho: stats.maxImpProject?.name || '—',
+  };
 }
 
 // Hook for components that need to re-render when projects load from API
@@ -144,6 +158,10 @@ function Nav(){
 
 function Footer(){
   const { t } = useT();
+  const P = useProjects();
+  const stats = useMemo(() => deriveStats(P), [P]);
+  const v = useMemo(() => buildStatsVars(P, stats), [P, stats]);
+  const tp = (k) => tpl(t(k), v);
   return (
     <footer className="rule-t">
       <div className="max-w-[1360px] mx-auto px-6 md:px-10 py-14">
@@ -165,7 +183,7 @@ function Footer(){
         </div>
         <div className="mt-12 pt-6 rule-t flex flex-col md:flex-row justify-between gap-3 text-[11px] font-mono uppercase tracking-[0.22em] text-[var(--bone-dim)]">
           <span>{t("footer.copy")}</span>
-          <span>{t("footer.stats")}</span>
+          <span>{tp("footer.stats")}</span>
         </div>
       </div>
     </footer>
@@ -176,7 +194,9 @@ function Hero(){
   const { t } = useT();
   const P = useProjects();
   const stats = useMemo(() => deriveStats(P), [P]);
-  const sub = t("hero.sub");
+  const v = useMemo(() => buildStatsVars(P, stats), [P, stats]);
+  const tp = (k) => tpl(t(k), v);
+  const sub = tpl(t("hero.sub"), v);
   return (
     <section id="top" className="relative min-h-[100vh] flex flex-col overflow-hidden">
       <div className="absolute inset-0 hero-img"/>
@@ -187,7 +207,7 @@ function Hero(){
         <div className="max-w-[1360px] mx-auto w-full px-6 md:px-10">
           <Reveal className="absolute top-24 left-6 md:left-10">
             <div className="kicker">{t("hero.kicker_tl")}</div>
-            <div className="mt-2 text-[11px] font-mono tnum text-[var(--bone-dim)]">{t("hero.stats_tl")}</div>
+            <div className="mt-2 text-[11px] font-mono tnum text-[var(--bone-dim)]">{tp("hero.stats_tl")}</div>
           </Reveal>
           <Reveal className="absolute top-24 right-6 md:right-10 text-right hide-sm" delay={1}>
             <div className="kicker">{t("hero.kicker_tr")}</div>
@@ -216,20 +236,20 @@ function Hero(){
               <div className="mt-3 font-display font-black bone-glow tnum" style={{fontSize:"clamp(36px, 5.5vw, 78px)", letterSpacing:"-0.02em"}}>
                 <CountUp to={stats.totalImp} />
               </div>
-              <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{t("hero.stat2.u")}</div>
+              <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{tp("hero.stat2.u")}</div>
             </Reveal>
             <Reveal delay={4} className="rule-l pl-4 md:pl-10">
               <div className="kicker">{t("hero.stat3.k")}</div>
               <div className="mt-3 font-display font-black teal-glow tnum" style={{fontSize:"clamp(36px, 5.5vw, 78px)", color:"var(--teal)", letterSpacing:"-0.02em"}}>
                 <CountUp to={stats.peakEr} decimals={2} suffix="%" />
               </div>
-              <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{t("hero.stat3.u")}</div>
+              <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{tp("hero.stat3.u")}</div>
             </Reveal>
           </div>
           <Reveal delay={3} className="mt-10 flex flex-wrap items-center gap-4">
             <a href="#about" className="btn-ember px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:brightness-110 transition">{t("hero.cta1")}</a>
             <a href="#cta" className="btn-bone px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:text-[var(--ember)] transition">{t("hero.cta2")}</a>
-            <div className="text-[11px] font-mono tracking-[0.18em] text-[var(--bone-dim)] ml-2">{t("hero.foot")}</div>
+            <div className="text-[11px] font-mono tracking-[0.18em] text-[var(--bone-dim)] ml-2">{tp("hero.foot")}</div>
           </Reveal>
           <div className="hidden md:flex items-center gap-3 mt-16 text-[var(--bone-dim)]">
             <div className="h-[1px] w-16" style={{background:"var(--rule-strong)"}}/>
@@ -243,6 +263,10 @@ function Hero(){
 
 function AboutSection(){
   const { t } = useT();
+  const P = useProjects();
+  const stats = useMemo(() => deriveStats(P), [P]);
+  const v = useMemo(() => buildStatsVars(P, stats), [P, stats]);
+  const tp = (k) => tpl(t(k), v);
   const caps = [
     {n:"01", key:"cap1"},{n:"02", key:"cap2"},{n:"03", key:"cap3"},{n:"04", key:"cap4"},
   ];
@@ -277,7 +301,7 @@ function AboutSection(){
         </div>
         <Reveal delay={2} className="mt-10 grid md:grid-cols-3 gap-6 text-[13px] font-mono uppercase tracking-[0.18em] text-[var(--bone-dim)]">
           <div>{t("about.f1")}</div>
-          <div>{t("about.f2")}</div>
+          <div>{tp("about.f2")}</div>
           <div>{t("about.f3")}</div>
         </Reveal>
       </div>
@@ -285,4 +309,4 @@ function AboutSection(){
   );
 }
 
-window.App_Part1 = { Nav, Footer, Hero, AboutSection, CountUp, Reveal, PROJECTS, getProjects, useProjects, loadProjectsFromAPI, deriveStats, fmt, useT, LangProvider };
+window.App_Part1 = { Nav, Footer, Hero, AboutSection, CountUp, Reveal, PROJECTS, getProjects, useProjects, loadProjectsFromAPI, deriveStats, buildStatsVars, fmt, useT, LangProvider, tpl };

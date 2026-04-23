@@ -1,21 +1,23 @@
 /* Lighthouse — part 2: KPI · Winners · Stars · ImageDivider */
-const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveStats: deriveStats2, fmt: fmt2, useT: useT2 } = window.App_Part1;
+const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveStats: deriveStats2, buildStatsVars: buildStatsVars2, fmt: fmt2, useT: useT2, tpl: tpl2 } = window.App_Part1;
 
 function KpiSection(){
   const { t } = useT2();
   const P = useProjects2();
   const ds = React.useMemo(() => deriveStats2(P), [P]);
+  const v = React.useMemo(() => buildStatsVars2(P, ds), [P, ds]);
+  const tp = (k) => tpl2(t(k), v);
   const kpis = [
-    {k:t("kpi.k1"), v:ds.totalBudget, d:0, suf:"", unit:t("kpi.k1u"), note:t("kpi.k1n"), tone:"ember"},
+    {k:t("kpi.k1"), v:ds.totalBudget, d:0, suf:"", unit:t("kpi.k1u"), note:tp("kpi.k1n"), tone:"ember"},
     {k:t("kpi.k2"), v:ds.totalImp, d:0, suf:"", unit:t("kpi.k2u"), note:t("kpi.k2n"), tone:"bone"},
     {k:t("kpi.k3"), v:ds.totalEng, d:0, suf:"", unit:t("kpi.k3u"), note:t("kpi.k3n"), tone:"bone"},
     {k:t("kpi.k4"), v:ds.avgCpm, d:2, suf:"", unit:t("kpi.k4u"), note:t("kpi.k4n"), tone:"ember"},
-    {k:t("kpi.k5"), v:ds.lowestCpm, d:2, suf:"", unit:t("kpi.k5u"), note:t("kpi.k5n"), tone:"teal"},
-    {k:t("kpi.k6"), v:ds.peakEr, d:2, suf:"%", unit:t("kpi.k6u"), note:t("kpi.k6n"), tone:"teal"},
+    {k:t("kpi.k5"), v:ds.lowestCpm, d:2, suf:"", unit:t("kpi.k5u"), note:tp("kpi.k5n"), tone:"teal"},
+    {k:t("kpi.k6"), v:ds.peakEr, d:2, suf:"%", unit:t("kpi.k6u"), note:tp("kpi.k6n"), tone:"teal"},
   ];
   const subs = [
-    {k:t("kpi.sub1.k"), v:ds.lowestCpe.toFixed(2), unit:t("kpi.sub1.u"), who:t("kpi.sub1.who")},
-    {k:t("kpi.sub2.k"), v:fmt2(ds.maxImp), unit:t("kpi.sub2.u"), who:t("kpi.sub2.who")},
+    {k:t("kpi.sub1.k"), v:ds.lowestCpe.toFixed(2), unit:t("kpi.sub1.u"), who:tp("kpi.sub1.who")},
+    {k:t("kpi.sub2.k"), v:fmt2(ds.maxImp), unit:t("kpi.sub2.u"), who:tp("kpi.sub2.who")},
   ];
   return (
     <section id="kpi" className="relative py-28 md:py-36 overflow-hidden">
@@ -28,7 +30,7 @@ function KpiSection(){
             <h2 className="font-display font-black leading-[1.02]" style={{fontSize:"clamp(32px, 5vw, 68px)", letterSpacing:"-0.015em"}}>
               {t("kpi.h2_a")}<span className="text-[var(--ember)] ember-glow">{t("kpi.h2_b")}</span>
             </h2>
-            <p className="mt-6 max-w-2xl font-cn text-[17px] leading-[1.75] text-[var(--bone-dim)]">{t("kpi.p")}</p>
+            <p className="mt-6 max-w-2xl font-cn text-[17px] leading-[1.75] text-[var(--bone-dim)]">{tp("kpi.p")}</p>
           </div>
         </Reveal2>
         <div className="mt-16 grid grid-cols-2 lg:grid-cols-3 gap-px rule-t rule-b rule-l" style={{borderRight:"1px solid var(--rule)", background:"var(--rule)"}}>
