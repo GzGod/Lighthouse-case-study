@@ -24,7 +24,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .cms-sidebar .logout { position:absolute; bottom:20px; left:20px; color:#888; font-size:12px; cursor:pointer; background:none; border:none; }
 .cms-sidebar .logout:hover { color:#fff; }
 
-.cms-main { margin-left:220px; flex:1; padding:32px 40px; max-width:1200px; }
+.cms-main { margin-left:220px; flex:1; padding:32px 40px; max-width:none; }
 .cms-main h1 { font-size:22px; margin-bottom:6px; }
 .cms-main .page-desc { font-size:13px; color:#888; margin-bottom:28px; }
 
@@ -122,3 +122,15 @@ tr:hover td { background:#fafaf8; }
 .ip-preview-container .hairline { height:1px; background:linear-gradient(to right, transparent, var(--rule-strong), transparent); }
 .ip-preview-container .reveal { opacity:1 !important; transform:none !important; }
 .ip-preview-container .ring-soft { box-shadow:0 0 0 1px var(--rule-strong); }
+
+/* ── Split layout for i18n / projects with preview ── */
+.i18n-layout { display:flex; gap:0; }
+.i18n-layout .i18n-editor-col { flex:1; min-width:0; max-width:100%; }
+.i18n-layout.with-preview .i18n-editor-col { flex:0 0 55%; max-width:55%; padding-right:20px; }
+.i18n-layout.with-preview .i18n-preview-col { flex:0 0 45%; max-width:45%; position:sticky; top:0; height:calc(100vh - 64px); display:flex; flex-direction:column; }
+.i18n-preview-col .preview-label { font-size:11px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:.3px; padding:8px 12px; background:#1a1a1a; color:#ccc; flex-shrink:0; }
+.preview-iframe { width:100%; flex:1; border:none; background:#07080a; min-height:0; }
+
+/* IP editor preview uses iframe now */
+.ip-editor-preview { overflow:hidden; }
+.ip-editor-preview .preview-iframe { width:100%; height:100%; border:none; }

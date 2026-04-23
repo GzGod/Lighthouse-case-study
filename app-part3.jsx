@@ -1,6 +1,6 @@
 /* Lighthouse — part 3: Matrix · Why · CTA · App shell */
 const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3 } = window.App_Part1;
-const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider } = window.App_Part2;
+const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, CURATED_STAR_NAMES } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
 
@@ -36,7 +36,7 @@ function MatrixSection(){
     else { setSortKey(k); setSortDir("asc"); }
   }
   const arrow = (k)=> sortKey===k ? (sortDir==="asc"?"↑":"↓") : "·";
-  const stars = new Set(["Portals","zkVerify","Sentient","HashKey Exchange"]);
+  const stars = CURATED_STAR_NAMES;
 
   return (
     <section id="matrix" className="relative py-28 md:py-36 overflow-hidden">
@@ -189,10 +189,10 @@ function ScatterChart({rows, stars, setHovered, tr, ds}){
         </YAxis>
         <ZAxis range={[60,1200]} />
         <ReferenceLine x={ds.avgCpm} stroke="var(--ember)" strokeDasharray="3 5" strokeOpacity={0.6}>
-          <Label value={tr("matrix.ref_cpm")} position="top" fill="var(--ember-soft)" fontFamily="JetBrains Mono" fontSize={10}/>
+          <Label value={`${tr("matrix.col.cpm")} ${ds.avgCpm.toFixed(2)}`} position="top" fill="var(--ember-soft)" fontFamily="JetBrains Mono" fontSize={10}/>
         </ReferenceLine>
         <ReferenceLine y={ds.avgEr} stroke="var(--teal)" strokeDasharray="3 5" strokeOpacity={0.5}>
-          <Label value={tr("matrix.ref_er")} position="right" fill="var(--teal)" fontFamily="JetBrains Mono" fontSize={10}/>
+          <Label value={`${tr("matrix.col.er")} ${ds.avgEr.toFixed(2)}%`} position="right" fill="var(--teal)" fontFamily="JetBrains Mono" fontSize={10}/>
         </ReferenceLine>
         <Tooltip content={tip} cursor={{stroke:"var(--rule-strong)", strokeDasharray:"2 4"}}/>
         <Scatter data={otherData} shape={(p)=>cell(p, "#6fb7c1")} />
@@ -256,11 +256,11 @@ function WhyCta(){
             </div>
             <div className="mt-14 grid grid-cols-3 max-w-xl mx-auto text-center gap-6 rule-t pt-8">
               <div>
-                <div className="font-display font-bold tnum text-[28px] ember-glow" style={{color:"var(--ember-soft)"}}>{t("cta.s1.v")}</div>
+                <div className="font-display font-bold tnum text-[28px] ember-glow" style={{color:"var(--ember-soft)"}}>{sv.totalBudgetLabel}</div>
                 <div className="kicker mt-1 text-[10px]">{t("cta.s1.k")}</div>
               </div>
               <div className="rule-l">
-                <div className="font-display font-bold tnum text-[28px]">{t("cta.s2.v")}</div>
+                <div className="font-display font-bold tnum text-[28px]">{sv.totalImpLabel}</div>
                 <div className="kicker mt-1 text-[10px]">{t("cta.s2.k")}</div>
               </div>
               <div className="rule-l">

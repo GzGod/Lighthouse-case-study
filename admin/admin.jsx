@@ -1,4 +1,4 @@
-const { useState, useEffect, useCallback, createContext, useContext } = React;
+const { useState, useEffect, useCallback, useRef, createContext, useContext } = React;
 
 const API = window.location.origin + '/api';
 
@@ -22,7 +22,6 @@ function apiUpload(file) {
   return fetch(API + '/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: fd }).then(r => r.json());
 }
 
-// Toast
 const ToastCtx = createContext(() => {});
 function ToastProvider({ children }) {
   const [msg, setMsg] = useState(null);
@@ -30,6 +29,25 @@ function ToastProvider({ children }) {
   return <ToastCtx.Provider value={toast}>{children}{msg && <div className="toast">{msg}</div>}</ToastCtx.Provider>;
 }
 function useToast() { return useContext(ToastCtx); }
+
+/* ── Shared: iframe-based live preview ── */
+function PreviewPane({ src, className }) {
+  return <iframe src={src} className={`preview-iframe ${className||''}`} />;
+}
+
+function usePreviewRef(src) {
+  const ref = useRef(null);
+  const send = useCallback((msg) => {
+    if (ref.current && ref.current.contentWindow) {
+      ref.current.contentWindow.postMessage(msg, '*');
+    }
+  }, []);
+  return { ref, send };
+}
+
+function PreviewFrame({ src, msgRef, className }) {
+  return <iframe ref={msgRef} src={src} className={`preview-iframe ${className||''}`} />;
+}
 
 /* ── Login ── */
 function LoginPage({ onLogin }) {
@@ -67,7 +85,19 @@ function Sidebar({ page, setPage, onLogout }) {
   </aside>;
 }
 
-/* ── I18n Editor ── */
+// Section → anchor mapping for i18n preview scroll
+const SECTION_ANCHORS = {
+  hero: '#top', about: '#about', kpi: '#kpi', win: '#winners',
+  stars: '#stars', matrix: '#matrix', why: '#why', cta: '#cta',
+  nav: '#top', brand: '#top', footer: '#top', div1: '#about', div2: '#about',
+  tag: '#matrix', sample: '#top',
+};
+function sectionAnchor(key) {
+  const prefix = key.split('.')[0];
+  return SECTION_ANCHORS[prefix] || '#top';
+}
+
+/* ── I18n Editor with live preview ── */
 function I18nPage() {
   const toast = useToast();
   const [sections, setSections] = useState([]);
@@ -75,21 +105,42 @@ function I18nPage() {
   const [rows, setRows] = useState([]);
   const [edits, setEdits] = useState({});
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
+  const iframeRef = useRef(null);
 
   useEffect(() => { api('/i18n/sections').then(setSections); }, []);
   useEffect(() => { if (sections.length && !active) setActive(sections[0]); }, [sections]);
   useEffect(() => { if (active) api(`/i18n/section/${active}`).then(r => { setRows(r); setEdits({}); }); }, [active]);
 
   const grouped = {};
-  rows.forEach(r => {
-    if (!grouped[r.key]) grouped[r.key] = {};
-    grouped[r.key][r.lang] = r.value;
-  });
+  rows.forEach(r => { if (!grouped[r.key]) grouped[r.key] = {}; grouped[r.key][r.lang] = r.value; });
   const keys = Object.keys(grouped).sort();
 
   const handleChange = (lang, key, val) => {
     setEdits(prev => ({ ...prev, [`${lang}:${key}`]: { lang, key, value: val } }));
   };
+
+  // Send draft overrides to iframe whenever edits change
+  useEffect(() => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    const drafts = { zh: {}, en: {} };
+    for (const e of Object.values(edits)) {
+      drafts[e.lang][e.key] = e.value;
+    }
+    iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'i18n-draft', drafts }, '*');
+  }, [edits]);
+
+  // Scroll iframe to relevant section when switching tabs
+  useEffect(() => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow || !active) return;
+    const anchor = SECTION_ANCHORS[active] || '#top';
+    setTimeout(() => {
+      try { iframeRef.current.contentWindow.location.hash = anchor; } catch(e) {}
+    }, 300);
+  }, [active]);
+
+  const isIPSection = active === 'ip' || active === 'astra';
+  const previewSrc = isIPSection ? '/Personal%20IP.html' : '/Lighthouse%20Case%20Study.html';
 
   const save = async () => {
     const updates = Object.values(edits);
@@ -99,48 +150,75 @@ function I18nPage() {
     setSaving(false);
     setEdits({});
     toast(`已保存 ${updates.length} 条文案`);
+    if (iframeRef.current) iframeRef.current.src = iframeRef.current.src;
   };
 
-  return <div>
-    <h1>文案编辑</h1>
-    <p className="page-desc">按板块编辑中英文案，修改后点击保存</p>
-    <div className="section-tabs">
-      {sections.map(s => <button key={s} className={`section-tab ${s===active?'active':''}`} onClick={()=>setActive(s)}>{s}</button>)}
-    </div>
-    <div className="card">
+  return <div className={`i18n-layout ${showPreview ? 'with-preview' : ''}`}>
+    <div className="i18n-editor-col">
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <h3 style={{margin:0,border:'none',padding:0}}>{active} · {keys.length} 条</h3>
-        <button className="btn btn-primary" onClick={save} disabled={saving || !Object.keys(edits).length}>
-          {saving ? '保存中...' : `保存修改 (${Object.keys(edits).length})`}
+        <h1 style={{margin:0}}>文案编辑</h1>
+        <button className="btn btn-ghost btn-sm" onClick={()=>setShowPreview(!showPreview)}>
+          {showPreview ? '隐藏预览' : '显示预览'}
         </button>
       </div>
-      {keys.map(k => <div className="i18n-pair" key={k}>
-        <div className="i18n-key">{k}</div>
-        <div className="i18n-val">
-          <div className="lang-tag">中文</div>
-          <textarea value={edits[`zh:${k}`]?.value ?? grouped[k]?.zh ?? ''} onChange={e=>handleChange('zh',k,e.target.value)} rows={1} />
+      <p className="page-desc">按板块编辑中英文案，右侧实时预览</p>
+      <div className="section-tabs">
+        {sections.map(s => <button key={s} className={`section-tab ${s===active?'active':''}`} onClick={()=>setActive(s)}>{s}</button>)}
+      </div>
+      <div className="card">
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+          <h3 style={{margin:0,border:'none',padding:0}}>{active} · {keys.length} 条</h3>
+          <button className="btn btn-primary" onClick={save} disabled={saving || !Object.keys(edits).length}>
+            {saving ? '保存中...' : `保存修改 (${Object.keys(edits).length})`}
+          </button>
         </div>
-        <div className="i18n-val">
-          <div className="lang-tag">English</div>
-          <textarea value={edits[`en:${k}`]?.value ?? grouped[k]?.en ?? ''} onChange={e=>handleChange('en',k,e.target.value)} rows={1} />
-        </div>
-      </div>)}
+        {keys.map(k => <div className="i18n-pair" key={k}>
+          <div className="i18n-key">{k}</div>
+          <div className="i18n-val">
+            <div className="lang-tag">中文</div>
+            <textarea value={edits[`zh:${k}`]?.value ?? grouped[k]?.zh ?? ''} onChange={e=>handleChange('zh',k,e.target.value)} rows={1} />
+          </div>
+          <div className="i18n-val">
+            <div className="lang-tag">English</div>
+            <textarea value={edits[`en:${k}`]?.value ?? grouped[k]?.en ?? ''} onChange={e=>handleChange('en',k,e.target.value)} rows={1} />
+          </div>
+        </div>)}
+      </div>
     </div>
+    {showPreview && <div className="i18n-preview-col">
+      <div className="preview-label">实时预览 · {isIPSection ? 'Personal IP' : '首页'}</div>
+      <iframe ref={iframeRef} src={previewSrc} className="preview-iframe" />
+    </div>}
   </div>;
 }
 
-/* ── Projects Page ── */
+/* ── Projects Page with live preview ── */
 function ProjectsPage() {
   const toast = useToast();
   const [projects, setProjects] = useState([]);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
+  const [showPreview, setShowPreview] = useState(true);
+  const iframeRef = useRef(null);
 
   const load = () => api('/projects').then(setProjects);
   useEffect(() => { load(); }, []);
 
   const openNew = () => { setForm({ name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1 }); setEditing('new'); };
   const openEdit = (p) => { setForm({...p}); setEditing(p.id); };
+
+  // Send project draft to iframe whenever form changes
+  useEffect(() => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow || editing === null) return;
+    const draftProjects = projects.map(p => {
+      const proj = p.id === editing ? form : p;
+      return { name:proj.name, logo:proj.logo, budget:proj.budget, imp:proj.impressions, cpm:proj.cpm, er:proj.er, cpe:proj.cpe, tag:proj.tag, is_baseline: proj.is_baseline ?? 1 };
+    });
+    if (editing === 'new') {
+      draftProjects.push({ name:form.name, logo:form.logo, budget:form.budget, imp:form.impressions, cpm:form.cpm, er:form.er, cpe:form.cpe, tag:form.tag, is_baseline: form.is_baseline ?? 1 });
+    }
+    iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'projects-draft', projects: draftProjects }, '*');
+  }, [form, editing, projects]);
 
   const save = async () => {
     if (editing === 'new') {
@@ -151,37 +229,44 @@ function ProjectsPage() {
       toast('项目已更新');
     }
     setEditing(null); load();
+    setTimeout(() => { if (iframeRef.current) iframeRef.current.src = iframeRef.current.src; }, 200);
   };
 
   const del = async (id) => {
     if (!confirm('确定删除？')) return;
     await api(`/projects/${id}`, { method:'DELETE' });
     toast('已删除'); load();
+    setTimeout(() => { if (iframeRef.current) iframeRef.current.src = iframeRef.current.src; }, 200);
   };
 
-  return <div>
-    <h1>项目管理</h1>
-    <p className="page-desc">管理项目矩阵中的所有项目数据</p>
-    <div style={{marginBottom:16}}><button className="btn btn-primary" onClick={openNew}>+ 添加项目</button></div>
-    <div className="card">
-      <table>
-        <thead><tr><th>项目</th><th>预算</th><th>曝光</th><th>CPM</th><th>互动率</th><th>CPE</th><th>标签</th><th>操作</th></tr></thead>
-        <tbody>{projects.map(p => <tr key={p.id}>
-          <td style={{fontWeight:600}}>{p.name}</td>
-          <td>{p.budget?.toLocaleString()}</td>
-          <td>{p.impressions?.toLocaleString()}</td>
-          <td>{p.cpm?.toFixed(2)}</td>
-          <td>{p.er?.toFixed(2)}%</td>
-          <td>{p.cpe?.toFixed(2)}</td>
-          <td>{p.tag}</td>
-          <td><button className="btn btn-ghost btn-sm" onClick={()=>openEdit(p)}>编辑</button> <button className="btn btn-danger btn-sm" onClick={()=>del(p.id)}>删除</button></td>
-        </tr>)}</tbody>
-      </table>
-    </div>
+  return <div className={`i18n-layout ${showPreview ? 'with-preview' : ''}`}>
+    <div className="i18n-editor-col">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <h1 style={{margin:0}}>项目管理</h1>
+        <button className="btn btn-ghost btn-sm" onClick={()=>setShowPreview(!showPreview)}>
+          {showPreview ? '隐藏预览' : '显示预览'}
+        </button>
+      </div>
+      <p className="page-desc">编辑项目数据，右侧实时预览首页变化</p>
+      <div style={{marginBottom:16}}><button className="btn btn-primary" onClick={openNew}>+ 添加项目</button></div>
+      <div className="card">
+        <table>
+          <thead><tr><th>项目</th><th>预算</th><th>曝光</th><th>CPM</th><th>互动率</th><th>CPE</th><th>标签</th><th>操作</th></tr></thead>
+          <tbody>{projects.map(p => <tr key={p.id} style={editing===p.id?{background:'#fff8f0'}:{}}>
+            <td style={{fontWeight:600}}>{p.name}</td>
+            <td>{p.budget?.toLocaleString()}</td>
+            <td>{p.impressions?.toLocaleString()}</td>
+            <td>{p.cpm?.toFixed(2)}</td>
+            <td>{p.er?.toFixed(2)}%</td>
+            <td>{p.cpe?.toFixed(2)}</td>
+            <td>{p.tag}</td>
+            <td><button className="btn btn-ghost btn-sm" onClick={()=>openEdit(p)}>编辑</button> <button className="btn btn-danger btn-sm" onClick={()=>del(p.id)}>删除</button></td>
+          </tr>)}</tbody>
+        </table>
+      </div>
 
-    {editing !== null && <div className="modal-overlay" onClick={()=>setEditing(null)}>
-      <div className="modal" onClick={e=>e.stopPropagation()}>
-        <h2>{editing==='new'?'添加项目':'编辑项目'}</h2>
+      {editing !== null && <div className="card" style={{marginTop:16,border:'2px solid #ff7a45'}}>
+        <h3>{editing==='new'?'添加项目':'编辑项目'}</h3>
         <div className="form-row">
           <div className="form-group"><label>项目名称</label><input value={form.name||''} onChange={e=>setForm({...form,name:e.target.value})} /></div>
           <div className="form-group"><label>Logo 路径</label><input value={form.logo||''} onChange={e=>setForm({...form,logo:e.target.value})} /></div>
@@ -200,13 +285,16 @@ function ProjectsPage() {
           <div className="form-group"><label>进入基准</label><select value={form.is_baseline??1} onChange={e=>setForm({...form,is_baseline:+e.target.value})}><option value={1}>是</option><option value={0}>否</option></select></div>
         </div>
         <div className="btn-group"><button className="btn btn-primary" onClick={save}>保存</button><button className="btn btn-ghost" onClick={()=>setEditing(null)}>取消</button></div>
-      </div>
+      </div>}
+    </div>
+    {showPreview && <div className="i18n-preview-col">
+      <div className="preview-label">实时预览 · 首页 (Hero / KPI / Winners / Stars / Matrix)</div>
+      <iframe ref={iframeRef} src="/Lighthouse%20Case%20Study.html" className="preview-iframe" />
     </div>}
   </div>;
 }
 
 /* ── IP Cases Page ── */
-// IP Case template: defines all fields grouped by section
 const IP_TEMPLATE_GROUPS = [
   { label: '基本信息', fields: [
     { key: 'badge', zh: '标签（如：灯塔推文引用池 · 2026.04）' },
@@ -253,11 +341,7 @@ const IP_TEMPLATE_GROUPS = [
 function generateTemplateKeys(slug) {
   const texts = { zh: {}, en: {} };
   for (const group of IP_TEMPLATE_GROUPS) {
-    for (const f of group.fields) {
-      const fullKey = `${slug}.${f.key}`;
-      texts.zh[fullKey] = '';
-      texts.en[fullKey] = '';
-    }
+    for (const f of group.fields) { texts.zh[`${slug}.${f.key}`] = ''; texts.en[`${slug}.${f.key}`] = ''; }
   }
   return texts;
 }
@@ -284,58 +368,6 @@ function ImagePicker({ value, onChange }) {
   </div>;
 }
 
-/* ── IP Case Live Preview (reuses real rendering components) ── */
-function IPCasePreview({ slug, textEdits, caseData, previewLang }) {
-  const DICT = window.i18n && window.i18n.DICT;
-  const LangCtx = window.i18n && window.i18n.LangContext;
-  const Renderers = window.IPRenderers;
-
-  // Merge current edits + saved texts into DICT so real components read them via t()
-  React.useEffect(() => {
-    if (!DICT) return;
-    const sources = { zh: { ...(caseData?.texts?.zh || {}), ...(textEdits?.zh || {}) },
-                      en: { ...(caseData?.texts?.en || {}), ...(textEdits?.en || {}) } };
-    for (const [lang, entries] of Object.entries(sources)) {
-      if (!DICT[lang]) DICT[lang] = {};
-      Object.assign(DICT[lang], entries);
-    }
-  });
-
-  if (!DICT || !LangCtx || !Renderers) {
-    return <div style={{padding:40,color:'#888',textAlign:'center',fontFamily:'monospace',fontSize:13}}>预览组件未加载 — 请确认 i18n.jsx 和 personal-ip.jsx 已引入</div>;
-  }
-
-  const lang = previewLang || 'zh';
-  const t = (k) => (DICT[lang] && DICT[lang][k] !== undefined) ? DICT[lang][k] : (DICT.zh[k] ?? k);
-  const setLang = () => {};
-  const ctxValue = { lang, setLang, t };
-
-  // Safe check: if required fields missing, show placeholder
-  const hasMinimum = ['h2_a','h2_b','name'].some(f => {
-    const v = DICT.zh && DICT.zh[`${slug}.${f}`];
-    return v && v.trim();
-  });
-
-  return (
-    <div className="ip-preview-container">
-      {hasMinimum ? (
-        <LangCtx.Provider value={ctxValue}>
-          <Renderers.IPCaseSection slug={slug} index={0} />
-        </LangCtx.Provider>
-      ) : (
-        <div style={{padding:'80px 40px',textAlign:'center'}}>
-          <div style={{fontFamily:'JetBrains Mono,monospace',fontSize:11,letterSpacing:'0.22em',textTransform:'uppercase',color:'#a39e96'}}>
-            填写基本信息后预览将在此显示
-          </div>
-          <div style={{marginTop:12,fontSize:13,color:'#666'}}>
-            至少填写「大标题前半」「大标题高亮」「KOL 名称」中的一项
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function IPCasesPage() {
   const toast = useToast();
   const [cases, setCases] = useState([]);
@@ -344,57 +376,59 @@ function IPCasesPage() {
   const [textEdits, setTextEdits] = useState({});
   const [viewMode, setViewMode] = useState('split');
   const [previewLang, setPreviewLang] = useState('zh');
+  const iframeRef = useRef(null);
 
   const load = () => api('/ip-cases/all').then(setCases);
   useEffect(() => { load(); }, []);
 
   const openEdit = async (c) => {
     const data = await api(`/ip-cases/${c.id}`);
-    setCaseData(data);
-    setTextEdits({});
-    setEditing(c.id);
+    setCaseData(data); setTextEdits({}); setEditing(c.id);
   };
 
   const openNew = () => {
     const defaultSlug = 'new-case';
-    const tpl = generateTemplateKeys(defaultSlug);
     setEditing('new');
     setCaseData({ slug: defaultSlug, status: 'draft', texts: { zh: {}, en: {} } });
-    setTextEdits({ zh: { ...tpl.zh }, en: { ...tpl.en } });
+    setTextEdits(generateTemplateKeys(defaultSlug));
   };
 
-  // When slug changes, rewrite all template key prefixes to stay in sync
   const handleSlugChange = (newSlug) => {
     const oldSlug = caseData.slug;
     if (!newSlug || newSlug === oldSlug) { setCaseData({...caseData, slug: newSlug}); return; }
-    // Rewrite keys in textEdits
     const rewrite = (obj) => {
       const out = {};
       for (const [k, v] of Object.entries(obj || {})) {
-        if (k.startsWith(oldSlug + '.')) out[newSlug + k.slice(oldSlug.length)] = v;
-        else out[k] = v;
+        out[k.startsWith(oldSlug + '.') ? newSlug + k.slice(oldSlug.length) : k] = v;
       }
       return out;
     };
-    // Also rewrite keys in caseData.texts (for existing cases loaded from DB)
-    const newTexts = {
-      zh: rewrite(caseData.texts?.zh),
-      en: rewrite(caseData.texts?.en),
-    };
+    const newTexts = { zh: rewrite(caseData.texts?.zh), en: rewrite(caseData.texts?.en) };
     setTextEdits(prev => ({ zh: rewrite(prev.zh), en: rewrite(prev.en) }));
     setCaseData({...caseData, slug: newSlug, texts: newTexts});
   };
 
   const handleTextChange = (lang, key, val) => {
-    setTextEdits(prev => {
-      const next = { ...prev };
-      if (!next[lang]) next[lang] = {};
-      next[lang][key] = val;
-      return next;
-    });
+    setTextEdits(prev => ({ ...prev, [lang]: { ...(prev[lang]||{}), [key]: val } }));
   };
 
-  // Required fields for publishing — must have non-empty zh value
+  // Send IP draft to iframe whenever edits change
+  useEffect(() => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow || !caseData) return;
+    const drafts = {
+      zh: { ...(caseData.texts?.zh || {}), ...(textEdits.zh || {}) },
+      en: { ...(caseData.texts?.en || {}), ...(textEdits.en || {}) },
+    };
+    iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'ip-draft', drafts }, '*');
+    iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'i18n-draft', drafts }, '*');
+  }, [textEdits, caseData]);
+
+  // Send lang to iframe
+  useEffect(() => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'set-lang', lang: previewLang }, '*');
+  }, [previewLang]);
+
   const REQUIRED_FOR_PUBLISH = ['h2_a', 'h2_b', 'name', 'handle', 'lede'];
 
   const save = async () => {
@@ -405,16 +439,14 @@ function IPCasesPage() {
         const v = textEdits.zh?.[k] ?? caseData.texts?.zh?.[k] ?? '';
         return !v.trim();
       });
-      if (missing.length) {
-        toast(`发布失败：缺少必填字段 ${missing.join(', ')}`);
-        return;
-      }
+      if (missing.length) { toast(`发布失败：缺少必填字段 ${missing.join(', ')}`); return; }
     }
     try {
       if (editing === 'new') {
         const res = await api('/ip-cases', { method: 'POST', body: JSON.stringify({ slug: caseData.slug, status: 'draft' }) });
-        if (Object.keys(textEdits).length) {
-          await api(`/ip-cases/${res.id}/i18n`, { method: 'PUT', body: JSON.stringify({ texts: textEdits }) });
+        const merged = { zh: { ...(textEdits.zh || {}) }, en: { ...(textEdits.en || {}) } };
+        if (Object.keys(merged.zh).length || Object.keys(merged.en).length) {
+          await api(`/ip-cases/${res.id}/i18n`, { method: 'PUT', body: JSON.stringify({ texts: merged }) });
         }
         if (caseData.status === 'published') {
           await api(`/ip-cases/${res.id}`, { method: 'PUT', body: JSON.stringify({ status: 'published' }) });
@@ -423,16 +455,12 @@ function IPCasesPage() {
       } else {
         const merged = { zh: { ...(caseData.texts?.zh || {}), ...(textEdits.zh || {}) }, en: { ...(caseData.texts?.en || {}), ...(textEdits.en || {}) } };
         const hasTextEdits = Object.keys(textEdits.zh || {}).length || Object.keys(textEdits.en || {}).length;
-        if (hasTextEdits) {
-          await api(`/ip-cases/${editing}/i18n`, { method: 'PUT', body: JSON.stringify({ texts: merged }) });
-        }
+        if (hasTextEdits) await api(`/ip-cases/${editing}/i18n`, { method: 'PUT', body: JSON.stringify({ texts: merged }) });
         await api(`/ip-cases/${editing}`, { method: 'PUT', body: JSON.stringify({ slug: caseData.slug, status: caseData.status }) });
         toast('案例已更新');
       }
       setEditing(null); load();
-    } catch (err) {
-      toast('保存失败：' + err.message);
-    }
+    } catch (err) { toast('保存失败：' + err.message); }
   };
 
   const del = async (id) => {
@@ -442,25 +470,13 @@ function IPCasesPage() {
   };
 
   const getVal = (lang, key) => textEdits[lang]?.[key] ?? caseData?.texts?.[lang]?.[key] ?? '';
-
-  const allKeys = caseData ? [...new Set([
-    ...Object.keys(caseData.texts?.zh || {}),
-    ...Object.keys(caseData.texts?.en || {}),
-    ...Object.keys(textEdits.zh || {}),
-    ...Object.keys(textEdits.en || {}),
-  ])].sort() : [];
-
-  // Group keys by template structure for display — show ALL template fields (not just existing ones)
   const slug = caseData?.slug || '';
   const templateKeySet = new Set();
   const groupedDisplay = slug ? IP_TEMPLATE_GROUPS.map(g => {
-    const fields = g.fields.map(f => {
-      const fullKey = `${slug}.${f.key}`;
-      templateKeySet.add(fullKey);
-      return { ...f, fullKey };
-    });
+    const fields = g.fields.map(f => { const fullKey = `${slug}.${f.key}`; templateKeySet.add(fullKey); return { ...f, fullKey }; });
     return { ...g, fields };
   }) : [];
+  const allKeys = caseData ? [...new Set([...Object.keys(caseData.texts?.zh || {}), ...Object.keys(caseData.texts?.en || {}), ...Object.keys(textEdits.zh || {}), ...Object.keys(textEdits.en || {})])].sort() : [];
   const extraKeys = allKeys.filter(k => !templateKeySet.has(k));
 
   return <div>
@@ -501,7 +517,7 @@ function IPCasesPage() {
       <div className={`ip-editor-body mode-${viewMode}`}>
         <div className="ip-editor-form">
           <div className="form-row">
-            <div className="form-group"><label>Slug（唯一标识）</label><input value={caseData.slug} onChange={e=>handleSlugChange(e.target.value)} placeholder="例如: nova" disabled={editing !== 'new' && Object.keys(caseData.texts?.zh || {}).length > 0} />{editing !== 'new' && Object.keys(caseData.texts?.zh || {}).length > 0 && <div style={{fontSize:11,color:'#888',marginTop:4}}>已有内容的案例不可修改 Slug</div>}</div>
+            <div className="form-group"><label>Slug（唯一标识）</label><input value={caseData.slug} onChange={e=>handleSlugChange(e.target.value)} placeholder="例如: nova" disabled={editing !== 'new' && Object.values(caseData.texts?.zh || {}).some(v => v && v.trim())} />{editing !== 'new' && Object.values(caseData.texts?.zh || {}).some(v => v && v.trim()) && <div style={{fontSize:11,color:'#888',marginTop:4}}>已有内容的案例不可修改 Slug</div>}</div>
             <div className="form-group"><label>状态</label><select value={caseData.status} onChange={e=>setCaseData({...caseData,status:e.target.value})}><option value="draft">草稿</option><option value="published">已发布</option></select></div>
           </div>
 
@@ -541,8 +557,7 @@ function IPCasesPage() {
                 <button className="btn btn-ghost btn-sm" onClick={() => {
                   const k = document.getElementById('new-key-input').value.trim();
                   if (!k) return;
-                  handleTextChange('zh', k, '');
-                  handleTextChange('en', k, '');
+                  handleTextChange('zh', k, ''); handleTextChange('en', k, '');
                   document.getElementById('new-key-input').value = '';
                 }}>添加</button>
               </div>
@@ -555,7 +570,7 @@ function IPCasesPage() {
           </div>
         </div>
         <div className="ip-editor-preview">
-          <IPCasePreview slug={slug} textEdits={textEdits} caseData={caseData} previewLang={previewLang} />
+          <iframe ref={iframeRef} src="/Personal%20IP.html" className="preview-iframe" style={{width:'100%',height:'100%',border:'none'}} />
         </div>
       </div>
     </div>}

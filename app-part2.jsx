@@ -1,6 +1,15 @@
 /* Lighthouse — part 2: KPI · Winners · Stars · ImageDivider */
 const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveStats: deriveStats2, buildStatsVars: buildStatsVars2, fmt: fmt2, useT: useT2, tpl: tpl2 } = window.App_Part1;
 
+// Curated star samples — fixed set matching hand-written narratives in i18n
+const CURATED_STARS = [
+  { name: "Portals",          slotKey: "s1" },
+  { name: "zkVerify",         slotKey: "s2" },
+  { name: "Sentient",         slotKey: "s3" },
+  { name: "HashKey Exchange",  slotKey: "s4" },
+];
+const CURATED_STAR_NAMES = new Set(CURATED_STARS.map(s => s.name));
+
 function KpiSection(){
   const { t } = useT2();
   const P = useProjects2();
@@ -193,36 +202,37 @@ function WinnersSection(){
 function StarsSection(){
   const { t } = useT2();
   const P = useProjects2();
-  const base = React.useMemo(() => P.filter(p => p.is_baseline !== 0), [P]);
 
   const stars = React.useMemo(() => {
-    if (!base.length) return [];
-    const sorted = [...base].sort((a,b) => (b.imp||0) - (a.imp||0));
-    const top4 = sorted.slice(0, 4);
     const tones = ["ember","teal","ember","teal"];
     const bgs = ["divider-img-2","divider-img-3","divider-img-1","divider-img-4"];
-    return top4.map((p, i) => {
-      const eng = Math.round((p.imp||0) * (p.er||0) / 100);
-      const cpe = eng > 0 ? ((p.budget||0) / eng) : 0;
+    return CURATED_STARS.map((cs, i) => {
+      const p = P.find(proj => proj.name === cs.name);
+      const budget = p?.budget || 0;
+      const imp = p?.imp || 0;
+      const cpm = p?.cpm || 0;
+      const er = p?.er || 0;
+      const eng = Math.round(imp * er / 100);
+      const cpe = eng > 0 ? (budget / eng) : 0;
       const bestStat = (() => {
-        if (p.cpm && p.cpm <= 35) return {k:t("stars.stat.cpm"), v:(p.cpm).toFixed(2), u:t("stars.u.usdc"), hl:true};
-        if (p.er && p.er >= 1) return {k:t("stars.stat.er"), v:(p.er).toFixed(2), u:t("stars.u.pct"), hl:true};
+        if (cpm && cpm <= 35) return {k:t("stars.stat.cpm"), v:cpm.toFixed(2), u:t("stars.u.usdc"), hl:true};
+        if (er && er >= 1) return {k:t("stars.stat.er"), v:er.toFixed(2), u:t("stars.u.pct"), hl:true};
         if (cpe && cpe <= 5) return {k:t("stars.stat.cpe"), v:cpe.toFixed(2), u:t("stars.u.usdc"), hl:true};
-        return {k:t("stars.stat.cpm"), v:(p.cpm||0).toFixed(2), u:t("stars.u.usdc"), hl:true};
+        return {k:t("stars.stat.cpm"), v:cpm.toFixed(2), u:t("stars.u.usdc"), hl:true};
       })();
       return {
-        key: `s${i+1}`, name: p.name, logo: p.logo || '', bg: bgs[i] || bgs[0], tone: tones[i],
+        key: cs.slotKey, name: cs.name, logo: p?.logo || '', bg: bgs[i], tone: tones[i],
         stats: [
-          {k:t("stars.stat.budget"), v:fmt2(p.budget||0), u:t("stars.u.usdc")},
-          {k:t("stars.stat.imp"), v:fmt2(p.imp||0), u:t("stars.u.imp")},
+          {k:t("stars.stat.budget"), v:fmt2(budget), u:t("stars.u.usdc")},
+          {k:t("stars.stat.imp"), v:fmt2(imp), u:t("stars.u.imp")},
           bestStat,
           bestStat.k === t("stars.stat.cpm")
-            ? {k:t("stars.stat.er"), v:(p.er||0).toFixed(2), u:t("stars.u.pct")}
-            : {k:t("stars.stat.cpm"), v:(p.cpm||0).toFixed(2), u:t("stars.u.usdc")},
+            ? {k:t("stars.stat.er"), v:er.toFixed(2), u:t("stars.u.pct")}
+            : {k:t("stars.stat.cpm"), v:cpm.toFixed(2), u:t("stars.u.usdc")},
         ],
       };
     });
-  }, [base, t]);
+  }, [P, t]);
   return (
     <section id="stars" className="relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1px]" style={{background:"var(--rule-strong)"}}/>
@@ -384,4 +394,4 @@ function IPCard({ caseData, index, t }){
   );
 }
 
-window.App_Part2 = { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider };
+window.App_Part2 = { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, CURATED_STAR_NAMES };

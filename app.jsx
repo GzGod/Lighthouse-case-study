@@ -44,9 +44,11 @@ function deriveStats(projects) {
 
 function buildStatsVars(projects, stats) {
   const impM = stats.totalImp >= 1e6 ? Math.round(stats.totalImp / 1e5) / 10 + 'M' : new Intl.NumberFormat('en-US').format(stats.totalImp);
+  const budgetK = stats.totalBudget >= 1000 ? Math.round(stats.totalBudget / 100) / 10 + 'K' : new Intl.NumberFormat('en-US').format(stats.totalBudget);
   return {
     totalCount: projects.length,
     baselineCount: stats.baselineCount,
+    totalBudgetLabel: budgetK,
     totalImpFmt: new Intl.NumberFormat('en-US').format(stats.totalImp),
     totalImpLabel: impM,
     peakErWho: stats.peakErProject?.name || '—',
@@ -61,6 +63,17 @@ function useProjects() {
   const [data, setData] = useState(PROJECTS);
   useEffect(() => {
     loadProjectsFromAPI().then(p => setData([...p]));
+  }, []);
+  // Listen for preview project overrides from admin iframe parent
+  useEffect(() => {
+    function onMsg(e) {
+      if (!e.data || e.data.type !== 'lh-preview') return;
+      if (e.data.action === 'projects-draft') {
+        setData(e.data.projects);
+      }
+    }
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
   }, []);
   return data;
 }

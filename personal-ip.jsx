@@ -351,6 +351,27 @@ function PageIP() {
   const [, forceUpdate] = useStateIP(0);
   useEffectIP(() => { if (ready) forceUpdate(n => n + 1); }, [ready]);
 
+  // Listen for IP case draft overrides from admin iframe parent
+  useEffectIP(() => {
+    function onMsg(e) {
+      if (!e.data || e.data.type !== 'lh-preview') return;
+      if (e.data.action === 'ip-draft') {
+        // Merge draft texts into DICT_IP for preview (iframe is isolated, so this is safe)
+        const drafts = e.data.drafts;
+        if (drafts) {
+          for (const [lang, entries] of Object.entries(drafts)) {
+            if (DICT_IP[lang]) Object.assign(DICT_IP[lang], entries);
+          }
+          forceUpdate(n => n + 1);
+        }
+      } else if (e.data.action === 'set-lang') {
+        // handled by LangProvider
+      }
+    }
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
   // Filter: only render cases that have all required fields filled
   const validCases = ready ? cases.filter(c => isCaseComplete(c.slug)) : [];
   const showAstraFallback = ready && validCases.length === 0 && isCaseComplete('astra');

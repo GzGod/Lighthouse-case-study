@@ -42,11 +42,13 @@ module.exports = function(pool) {
   router.put('/:id', authMiddleware, async (req, res) => {
     const { slug, sort_order, status } = req.body;
 
-    // Bug 5: Block slug change if case already has i18n content
     if (slug !== undefined) {
       const { rows: current } = await pool.query('SELECT slug FROM ip_cases WHERE id = $1', [req.params.id]);
       if (current[0] && current[0].slug !== slug) {
-        const { rows: contentCount } = await pool.query('SELECT COUNT(*) as c FROM ip_case_i18n WHERE case_id = $1', [req.params.id]);
+        const { rows: contentCount } = await pool.query(
+          "SELECT COUNT(*) as c FROM ip_case_i18n WHERE case_id = $1 AND value != '' AND value IS NOT NULL",
+          [req.params.id]
+        );
         if (parseInt(contentCount[0].c) > 0) {
           return res.status(400).json({ error: '已有内容的案例不可修改 Slug，否则会导致内容断链' });
         }
@@ -87,10 +89,18 @@ module.exports = function(pool) {
     const caseId = req.params.id;
     for (const [lang, entries] of Object.entries(texts)) {
       for (const [key, value] of Object.entries(entries)) {
-        await pool.query(
-          'INSERT INTO ip_case_i18n (case_id, lang, key, value) VALUES ($1,$2,$3,$4) ON CONFLICT (case_id, lang, key) DO UPDATE SET value = $4',
-          [caseId, lang, key, String(value)]
-        );
+        const strVal = String(value);
+        if (strVal === '') {
+          await pool.query(
+            'DELETE FROM ip_case_i18n WHERE case_id = $1 AND lang = $2 AND key = $3',
+            [caseId, lang, key]
+          );
+        } else {
+          await pool.query(
+            'INSERT INTO ip_case_i18n (case_id, lang, key, value) VALUES ($1,$2,$3,$4) ON CONFLICT (case_id, lang, key) DO UPDATE SET value = $4',
+            [caseId, lang, key, strVal]
+          );
+        }
       }
     }
     await pool.query("UPDATE ip_cases SET updated_at = NOW() WHERE id = $1", [caseId]);

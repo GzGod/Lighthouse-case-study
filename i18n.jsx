@@ -520,15 +520,38 @@ function LangProvider({children}){
     try { return localStorage.getItem(LANG_KEY) || "zh"; } catch { return "zh"; }
   });
   const [ready, setReady] = React.useState(false);
+  const [draftOverrides, setDraftOverrides] = React.useState(null);
   React.useEffect(() => { loadLiveDict().then(() => setReady(true)); }, []);
+
+  // Listen for preview draft messages from admin iframe parent
+  React.useEffect(() => {
+    function onMsg(e) {
+      if (!e.data || e.data.type !== 'lh-preview') return;
+      if (e.data.action === 'i18n-draft') {
+        setDraftOverrides(e.data.drafts); // { zh: {...}, en: {...} }
+      } else if (e.data.action === 'set-lang') {
+        setLangState(e.data.lang);
+      } else if (e.data.action === 'clear-draft') {
+        setDraftOverrides(null);
+      }
+    }
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
   const setLang = (l)=>{
     setLangState(l);
     try { localStorage.setItem(LANG_KEY, l); } catch {}
     try { document.documentElement.lang = l === "zh" ? "zh-CN" : "en"; } catch {}
   };
   React.useEffect(()=>{ try { document.documentElement.lang = lang === "zh" ? "zh-CN" : "en"; } catch {} }, [lang]);
-  const t = (k)=> (DICT[lang] && DICT[lang][k] !== undefined) ? DICT[lang][k] : (DICT.zh[k] ?? k);
-  return <LangContext.Provider value={{lang, setLang, t}}>{children}</LangContext.Provider>;
+  const t = (k)=> {
+    // Draft overrides take priority (preview mode)
+    if (draftOverrides && draftOverrides[lang] && draftOverrides[lang][k] !== undefined) return draftOverrides[lang][k];
+    if (draftOverrides && draftOverrides.zh && draftOverrides.zh[k] !== undefined && !(DICT[lang] && DICT[lang][k] !== undefined)) return draftOverrides.zh[k];
+    return (DICT[lang] && DICT[lang][k] !== undefined) ? DICT[lang][k] : (DICT.zh[k] ?? k);
+  };
+  return <LangContext.Provider value={{lang, setLang, t, draftOverrides}}>{children}</LangContext.Provider>;
 }
 
 function useT(){ return React.useContext(LangContext); }
