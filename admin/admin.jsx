@@ -204,7 +204,7 @@ function ProjectsPage() {
   const load = () => api('/projects').then(setProjects);
   useEffect(() => { load(); }, []);
 
-  const openNew = () => { setForm({ name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1 }); setEditing('new'); };
+  const openNew = () => { setForm({ name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1, tweets:0 }); setEditing('new'); };
   const openEdit = (p) => { setForm({...p}); setEditing(p.id); };
 
   // Send project draft to iframe whenever form changes
@@ -212,10 +212,10 @@ function ProjectsPage() {
     if (!iframeRef.current || !iframeRef.current.contentWindow || editing === null) return;
     const draftProjects = projects.map(p => {
       const proj = p.id === editing ? form : p;
-      return { name:proj.name, logo:proj.logo, budget:proj.budget, imp:proj.impressions, cpm:proj.cpm, er:proj.er, cpe:proj.cpe, tag:proj.tag, is_baseline: proj.is_baseline ?? 1 };
+      return { name:proj.name, logo:proj.logo, budget:proj.budget, imp:proj.impressions, cpm:proj.cpm, er:proj.er, cpe:proj.cpe, tag:proj.tag, is_baseline: proj.is_baseline ?? 1, tweets: proj.tweets ?? 0 };
     });
     if (editing === 'new') {
-      draftProjects.push({ name:form.name, logo:form.logo, budget:form.budget, imp:form.impressions, cpm:form.cpm, er:form.er, cpe:form.cpe, tag:form.tag, is_baseline: form.is_baseline ?? 1 });
+      draftProjects.push({ name:form.name, logo:form.logo, budget:form.budget, imp:form.impressions, cpm:form.cpm, er:form.er, cpe:form.cpe, tag:form.tag, is_baseline: form.is_baseline ?? 1, tweets: form.tweets ?? 0 });
     }
     iframeRef.current.contentWindow.postMessage({ type: 'lh-preview', action: 'projects-draft', projects: draftProjects }, '*');
   }, [form, editing, projects]);
@@ -251,7 +251,7 @@ function ProjectsPage() {
       <div style={{marginBottom:16}}><button className="btn btn-primary" onClick={openNew}>+ 添加项目</button></div>
       <div className="card">
         <table>
-          <thead><tr><th>项目</th><th>预算</th><th>曝光</th><th>CPM</th><th>互动率</th><th>CPE</th><th>标签</th><th>操作</th></tr></thead>
+          <thead><tr><th>项目</th><th>预算</th><th>曝光</th><th>CPM</th><th>互动率</th><th>CPE</th><th>推文</th><th>标签</th><th>操作</th></tr></thead>
           <tbody>{projects.map(p => <tr key={p.id} style={editing===p.id?{background:'#fff8f0'}:{}}>
             <td style={{fontWeight:600}}>{p.name}</td>
             <td>{p.budget?.toLocaleString()}</td>
@@ -259,6 +259,7 @@ function ProjectsPage() {
             <td>{p.cpm?.toFixed(2)}</td>
             <td>{p.er?.toFixed(2)}%</td>
             <td>{p.cpe?.toFixed(2)}</td>
+            <td>{p.tweets ?? 0}</td>
             <td>{p.tag}</td>
             <td><button className="btn btn-ghost btn-sm" onClick={()=>openEdit(p)}>编辑</button> <button className="btn btn-danger btn-sm" onClick={()=>del(p.id)}>删除</button></td>
           </tr>)}</tbody>
@@ -282,6 +283,7 @@ function ProjectsPage() {
         </div>
         <div className="form-row">
           <div className="form-group"><label>标签</label><input value={form.tag||''} onChange={e=>setForm({...form,tag:e.target.value})} /></div>
+          <div className="form-group"><label>推文数</label><input type="number" value={form.tweets||0} onChange={e=>setForm({...form,tweets:+e.target.value})} /></div>
           <div className="form-group"><label>进入基准</label><select value={form.is_baseline??1} onChange={e=>setForm({...form,is_baseline:+e.target.value})}><option value={1}>是</option><option value={0}>否</option></select></div>
         </div>
         <div className="btn-group"><button className="btn btn-primary" onClick={save}>保存</button><button className="btn btn-ghost" onClick={()=>setEditing(null)}>取消</button></div>
