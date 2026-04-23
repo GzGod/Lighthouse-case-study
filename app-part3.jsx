@@ -1,5 +1,5 @@
 /* Lighthouse — part 3: Matrix · Why · CTA · App shell */
-const { Reveal: Reveal3, PROJECTS: P3, fmt: fmt3, useT: useT3, LangProvider: LP3 } = window.App_Part1;
+const { Reveal: Reveal3, useProjects: useProjects3, fmt: fmt3, useT: useT3, LangProvider: LP3 } = window.App_Part1;
 const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
@@ -15,6 +15,7 @@ const TAG_KEYS = {
 
 function MatrixSection(){
   const { t } = useT3();
+  const P3 = useProjects3();
   const [sortKey, setSortKey] = React.useState("cpm");
   const [sortDir, setSortDir] = React.useState("asc");
   const [hovered, setHovered] = React.useState(null);
@@ -26,7 +27,7 @@ function MatrixSection(){
       return sortDir==="asc" ? va-vb : vb-va;
     });
     return d;
-  },[sortKey,sortDir]);
+  },[P3, sortKey,sortDir]);
   function setSort(k){
     if(sortKey===k) setSortDir(s=>s==="asc"?"desc":"asc");
     else { setSortKey(k); setSortDir("asc"); }

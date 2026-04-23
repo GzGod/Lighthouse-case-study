@@ -1,6 +1,35 @@
 /* Personal IP page — standalone. Real case: @0xAstraSpark × Justin Sun */
 const { useEffect: useEffectIP, useRef: useRefIP, useState: useStateIP } = React;
-const { LangProvider: LPIP, useT: useTIP } = window.i18n;
+const { LangProvider: LPIP, useT: useTIP, DICT: DICT_IP } = window.i18n;
+
+// Load IP case texts from API and merge into DICT so t() picks them up
+let _ipCasesLoaded = null;
+function loadIPCases() {
+  if (_ipCasesLoaded) return _ipCasesLoaded;
+  _ipCasesLoaded = fetch('/api/ip-cases').then(r => r.ok ? r.json() : null).then(cases => {
+    if (cases && cases.length) {
+      for (const c of cases) {
+        if (c.texts) {
+          for (const [lang, entries] of Object.entries(c.texts)) {
+            if (DICT_IP[lang]) Object.assign(DICT_IP[lang], entries);
+          }
+        }
+      }
+    }
+    return cases || [];
+  }).catch(() => []);
+  return _ipCasesLoaded;
+}
+
+// Hook: returns published IP cases from API
+function useIPCases() {
+  const [cases, setCases] = useStateIP([]);
+  const [ready, setReady] = useStateIP(false);
+  useEffectIP(() => {
+    loadIPCases().then(c => { setCases(c); setReady(true); });
+  }, []);
+  return { cases, ready };
+}
 
 function RevealIP({ children, delay = 0, className = "" }) {
   const ref = useRefIP(null);
@@ -309,7 +338,11 @@ function IPCTA() {
 }
 
 function PageIP() {
+  const { cases, ready } = useIPCases();
   React.useEffect(() => {document.documentElement.style.scrollBehavior = "smooth";}, []);
+  // Force re-render after API data merges into DICT
+  const [, forceUpdate] = useStateIP(0);
+  useEffectIP(() => { if (ready) forceUpdate(n => n + 1); }, [ready]);
   return (
     <div id="top" className="relative">
       <NavIP />

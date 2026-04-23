@@ -1,5 +1,5 @@
 /* Lighthouse — part 2: KPI · Winners · Stars · ImageDivider */
-const { Reveal: Reveal2, CountUp: CountUp2, PROJECTS: P2, fmt: fmt2, useT: useT2 } = window.App_Part1;
+const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, fmt: fmt2, useT: useT2 } = window.App_Part1;
 
 function KpiSection(){
   const { t } = useT2();

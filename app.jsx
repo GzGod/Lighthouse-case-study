@@ -3,17 +3,33 @@ const { useEffect, useRef, useState, useMemo } = React;
 const { LangProvider, useT } = window.i18n;
 
 let PROJECTS = JSON.parse(document.getElementById('projects-data').textContent);
+let _projectsReady = null; // Promise that resolves when API data is loaded
 
-// Try loading from API (overrides embedded data when server is running)
+// Load from API — returns a promise. Components can await this.
 function loadProjectsFromAPI() {
-  return fetch('/api/projects').then(r => r.ok ? r.json() : null).then(data => {
-    if (data && data.length) {
-      PROJECTS = data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag }));
-    }
-    return PROJECTS;
-  }).catch(() => PROJECTS);
+  if (!_projectsReady) {
+    _projectsReady = fetch('/api/projects').then(r => r.ok ? r.json() : null).then(data => {
+      if (data && data.length) {
+        PROJECTS = data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag }));
+      }
+      return PROJECTS;
+    }).catch(() => PROJECTS);
+  }
+  return _projectsReady;
 }
 loadProjectsFromAPI();
+
+// Getter so other parts always read the latest reference
+function getProjects() { return PROJECTS; }
+
+// Hook for components that need to re-render when projects load from API
+function useProjects() {
+  const [data, setData] = useState(PROJECTS);
+  useEffect(() => {
+    loadProjectsFromAPI().then(p => setData([...p]));
+  }, []);
+  return data;
+}
 
 const nf = new Intl.NumberFormat('en-US');
 const fmt = (n, d=0) => d>0 ? Number(n).toLocaleString('en-US', { minimumFractionDigits:d, maximumFractionDigits:d }) : nf.format(Math.round(n));
@@ -247,4 +263,4 @@ function AboutSection(){
   );
 }
 
-window.App_Part1 = { Nav, Footer, Hero, AboutSection, CountUp, Reveal, PROJECTS, fmt, useT, LangProvider };
+window.App_Part1 = { Nav, Footer, Hero, AboutSection, CountUp, Reveal, PROJECTS, getProjects, useProjects, loadProjectsFromAPI, fmt, useT, LangProvider };

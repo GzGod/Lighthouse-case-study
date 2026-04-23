@@ -261,7 +261,12 @@ function IPCasesPage() {
 
   const getVal = (lang, key) => textEdits[lang]?.[key] ?? caseData?.texts?.[lang]?.[key] ?? '';
 
-  const allKeys = caseData ? [...new Set([...Object.keys(caseData.texts?.zh || {}), ...Object.keys(caseData.texts?.en || {})])].sort() : [];
+  const allKeys = caseData ? [...new Set([
+    ...Object.keys(caseData.texts?.zh || {}),
+    ...Object.keys(caseData.texts?.en || {}),
+    ...Object.keys(textEdits.zh || {}),
+    ...Object.keys(textEdits.en || {}),
+  ])].sort() : [];
 
   return <div>
     <h1>IP 案例管理</h1>
@@ -288,8 +293,7 @@ function IPCasesPage() {
           <div className="form-group"><label>状态</label><select value={caseData.status} onChange={e=>setCaseData({...caseData,status:e.target.value})}><option value="draft">草稿</option><option value="published">已发布</option></select></div>
         </div>
 
-        {editing !== 'new' && <>
-          <h3 style={{marginTop:20,marginBottom:12}}>案例文案（{allKeys.length} 条）</h3>
+        <h3 style={{marginTop:20,marginBottom:12}}>案例文案（{allKeys.length} 条）</h3>
           <div className="form-group">
             <label>添加新 key</label>
             <div style={{display:'flex',gap:8}}>
@@ -314,7 +318,6 @@ function IPCasesPage() {
               <textarea value={getVal('en',k)} onChange={e=>handleTextChange('en',k,e.target.value)} rows={2} />
             </div>
           </div>)}
-        </>}
 
         <div className="btn-group"><button className="btn btn-primary" onClick={save}>保存</button><button className="btn btn-ghost" onClick={()=>setEditing(null)}>取消</button></div>
       </div>
