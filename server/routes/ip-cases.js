@@ -31,8 +31,11 @@ module.exports = function(pool) {
 
   router.post('/', authMiddleware, async (req, res) => {
     const { slug, status } = req.body;
+    if (status === 'published') {
+      return res.status(400).json({ error: '新建案例不可直接设为 published，请先填写内容后再发布' });
+    }
     const { rows: mx } = await pool.query('SELECT COALESCE(MAX(sort_order),0) as m FROM ip_cases');
-    const { rows } = await pool.query('INSERT INTO ip_cases (slug, sort_order, status) VALUES ($1,$2,$3) RETURNING id', [slug, mx[0].m+1, status||'draft']);
+    const { rows } = await pool.query('INSERT INTO ip_cases (slug, sort_order, status) VALUES ($1,$2,$3) RETURNING id', [slug, mx[0].m+1, 'draft']);
     res.json({ id: rows[0].id });
   });
 

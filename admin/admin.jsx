@@ -8,7 +8,10 @@ function api(path, opts = {}) {
   if (token) headers['Authorization'] = `Bearer ${token}`;
   return fetch(API + path, { ...opts, headers }).then(r => {
     if (r.status === 401) { localStorage.removeItem('cms-token'); window.location.reload(); }
-    return r.json();
+    return r.json().then(data => {
+      if (!r.ok) throw new Error(data.error || `请求失败 (${r.status})`);
+      return data;
+    });
   });
 }
 
@@ -281,12 +284,66 @@ function ImagePicker({ value, onChange }) {
   </div>;
 }
 
+/* ── IP Case Live Preview (reuses real rendering components) ── */
+function IPCasePreview({ slug, textEdits, caseData, previewLang }) {
+  const DICT = window.i18n && window.i18n.DICT;
+  const LangCtx = window.i18n && window.i18n.LangContext;
+  const Renderers = window.IPRenderers;
+
+  // Merge current edits + saved texts into DICT so real components read them via t()
+  React.useEffect(() => {
+    if (!DICT) return;
+    const sources = { zh: { ...(caseData?.texts?.zh || {}), ...(textEdits?.zh || {}) },
+                      en: { ...(caseData?.texts?.en || {}), ...(textEdits?.en || {}) } };
+    for (const [lang, entries] of Object.entries(sources)) {
+      if (!DICT[lang]) DICT[lang] = {};
+      Object.assign(DICT[lang], entries);
+    }
+  });
+
+  if (!DICT || !LangCtx || !Renderers) {
+    return <div style={{padding:40,color:'#888',textAlign:'center',fontFamily:'monospace',fontSize:13}}>预览组件未加载 — 请确认 i18n.jsx 和 personal-ip.jsx 已引入</div>;
+  }
+
+  const lang = previewLang || 'zh';
+  const t = (k) => (DICT[lang] && DICT[lang][k] !== undefined) ? DICT[lang][k] : (DICT.zh[k] ?? k);
+  const setLang = () => {};
+  const ctxValue = { lang, setLang, t };
+
+  // Safe check: if required fields missing, show placeholder
+  const hasMinimum = ['h2_a','h2_b','name'].some(f => {
+    const v = DICT.zh && DICT.zh[`${slug}.${f}`];
+    return v && v.trim();
+  });
+
+  return (
+    <div className="ip-preview-container">
+      {hasMinimum ? (
+        <LangCtx.Provider value={ctxValue}>
+          <Renderers.IPCaseSection slug={slug} index={0} />
+        </LangCtx.Provider>
+      ) : (
+        <div style={{padding:'80px 40px',textAlign:'center'}}>
+          <div style={{fontFamily:'JetBrains Mono,monospace',fontSize:11,letterSpacing:'0.22em',textTransform:'uppercase',color:'#a39e96'}}>
+            填写基本信息后预览将在此显示
+          </div>
+          <div style={{marginTop:12,fontSize:13,color:'#666'}}>
+            至少填写「大标题前半」「大标题高亮」「KOL 名称」中的一项
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function IPCasesPage() {
   const toast = useToast();
   const [cases, setCases] = useState([]);
   const [editing, setEditing] = useState(null);
   const [caseData, setCaseData] = useState(null);
   const [textEdits, setTextEdits] = useState({});
+  const [viewMode, setViewMode] = useState('split');
+  const [previewLang, setPreviewLang] = useState('zh');
 
   const load = () => api('/ip-cases/all').then(setCases);
   useEffect(() => { load(); }, []);
@@ -342,7 +399,6 @@ function IPCasesPage() {
 
   const save = async () => {
     if (!caseData.slug || caseData.slug === 'new-case') { toast('请修改 Slug 为有意义的标识'); return; }
-    // Publish validation: check required fields have content
     if (caseData.status === 'published') {
       const missing = REQUIRED_FOR_PUBLISH.filter(f => {
         const k = `${caseData.slug}.${f}`;
@@ -354,21 +410,29 @@ function IPCasesPage() {
         return;
       }
     }
-    if (editing === 'new') {
-      const res = await api('/ip-cases', { method: 'POST', body: JSON.stringify({ slug: caseData.slug, status: caseData.status }) });
-      if (Object.keys(textEdits).length) {
-        await api(`/ip-cases/${res.id}/i18n`, { method: 'PUT', body: JSON.stringify({ texts: textEdits }) });
-      }
-      toast('案例已创建');
-    } else {
-      await api(`/ip-cases/${editing}`, { method: 'PUT', body: JSON.stringify({ slug: caseData.slug, status: caseData.status }) });
-      if (Object.keys(textEdits).length) {
+    try {
+      if (editing === 'new') {
+        const res = await api('/ip-cases', { method: 'POST', body: JSON.stringify({ slug: caseData.slug, status: 'draft' }) });
+        if (Object.keys(textEdits).length) {
+          await api(`/ip-cases/${res.id}/i18n`, { method: 'PUT', body: JSON.stringify({ texts: textEdits }) });
+        }
+        if (caseData.status === 'published') {
+          await api(`/ip-cases/${res.id}`, { method: 'PUT', body: JSON.stringify({ status: 'published' }) });
+        }
+        toast('案例已创建');
+      } else {
         const merged = { zh: { ...(caseData.texts?.zh || {}), ...(textEdits.zh || {}) }, en: { ...(caseData.texts?.en || {}), ...(textEdits.en || {}) } };
-        await api(`/ip-cases/${editing}/i18n`, { method: 'PUT', body: JSON.stringify({ texts: merged }) });
+        const hasTextEdits = Object.keys(textEdits.zh || {}).length || Object.keys(textEdits.en || {}).length;
+        if (hasTextEdits) {
+          await api(`/ip-cases/${editing}/i18n`, { method: 'PUT', body: JSON.stringify({ texts: merged }) });
+        }
+        await api(`/ip-cases/${editing}`, { method: 'PUT', body: JSON.stringify({ slug: caseData.slug, status: caseData.status }) });
+        toast('案例已更新');
       }
-      toast('案例已更新');
+      setEditing(null); load();
+    } catch (err) {
+      toast('保存失败：' + err.message);
     }
-    setEditing(null); load();
   };
 
   const del = async (id) => {
@@ -416,59 +480,83 @@ function IPCasesPage() {
       </table>
     </div>
 
-    {editing !== null && caseData && <div className="modal-overlay" onClick={()=>setEditing(null)}>
-      <div className="modal" style={{maxWidth:960}} onClick={e=>e.stopPropagation()}>
-        <h2>{editing==='new'?'新建 IP 案例':'编辑 IP 案例'}</h2>
-        <div className="form-row">
-          <div className="form-group"><label>Slug（唯一标识）</label><input value={caseData.slug} onChange={e=>handleSlugChange(e.target.value)} placeholder="例如: nova" disabled={editing !== 'new' && Object.keys(caseData.texts?.zh || {}).length > 0} />{editing !== 'new' && Object.keys(caseData.texts?.zh || {}).length > 0 && <div style={{fontSize:11,color:'#888',marginTop:4}}>已有内容的案例不可修改 Slug</div>}</div>
-          <div className="form-group"><label>状态</label><select value={caseData.status} onChange={e=>setCaseData({...caseData,status:e.target.value})}><option value="draft">草稿</option><option value="published">已发布</option></select></div>
+    {editing !== null && caseData && <div className="ip-editor-overlay">
+      <div className="ip-editor-toolbar">
+        <div className="toolbar-group">
+          <h2>{editing==='new'?'新建 IP 案例':'编辑 IP 案例'} — {caseData.slug}</h2>
+          <span className={`badge badge-${caseData.status}`} style={{marginLeft:8}}>{caseData.status}</span>
         </div>
+        <div className="toolbar-group">
+          <button className={`mode-btn ${viewMode==='form'?'active':''}`} onClick={()=>setViewMode('form')}>表单</button>
+          <button className={`mode-btn ${viewMode==='split'?'active':''}`} onClick={()=>setViewMode('split')}>分栏</button>
+          <button className={`mode-btn ${viewMode==='preview'?'active':''}`} onClick={()=>setViewMode('preview')}>预览</button>
+          <span style={{width:1,height:20,background:'#555',margin:'0 4px'}} />
+          <button className={`mode-btn ${previewLang==='zh'?'active':''}`} onClick={()=>setPreviewLang('zh')}>中</button>
+          <button className={`mode-btn ${previewLang==='en'?'active':''}`} onClick={()=>setPreviewLang('en')}>EN</button>
+          <span style={{width:1,height:20,background:'#555',margin:'0 4px'}} />
+          <button className="btn btn-primary btn-sm" onClick={save}>保存</button>
+          <button className="mode-btn" onClick={()=>setEditing(null)}>关闭</button>
+        </div>
+      </div>
+      <div className={`ip-editor-body mode-${viewMode}`}>
+        <div className="ip-editor-form">
+          <div className="form-row">
+            <div className="form-group"><label>Slug（唯一标识）</label><input value={caseData.slug} onChange={e=>handleSlugChange(e.target.value)} placeholder="例如: nova" disabled={editing !== 'new' && Object.keys(caseData.texts?.zh || {}).length > 0} />{editing !== 'new' && Object.keys(caseData.texts?.zh || {}).length > 0 && <div style={{fontSize:11,color:'#888',marginTop:4}}>已有内容的案例不可修改 Slug</div>}</div>
+            <div className="form-group"><label>状态</label><select value={caseData.status} onChange={e=>setCaseData({...caseData,status:e.target.value})}><option value="draft">草稿</option><option value="published">已发布</option></select></div>
+          </div>
 
-        {groupedDisplay.map(g => <div key={g.label} className="card" style={{marginTop:16}}>
-          <h3>{g.label}</h3>
-          {g.fields.map(f => <div className="i18n-pair" key={f.fullKey}>
-            <div className="i18n-key"><div>{f.fullKey}</div><div style={{fontSize:10,color:'#aaa',marginTop:2}}>{f.zh}</div></div>
-            {f.isImg ? <div className="i18n-val" style={{flex:'1 1 100%'}}>
-              <div className="lang-tag">图片（中英共用）</div>
-              <ImagePicker value={getVal('zh',f.fullKey)} onChange={v=>{handleTextChange('zh',f.fullKey,v);handleTextChange('en',f.fullKey,v)}} />
-            </div> : <>
-            <div className="i18n-val">
-              <div className="lang-tag">中文</div>
-              <textarea value={getVal('zh',f.fullKey)} onChange={e=>handleTextChange('zh',f.fullKey,e.target.value)} rows={f.rows||1} />
-            </div>
-            <div className="i18n-val">
-              <div className="lang-tag">English</div>
-              <textarea value={getVal('en',f.fullKey)} onChange={e=>handleTextChange('en',f.fullKey,e.target.value)} rows={f.rows||1} />
-            </div>
-            </>}
+          {groupedDisplay.map(g => <div key={g.label} className="card" style={{marginTop:16}}>
+            <h3>{g.label}</h3>
+            {g.fields.map(f => <div className="i18n-pair" key={f.fullKey}>
+              <div className="i18n-key"><div>{f.fullKey}</div><div style={{fontSize:10,color:'#aaa',marginTop:2}}>{f.zh}</div></div>
+              {f.isImg ? <div className="i18n-val" style={{flex:'1 1 100%'}}>
+                <div className="lang-tag">图片（中英共用）</div>
+                <ImagePicker value={getVal('zh',f.fullKey)} onChange={v=>{handleTextChange('zh',f.fullKey,v);handleTextChange('en',f.fullKey,v)}} />
+              </div> : <>
+              <div className="i18n-val">
+                <div className="lang-tag">中文</div>
+                <textarea value={getVal('zh',f.fullKey)} onChange={e=>handleTextChange('zh',f.fullKey,e.target.value)} rows={f.rows||1} />
+              </div>
+              <div className="i18n-val">
+                <div className="lang-tag">English</div>
+                <textarea value={getVal('en',f.fullKey)} onChange={e=>handleTextChange('en',f.fullKey,e.target.value)} rows={f.rows||1} />
+              </div>
+              </>}
+            </div>)}
           </div>)}
-        </div>)}
 
-        {extraKeys.length > 0 && <div className="card" style={{marginTop:16}}>
-          <h3>其他字段（{extraKeys.length}）</h3>
-          {extraKeys.map(k => <div className="i18n-pair" key={k}>
-            <div className="i18n-key">{k}</div>
-            <div className="i18n-val"><div className="lang-tag">中文</div><textarea value={getVal('zh',k)} onChange={e=>handleTextChange('zh',k,e.target.value)} rows={1} /></div>
-            <div className="i18n-val"><div className="lang-tag">English</div><textarea value={getVal('en',k)} onChange={e=>handleTextChange('en',k,e.target.value)} rows={1} /></div>
-          </div>)}
-        </div>}
+          {extraKeys.length > 0 && <div className="card" style={{marginTop:16}}>
+            <h3>其他字段（{extraKeys.length}）</h3>
+            {extraKeys.map(k => <div className="i18n-pair" key={k}>
+              <div className="i18n-key">{k}</div>
+              <div className="i18n-val"><div className="lang-tag">中文</div><textarea value={getVal('zh',k)} onChange={e=>handleTextChange('zh',k,e.target.value)} rows={1} /></div>
+              <div className="i18n-val"><div className="lang-tag">English</div><textarea value={getVal('en',k)} onChange={e=>handleTextChange('en',k,e.target.value)} rows={1} /></div>
+            </div>)}
+          </div>}
 
-        <div style={{margin:'16px 0'}}>
-          <div className="form-group"><label>添加自定义 key</label>
-            <div style={{display:'flex',gap:8}}>
-              <input id="new-key-input" placeholder={slug ? `${slug}.custom_field` : 'slug.field_name'} style={{flex:1}} />
-              <button className="btn btn-ghost btn-sm" onClick={() => {
-                const k = document.getElementById('new-key-input').value.trim();
-                if (!k) return;
-                handleTextChange('zh', k, '');
-                handleTextChange('en', k, '');
-                document.getElementById('new-key-input').value = '';
-              }}>添加</button>
+          <div style={{margin:'16px 0'}}>
+            <div className="form-group"><label>添加自定义 key</label>
+              <div style={{display:'flex',gap:8}}>
+                <input id="new-key-input" placeholder={slug ? `${slug}.custom_field` : 'slug.field_name'} style={{flex:1}} />
+                <button className="btn btn-ghost btn-sm" onClick={() => {
+                  const k = document.getElementById('new-key-input').value.trim();
+                  if (!k) return;
+                  handleTextChange('zh', k, '');
+                  handleTextChange('en', k, '');
+                  document.getElementById('new-key-input').value = '';
+                }}>添加</button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="btn-group"><button className="btn btn-primary" onClick={save}>保存</button><button className="btn btn-ghost" onClick={()=>setEditing(null)}>取消</button></div>
+          <div className="btn-group" style={{paddingBottom:40}}>
+            <button className="btn btn-primary" onClick={save}>保存</button>
+            <button className="btn btn-ghost" onClick={()=>setEditing(null)}>关闭</button>
+          </div>
+        </div>
+        <div className="ip-editor-preview">
+          <IPCasePreview slug={slug} textEdits={textEdits} caseData={caseData} previewLang={previewLang} />
+        </div>
       </div>
     </div>}
   </div>;

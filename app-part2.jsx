@@ -89,36 +89,30 @@ function ImageDivider({bg, kickerKey, quoteKey, subKey}){
 
 function WinnersSection(){
   const { t } = useT2();
-  const dims = [
-    {
-      key:"d1", tone:"ember",
-      metricSuf:"",
-      rows:[
-        {name:"HashKey Exchange", v:19.06, imp:"73,455", budget:"1,400"},
-        {name:"Portals",          v:29.35, imp:"136,284", budget:"4,000"},
-        {name:"zkVerify",         v:32.80, imp:"365,874", budget:"12,000"},
-      ],
-      bad:"91.33", badWho:"ZetaChain",
-    },
-    {
-      key:"d2", tone:"teal",
-      rows:[
-        {name:"HeyElsa",  v:1.20, imp:"120,494", budget:"10,000", suf:"%"},
-        {name:"Sentient", v:1.14, imp:"182,611", budget:"10,000", suf:"%"},
-        {name:"Portals",  v:1.05, imp:"136,284", budget:"4,000",  suf:"%"},
-      ],
-      bad:"0.38", badWho:"HashKey Exchange", badSuf:"%",
-    },
-    {
-      key:"d3", tone:"bone",
-      rows:[
-        {name:"Portals", v:2.81, imp:"136,284", budget:"4,000"},
-        {name:"Allora",  v:4.19, imp:"328,192", budget:"12,000"},
-        {name:"Yei Finance", v:4.47, imp:"196,680", budget:"8,000"},
-      ],
-      bad:"18.57", badWho:"ZetaChain",
-    },
-  ];
+  const P = useProjects2();
+  const base = React.useMemo(() => P.filter(p => p.is_baseline !== 0), [P]);
+
+  const dims = React.useMemo(() => {
+    if (!base.length) return [];
+    const sorted = (fn) => [...base].sort(fn);
+    const top3Cpm = sorted((a,b) => (a.cpm||Infinity) - (b.cpm||Infinity)).slice(0,3);
+    const worstCpm = sorted((a,b) => (b.cpm||0) - (a.cpm||0))[0];
+    const top3Er = sorted((a,b) => (b.er||0) - (a.er||0)).slice(0,3);
+    const worstEr = sorted((a,b) => (a.er||0) - (b.er||0))[0];
+    const top3Cpe = sorted((a,b) => (a.cpe||Infinity) - (b.cpe||Infinity)).slice(0,3);
+    const worstCpe = sorted((a,b) => (b.cpe||0) - (a.cpe||0))[0];
+    return [
+      { key:"d1", tone:"ember",
+        rows: top3Cpm.map(p => ({name:p.name, v:+(p.cpm||0).toFixed(2), imp:fmt2(p.imp||0), budget:fmt2(p.budget||0)})),
+        bad: (worstCpm?.cpm||0).toFixed(2), badWho: worstCpm?.name||'—' },
+      { key:"d2", tone:"teal",
+        rows: top3Er.map(p => ({name:p.name, v:+(p.er||0).toFixed(2), imp:fmt2(p.imp||0), budget:fmt2(p.budget||0), suf:"%"})),
+        bad: (worstEr?.er||0).toFixed(2), badWho: worstEr?.name||'—', badSuf:"%" },
+      { key:"d3", tone:"bone",
+        rows: top3Cpe.map(p => ({name:p.name, v:+(p.cpe||0).toFixed(2), imp:fmt2(p.imp||0), budget:fmt2(p.budget||0)})),
+        bad: (worstCpe?.cpe||0).toFixed(2), badWho: worstCpe?.name||'—' },
+    ];
+  }, [base]);
   return (
     <section id="winners" className="relative py-28 md:py-36 overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1px]" style={{background:"var(--rule-strong)"}}/>
@@ -196,16 +190,37 @@ function WinnersSection(){
 
 function StarsSection(){
   const { t } = useT2();
-  const stars = [
-    {key:"s1", name:"Portals", logo:"assets/logos/portals.jpg", bg:"divider-img-2", tone:"ember",
-      stats:[{k:t("stars.stat.budget"),v:"4,000",u:t("stars.u.usdc")},{k:t("stars.stat.imp"),v:"136,284",u:t("stars.u.imp")},{k:t("stars.stat.cpm"),v:"29.35",u:t("stars.u.usdc")},{k:t("stars.stat.cpe"),v:"2.81",u:t("stars.u.usdc"),hl:true}]},
-    {key:"s2", name:"zkVerify", logo:"assets/logos/zkverify.jpg", bg:"divider-img-3", tone:"teal",
-      stats:[{k:t("stars.stat.budget"),v:"12,000",u:t("stars.u.usdc")},{k:t("stars.stat.imp"),v:"365,874",u:t("stars.u.imp"),hl:true},{k:t("stars.stat.cpm"),v:"32.80",u:t("stars.u.usdc")},{k:t("stars.stat.er"),v:"0.53",u:t("stars.u.pct")}]},
-    {key:"s3", name:"Sentient", logo:"assets/logos/sentient.jpg", bg:"divider-img-1", tone:"ember",
-      stats:[{k:t("stars.stat.budget"),v:"10,000",u:t("stars.u.usdc")},{k:t("stars.stat.imp"),v:"182,611",u:t("stars.u.imp")},{k:t("stars.stat.cpm"),v:"54.76",u:t("stars.u.usdc")},{k:t("stars.stat.er"),v:"1.14",u:t("stars.u.pct"),hl:true}]},
-    {key:"s4", name:"HashKey Exchange", logo:"assets/logos/hashkey.jpg", bg:"divider-img-4", tone:"teal",
-      stats:[{k:t("stars.stat.budget"),v:"1,400",u:t("stars.u.usdc")},{k:t("stars.stat.imp"),v:"73,455",u:t("stars.u.imp")},{k:t("stars.stat.cpm"),v:"19.06",u:t("stars.u.usdc"),hl:true},{k:t("stars.stat.cpe"),v:"5.05",u:t("stars.u.usdc")}]},
-  ];
+  const P = useProjects2();
+  const base = React.useMemo(() => P.filter(p => p.is_baseline !== 0), [P]);
+
+  const stars = React.useMemo(() => {
+    if (!base.length) return [];
+    const sorted = [...base].sort((a,b) => (b.imp||0) - (a.imp||0));
+    const top4 = sorted.slice(0, 4);
+    const tones = ["ember","teal","ember","teal"];
+    const bgs = ["divider-img-2","divider-img-3","divider-img-1","divider-img-4"];
+    return top4.map((p, i) => {
+      const eng = Math.round((p.imp||0) * (p.er||0) / 100);
+      const cpe = eng > 0 ? ((p.budget||0) / eng) : 0;
+      const bestStat = (() => {
+        if (p.cpm && p.cpm <= 35) return {k:t("stars.stat.cpm"), v:(p.cpm).toFixed(2), u:t("stars.u.usdc"), hl:true};
+        if (p.er && p.er >= 1) return {k:t("stars.stat.er"), v:(p.er).toFixed(2), u:t("stars.u.pct"), hl:true};
+        if (cpe && cpe <= 5) return {k:t("stars.stat.cpe"), v:cpe.toFixed(2), u:t("stars.u.usdc"), hl:true};
+        return {k:t("stars.stat.cpm"), v:(p.cpm||0).toFixed(2), u:t("stars.u.usdc"), hl:true};
+      })();
+      return {
+        key: `s${i+1}`, name: p.name, logo: p.logo || '', bg: bgs[i] || bgs[0], tone: tones[i],
+        stats: [
+          {k:t("stars.stat.budget"), v:fmt2(p.budget||0), u:t("stars.u.usdc")},
+          {k:t("stars.stat.imp"), v:fmt2(p.imp||0), u:t("stars.u.imp")},
+          bestStat,
+          bestStat.k === t("stars.stat.cpm")
+            ? {k:t("stars.stat.er"), v:(p.er||0).toFixed(2), u:t("stars.u.pct")}
+            : {k:t("stars.stat.cpm"), v:(p.cpm||0).toFixed(2), u:t("stars.u.usdc")},
+        ],
+      };
+    });
+  }, [base, t]);
   return (
     <section id="stars" className="relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1px]" style={{background:"var(--rule-strong)"}}/>
