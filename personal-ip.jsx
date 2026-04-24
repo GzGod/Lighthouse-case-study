@@ -2,6 +2,12 @@
 const { useEffect: useEffectIP, useRef: useRefIP, useState: useStateIP } = React;
 const { LangProvider: LPIP, useT: useTIP, DICT: DICT_IP } = window.i18n;
 
+// Snapshot of DICT before any draft pollution, used for clear/reset
+const DICT_IP_CLEAN = { zh: { ...DICT_IP.zh }, en: { ...DICT_IP.en } };
+
+// Track which keys are currently overridden by draft preview
+let _draftKeys = new Set();
+
 // Load IP case texts from API and merge into DICT so t() picks them up
 let _ipCasesLoaded = null;
 function loadIPCases() {
@@ -11,7 +17,15 @@ function loadIPCases() {
       for (const c of cases) {
         if (c.texts) {
           for (const [lang, entries] of Object.entries(c.texts)) {
-            if (DICT_IP[lang]) Object.assign(DICT_IP[lang], entries);
+            if (DICT_IP[lang]) {
+              for (const [k, v] of Object.entries(entries)) {
+                if (!_draftKeys.has(k)) {
+                  DICT_IP[lang][k] = v;
+                }
+              }
+              if (!DICT_IP_CLEAN[lang]) DICT_IP_CLEAN[lang] = {};
+              Object.assign(DICT_IP_CLEAN[lang], entries);
+            }
           }
         }
       }
@@ -360,13 +374,32 @@ function PageIP() {
         const drafts = e.data.drafts;
         if (drafts) {
           for (const [lang, entries] of Object.entries(drafts)) {
-            if (DICT_IP[lang]) Object.assign(DICT_IP[lang], entries);
+            if (DICT_IP[lang]) {
+              for (const [k, v] of Object.entries(entries)) {
+                DICT_IP[lang][k] = v;
+                _draftKeys.add(k);
+              }
+            }
           }
           if (e.data.slug) setPreviewSlug(e.data.slug);
           forceUpdate(n => n + 1);
         }
       } else if (e.data.action === 'clear-draft') {
+        // Restore all draft-polluted keys back to persisted values
+        for (const k of _draftKeys) {
+          for (const lang of ['zh', 'en']) {
+            if (DICT_IP[lang]) {
+              if (DICT_IP_CLEAN[lang] && DICT_IP_CLEAN[lang][k] !== undefined) {
+                DICT_IP[lang][k] = DICT_IP_CLEAN[lang][k];
+              } else {
+                delete DICT_IP[lang][k];
+              }
+            }
+          }
+        }
+        _draftKeys = new Set();
         setPreviewSlug(null);
+        forceUpdate(n => n + 1);
       }
     }
     window.addEventListener('message', onMsg);

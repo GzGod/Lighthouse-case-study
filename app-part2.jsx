@@ -208,10 +208,11 @@ function StarsSection(){
     const bgs = ["divider-img-2","divider-img-3","divider-img-1","divider-img-4"];
     return CURATED_STARS.map((cs, i) => {
       const p = P.find(proj => (proj.slug || '') === cs.slug);
-      const budget = p?.budget || 0;
-      const imp = p?.imp || 0;
-      const cpm = p?.cpm || 0;
-      const er = p?.er || 0;
+      if (!p) return null;
+      const budget = p.budget || 0;
+      const imp = p.imp || 0;
+      const cpm = p.cpm || 0;
+      const er = p.er || 0;
       const eng = Math.round(imp * er / 100);
       const cpe = eng > 0 ? (budget / eng) : 0;
       const bestStat = (() => {
@@ -221,7 +222,12 @@ function StarsSection(){
         return {k:t("stars.stat.cpm"), v:cpm.toFixed(2), u:t("stars.u.usdc"), hl:true};
       })();
       return {
-        key: cs.slotKey, name: cs.name, logo: p?.logo || '', bg: bgs[i], tone: tones[i],
+        id: p.slug || cs.slug,
+        key: cs.slotKey,
+        name: p.name,
+        logo: p.logo || '',
+        bg: bgs[i],
+        tone: tones[i],
         stats: [
           {k:t("stars.stat.budget"), v:fmt2(budget), u:t("stars.u.usdc")},
           {k:t("stars.stat.imp"), v:fmt2(imp), u:t("stars.u.imp")},
@@ -231,7 +237,7 @@ function StarsSection(){
             : {k:t("stars.stat.cpm"), v:cpm.toFixed(2), u:t("stars.u.usdc")},
         ],
       };
-    });
+    }).filter(Boolean);
   }, [P, t]);
   return (
     <section id="stars" className="relative overflow-hidden">
@@ -248,7 +254,7 @@ function StarsSection(){
         </Reveal2>
       </div>
       <div className="relative">
-        {stars.map((s,i)=><StarCard key={s.name} s={s} idx={i}/>)}
+        {stars.map((s,i)=><StarCard key={s.id} s={s} idx={i}/>)}
       </div>
     </section>
   );

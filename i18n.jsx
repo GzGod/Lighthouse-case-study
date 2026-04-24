@@ -17,14 +17,14 @@ const DICT = {
     "nav.lang": "EN",
 
     "hero.kicker_tl": "CASE STUDY · VOL. 01 / 2026",
-    "hero.stats_tl": "{totalCount} 个项目 · {totalTweets} 条推文 · Q4·25 — Q2·26",
+    "hero.stats_tl": "{baselineCount} 个基准项目 · {baselineTweets} 条推文 · Q4·25 — Q2·26",
     "hero.kicker_tr": "面向 · Founder / 项目方 / BD",
     "hero.by_tr": "编制 · 灯塔实验室",
     "hero.eyebrow": "灯塔 · 面向长期合作的 Web3 KOL 增长交付",
     "hero.h1_a": "让 Web3 KOL 投放",
     "hero.h1_b": "进入可复制、可预测的",
     "hero.h1_c": "长期增长交付。",
-    "hero.sub": ["基于 ", "{totalCount} 个真实项目", "、", "{totalTweets} 条推文", "、", "超 {totalImpLabel} 次曝光", "的投放记录，这份 Case Study 展示灯塔如何帮助项目方更早对齐预算、效率预期和交付边界，让每一次合作都能为下一次增长决策提供参照。"],
+    "hero.sub": ["基于 ", "{baselineCount} 个基准项目", "、", "{baselineTweets} 条推文", "、", "超 {totalImpLabel} 次曝光", "的投放记录，这份 Case Study 展示灯塔如何帮助项目方更早对齐预算、效率预期和交付边界，让每一次合作都能为下一次增长决策提供参照。"],
     "hero.stat1.k": "总预算池",
     "hero.stat1.u": "USDC · 全部链上结算",
     "hero.stat2.k": "总曝光量",
@@ -33,7 +33,7 @@ const DICT = {
     "hero.stat3.u": "由 {peakErWho} 创造 · 行业均值 ≈ 0.4%",
     "hero.cta1": "查看完整案例 ↓",
     "hero.cta2": "聊聊你的项目",
-    "hero.foot": "{totalCount} 个项目样本 · 可回看数据 · 可对照基准",
+    "hero.foot": "{baselineCount} 个基准项目样本 · {baselineTweets} 条推文 · 可回看数据 · 可对照基准",
     "hero.scroll": "SCROLL · 01/07",
 
     "about.kicker": "§ 02 · 为什么团队会继续和灯塔合作",
@@ -60,7 +60,7 @@ const DICT = {
     "kpi.kicker": "§ 03 · 长期合作要看的基准",
     "kpi.h2_a": "这些数字的价值，",
     "kpi.h2_b": "在于让后续判断更稳。",
-    "kpi.p": "以下 6 个 KPI 来自 {totalCount} 个项目的完整投放记录，保留真实波动，不做样本美化。它们让团队在下一次讨论预算、效率和目标时，有一套可以直接对照的参考线。",
+    "kpi.p": "以下 6 个 KPI 来自 {baselineCount} 个基准项目的完整投放记录，保留真实波动，不做样本美化。它们让团队在下一次讨论预算、效率和目标时，有一套可以直接对照的参考线。",
     "kpi.k1": "总预算", "kpi.k1u": "USDC", "kpi.k1n": "{baselineCount} 个基准项目共同形成的预算参考",
     "kpi.k2": "总曝光", "kpi.k2u": "IMPRESSIONS", "kpi.k2n": "{baselineTweets} 条推文沉淀出的真实交付体量",
     "kpi.k3": "总互动", "kpi.k3u": "ENGAGEMENTS", "kpi.k3n": "帮助团队判断内容和受众是否真正接上",
@@ -187,7 +187,7 @@ const DICT = {
     "stars.u.usdc": "USDC", "stars.u.imp": "IMP", "stars.u.pct": "%",
 
     "matrix.kicker": "§ 06 · 项目矩阵",
-    "matrix.h2_a": "{totalCount} 个项目，",
+    "matrix.h2_a": "{baselineCount} 个基准项目，",
     "matrix.h2_b": "沉淀出一套可对照的判断面。",
     "matrix.p": "横轴是 CPM，纵轴是互动率，气泡大小代表曝光量。这张图的意义，不只是把项目摆在一起看，更是帮助团队在未来合作里更快判断预算效率、内容表现和优化空间。",
     "matrix.legend1": "◇ X 轴 · CPM (USDC)",
@@ -206,7 +206,7 @@ const DICT = {
     "matrix.axis_x": "CPM (USDC) →",
     "matrix.axis_y": "← 互动率 (%)",
     "matrix.tip.budget": "预算", "matrix.tip.imp": "曝光", "matrix.tip.cpm": "CPM", "matrix.tip.er": "互动率", "matrix.tip.cpe": "CPE",
-    "matrix.table.title": "完整数据表 · {totalCount} 个项目",
+    "matrix.table.title": "完整数据表 · {baselineCount} 个基准项目"
     "matrix.table.sub": "点击表头排序 · 代表项目高亮",
     "matrix.table.compiled": "编制 · Q2 2026 · 全部金额以 USDC 计",
     "matrix.col.num": "#",
@@ -251,7 +251,7 @@ const DICT = {
     "cta.s3.v": "72h", "cta.s3.k": "方案反馈速度",
 
     "footer.copy": "© 2026 灯塔实验室 — Case Study Vol. 01 — 编制于 2026 年 Q2",
-    "footer.stats": "{totalCount} 个项目 · {totalTweets} 条推文 · 总曝光 {totalImpFmt} · 可作为后续合作参照",
+    "footer.stats": "{baselineCount} 个基准项目 · {baselineTweets} 条推文 · 总曝光 {totalImpFmt} · 可作为后续合作参照",
     "footer.link.contact": "联系",
 
     "sample.vol": "VOL. 01",
@@ -272,14 +272,14 @@ const DICT = {
     "nav.lang": "中文",
 
     "hero.kicker_tl": "CASE STUDY · VOL. 01 / 2026",
-    "hero.stats_tl": "{totalCount} PROJECTS · {totalTweets} TWEETS · Q4·25 — Q2·26",
+    "hero.stats_tl": "{baselineCount} baseline projects · {baselineTweets} tweets · Q4·25 — Q2·26",
     "hero.kicker_tr": "FOR FOUNDERS / PROJECT TEAMS / BD",
     "hero.by_tr": "COMPILED BY · LIGHTHOUSE LABS",
     "hero.eyebrow": "LIGHTHOUSE · LONG-TERM WEB3 KOL GROWTH DELIVERY",
     "hero.h1_a": "Move Web3 KOL campaigns",
     "hero.h1_b": "into repeatable, more predictable",
     "hero.h1_c": "long-term growth delivery.",
-    "hero.sub": ["Built on ", "{totalCount} real projects", ", ", "{totalTweets} tweets", ", and ", "more than {totalImpLabel} impressions", ", this case study shows how Lighthouse helps teams align budget, expected efficiency, and delivery scope earlier — so each campaign leaves behind something useful for the next growth decision."],
+    "hero.sub": ["Built on ", "{baselineCount} baseline projects", ", ", "{baselineTweets} tweets", ", and ", "more than {totalImpLabel} impressions", ", this case study shows how Lighthouse helps teams align budget, expected efficiency, and delivery scope earlier — so each campaign leaves behind something useful for the next growth decision."],
     "hero.stat1.k": "Budget Pool",
     "hero.stat1.u": "USDC · fully on-chain settled",
     "hero.stat2.k": "Impressions",
@@ -288,7 +288,7 @@ const DICT = {
     "hero.stat3.u": "set by {peakErWho} · industry avg ≈ 0.4%",
     "hero.cta1": "Read the full case ↓",
     "hero.cta2": "Talk through your project",
-    "hero.foot": "{totalCount} project samples · reviewable records · benchmarkable results",
+    "hero.foot": "{baselineCount} baseline project samples · {baselineTweets} tweets · reviewable records · benchmarkable results",
     "hero.scroll": "SCROLL · 01/07",
 
     "about.kicker": "§ 02 · WHY TEAMS STAY WITH LIGHTHOUSE",
@@ -315,7 +315,7 @@ const DICT = {
     "kpi.kicker": "§ 03 · BENCHMARKS THAT MATTER IN LONGER-TERM WORK",
     "kpi.h2_a": "The value of these numbers",
     "kpi.h2_b": "is that they steady the next decision.",
-    "kpi.p": "These 6 KPIs come from complete campaign records across {totalCount} projects. The swings are left intact and the sample is not polished for appearance. What matters is that teams now have a reference line they can use when discussing budget, efficiency, and goals the next time around.",
+    "kpi.p": "These 6 KPIs come from complete campaign records across {baselineCount} baseline projects. The swings are left intact and the sample is not polished for appearance. What matters is that teams now have a reference line they can use when discussing budget, efficiency, and goals the next time around.",
     "kpi.k1": "Total Budget", "kpi.k1u": "USDC", "kpi.k1n": "A budget reference built from {baselineCount} baseline projects",
     "kpi.k2": "Total Impressions", "kpi.k2u": "IMPRESSIONS", "kpi.k2n": "Real delivery scale built from {baselineTweets} tweets",
     "kpi.k3": "Total Engagements", "kpi.k3u": "ENGAGEMENTS", "kpi.k3n": "A practical signal for whether content and audience truly connected",
@@ -432,7 +432,7 @@ const DICT = {
     "stars.u.usdc": "USDC", "stars.u.imp": "IMP", "stars.u.pct": "%",
 
     "matrix.kicker": "§ 06 · FULL PROJECT MATRIX",
-    "matrix.h2_a": "{totalCount} projects,",
+    "matrix.h2_a": "{baselineCount} baseline projects,",
     "matrix.h2_b": "distilled into a benchmarkable judgment set.",
     "matrix.p": "X axis: CPM. Y axis: engagement rate. Bubble size: impressions. The point of this chart is not just placing projects side by side — it helps teams judge budget efficiency, content performance, and optimization space faster in future collaborations.",
     "matrix.legend1": "◇ X · CPM (USDC)",
@@ -451,7 +451,7 @@ const DICT = {
     "matrix.axis_x": "CPM (USDC) →",
     "matrix.axis_y": "← ENGAGEMENT RATE (%)",
     "matrix.tip.budget": "Budget", "matrix.tip.imp": "Imp.", "matrix.tip.cpm": "CPM", "matrix.tip.er": "ER", "matrix.tip.cpe": "CPE",
-    "matrix.table.title": "Full data table · {totalCount} projects",
+    "matrix.table.title": "Full data table · {baselineCount} baseline projects"
     "matrix.table.sub": "Click a column to sort · star projects highlighted",
     "matrix.table.compiled": "COMPILED · Q2 2026 · ALL AMOUNTS IN USDC",
     "matrix.col.num": "#",
@@ -496,7 +496,7 @@ const DICT = {
     "cta.s3.v": "72h", "cta.s3.k": "Proposal response time",
 
     "footer.copy": "© 2026 Lighthouse Labs — Case Study Vol. 01 — Compiled Q2 2026",
-    "footer.stats": "{totalCount} projects · {totalTweets} tweets · {totalImpFmt} total impressions · USDC on Base",
+    "footer.stats": "{baselineCount} baseline projects · {baselineTweets} tweets · {totalImpFmt} total impressions · benchmark reference on Base",
     "footer.link.contact": "Contact",
 
     "sample.vol": "VOL. 01",

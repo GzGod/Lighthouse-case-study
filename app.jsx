@@ -2,18 +2,20 @@
 const { useEffect, useRef, useState, useMemo } = React;
 const { LangProvider, useT, tpl } = window.i18n;
 
-let PROJECTS = JSON.parse(document.getElementById('projects-data').textContent);
-let _projectsReady = null; // Promise that resolves when API data is loaded
+const FALLBACK_PROJECTS = JSON.parse(document.getElementById('projects-data').textContent);
+let PROJECTS = FALLBACK_PROJECTS;
+let _projectsReady = null;
+let _apiLoaded = false;
 
-// Load from API — returns a promise. Components can await this.
 function loadProjectsFromAPI() {
   if (!_projectsReady) {
     _projectsReady = fetch('/api/projects').then(r => r.ok ? r.json() : null).then(data => {
       if (data && data.length) {
         PROJECTS = data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag, is_baseline: p.is_baseline ?? 1, tweets: p.tweets ?? 0, slug: p.slug || '' }));
       }
+      _apiLoaded = true;
       return PROJECTS;
-    }).catch(() => PROJECTS);
+    }).catch(() => { _apiLoaded = true; return PROJECTS; });
   }
   return _projectsReady;
 }
@@ -65,16 +67,20 @@ function buildStatsVars(projects, stats) {
 // Hook for components that need to re-render when projects load from API
 function useProjects() {
   const [data, setData] = useState(PROJECTS);
+  const draftRef = useRef(null);
   useEffect(() => {
-    loadProjectsFromAPI().then(p => setData([...p]));
+    loadProjectsFromAPI().then(p => {
+      if (!draftRef.current) setData([...p]);
+    });
   }, []);
-  // Listen for preview project overrides from admin iframe parent
   useEffect(() => {
     function onMsg(e) {
       if (!e.data || e.data.type !== 'lh-preview') return;
       if (e.data.action === 'projects-draft') {
+        draftRef.current = e.data.projects;
         setData(e.data.projects);
       } else if (e.data.action === 'projects-clear') {
+        draftRef.current = null;
         setData([...PROJECTS]);
       }
     }
@@ -328,4 +334,4 @@ function AboutSection(){
   );
 }
 
-window.App_Part1 = { Nav, Footer, Hero, AboutSection, CountUp, Reveal, PROJECTS, getProjects, useProjects, loadProjectsFromAPI, deriveStats, buildStatsVars, fmt, useT, LangProvider, tpl };
+window.App_Part1 = { Nav, Footer, Hero, AboutSection, CountUp, Reveal, PROJECTS, FALLBACK_PROJECTS, getProjects, useProjects, loadProjectsFromAPI, deriveStats, buildStatsVars, fmt, useT, LangProvider, tpl };

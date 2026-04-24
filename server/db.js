@@ -76,6 +76,33 @@ async function initDB() {
     await pool.query("UPDATE projects SET slug = $1 WHERE name = $2 AND (slug = '' OR slug IS NULL)", [slug, name]);
   }
 
+  await pool.query("UPDATE projects SET slug = '' WHERE slug IS NULL");
+  const { rows: duplicateSlugRows } = await pool.query(`
+    SELECT slug, array_agg(id ORDER BY id) AS ids
+    FROM projects
+    WHERE slug <> ''
+    GROUP BY slug HAVING COUNT(*) > 1
+  `);
+  for (const row of duplicateSlugRows) {
+    const [, ...duplicateIds] = row.ids || [];
+    for (const id of duplicateIds) {
+      let candidate = `${row.slug}-dup-${id}`;
+      let suffix = 1;
+      while (true) {
+        const { rows: existing } = await pool.query(
+          'SELECT 1 FROM projects WHERE slug = $1 AND id <> $2 LIMIT 1',
+          [candidate, id]
+        );
+        if (!existing.length) break;
+        candidate = `${row.slug}-dup-${id}-${suffix}`;
+        suffix += 1;
+      }
+      await pool.query('UPDATE projects SET slug = $1 WHERE id = $2', [candidate, id]);
+    }
+  }
+
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS projects_slug_unique_nonempty ON projects(slug) WHERE slug IS NOT NULL AND slug <> ''`);
+
   // Seed default admin
   const { rows } = await pool.query('SELECT COUNT(*) as c FROM users');
   if (parseInt(rows[0].c) === 0) {
@@ -104,7 +131,7 @@ async function seedProjects() {
     ["Lit Protocol","assets/logos/litprotocol.jpg",12000,174763,68.66,0.95,7.25,"",1,12,24,"lit-protocol"],
     ["HeyElsa","assets/logos/heyelsa.jpg",10000,120494,83.00,1.20,6.94,"互动王",1,13,20,"heyelsa"],
     ["ZetaChain","assets/logos/zetachain.jpg",6000,65693,91.33,0.49,18.57,"",1,14,16,"zetachain"],
-    ["KAIO","assets/logos/kaio.png",37200,124426,298.99,0.55,54.63,"旗舰预算",0,15,15,"kaio"],
+    ["KAIO","assets/logos/kaio.png",37200,124426,298.99,0.55,54.63,"旗舰预算",1,15,15,"kaio"],
   ];
 
   for (const p of projects) {

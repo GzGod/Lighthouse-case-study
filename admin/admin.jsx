@@ -110,7 +110,7 @@ function I18nPage() {
 
   useEffect(() => { api('/i18n/sections').then(setSections); }, []);
   useEffect(() => { if (sections.length && !active) setActive(sections[0]); }, [sections]);
-  useEffect(() => { if (active) api(`/i18n/section/${active}`).then(r => { setRows(r); setEdits({}); }); }, [active]);
+  useEffect(() => { if (active) api(`/i18n/section/${active}`).then(r => { setRows(r); setEdits({}); sendToIframe({ type: 'lh-preview', action: 'clear-draft' }); }); }, [active]);
 
   const grouped = {};
   rows.forEach(r => { if (!grouped[r.key]) grouped[r.key] = {}; grouped[r.key][r.lang] = r.value; });
@@ -231,6 +231,32 @@ function ProjectsPage() {
   const openNew = () => { setForm({ name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1, tweets:0, slug:'' }); setEditing('new'); };
   const openEdit = (p) => { setForm({...p}); setEditing(p.id); };
 
+  function hasProjectDraftIdentity(project) {
+    return Boolean(String(project?.name ?? '').trim() || String(project?.slug ?? '').trim());
+  }
+
+  function validateProjectForm(project) {
+    const name = String(project?.name ?? '').trim();
+    const slug = String(project?.slug ?? '').trim();
+    if (!name) return '请填写项目名称';
+    if (!slug) return '请填写 Slug';
+    if (!/^[a-z0-9-]+$/.test(slug)) return 'Slug 只能包含小写字母、数字和短横线';
+
+    const numericFields = [
+      ['budget', '预算'],
+      ['impressions', '曝光'],
+      ['cpm', 'CPM'],
+      ['er', '互动率'],
+      ['cpe', 'CPE'],
+      ['tweets', '推文数'],
+      ['is_baseline', '进入基准'],
+    ];
+    for (const [field, label] of numericFields) {
+      if (!Number.isFinite(Number(project?.[field]))) return `${label} 必须是有效数字`;
+    }
+    return '';
+  }
+
   // Build draft projects array from current state
   const buildDraftProjects = (currentForm, currentEditing) => {
     if (currentEditing === null) return null;
@@ -238,7 +264,7 @@ function ProjectsPage() {
       const proj = p.id === currentEditing ? currentForm : p;
       return { name:proj.name, logo:proj.logo, budget:proj.budget, imp:proj.impressions, cpm:proj.cpm, er:proj.er, cpe:proj.cpe, tag:proj.tag, is_baseline: proj.is_baseline ?? 1, tweets: proj.tweets ?? 0, slug: proj.slug || '' };
     });
-    if (currentEditing === 'new') {
+    if (currentEditing === 'new' && hasProjectDraftIdentity(currentForm)) {
       draftProjects.push({ name:currentForm.name, logo:currentForm.logo, budget:currentForm.budget, imp:currentForm.impressions, cpm:currentForm.cpm, er:currentForm.er, cpe:currentForm.cpe, tag:currentForm.tag, is_baseline: currentForm.is_baseline ?? 1, tweets: currentForm.tweets ?? 0, slug: currentForm.slug || '' });
     }
     return draftProjects;
@@ -273,6 +299,11 @@ function ProjectsPage() {
   };
 
   const save = async () => {
+    const error = validateProjectForm(form);
+    if (error) {
+      toast(error);
+      return;
+    }
     if (editing === 'new') {
       await api('/projects', { method:'POST', body:JSON.stringify(form) });
       toast('项目已添加');
