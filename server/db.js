@@ -77,6 +77,57 @@ async function initDB() {
   }
   await pool.query("UPDATE projects SET is_baseline = 1 WHERE (slug = 'kaio' OR name = 'KAIO')");
 
+  const dynamicI18nTemplates = [
+    ['zh', 'hero.stats_tl', '{baselineCount} 个基准项目 · {baselineTweets} 条推文 · Q4·25 — Q2·26', ['baselineCount', 'baselineTweets']],
+    ['zh', 'hero.sub', JSON.stringify(['基于 ', '{baselineCount} 个基准项目', '、', '{baselineTweets} 条推文', '、', '超 {totalImpLabel} 次曝光', '的投放记录，这份 Case Study 展示灯塔如何帮助项目方更早对齐预算、效率预期和交付边界，让每一次合作都能为下一次增长决策提供参照。']), ['baselineCount', 'baselineTweets', 'totalImpLabel']],
+    ['zh', 'hero.stat2.u', '{baselineCount} 个基准项目 · {baselineTweets} 条推文', ['baselineCount', 'baselineTweets']],
+    ['zh', 'hero.stat3.u', '由 {peakErWho} 创造 · 行业均值 ≈ 0.4%', ['peakErWho']],
+    ['zh', 'hero.foot', '{baselineCount} 个基准项目样本 · {baselineTweets} 条推文 · 可回看数据 · 可对照基准', ['baselineCount', 'baselineTweets']],
+    ['zh', 'about.f2', '◇ 累计服务项目 40+（本报告取样 {totalCount} 个 · {baselineCount} 个进入基准）', ['totalCount', 'baselineCount']],
+    ['zh', 'kpi.p', '以下 6 个 KPI 来自 {baselineCount} 个基准项目的完整投放记录，保留真实波动，不做样本美化。它们让团队在下一次讨论预算、效率和目标时，有一套可以直接对照的参考线。', ['baselineCount']],
+    ['zh', 'kpi.k1n', '{baselineCount} 个基准项目共同形成的预算参考', ['baselineCount']],
+    ['zh', 'kpi.k2n', '{baselineTweets} 条推文沉淀出的真实交付体量', ['baselineTweets']],
+    ['zh', 'kpi.k5n', '{lowestCpmWho} 跑出的高效曝光样本', ['lowestCpmWho']],
+    ['zh', 'kpi.k6n', '{peakErWho} 把深度参与拉到行业均值上方', ['peakErWho']],
+    ['zh', 'kpi.sub1.who', '{lowestCpeWho} 把互动成本压到很低的区间', ['lowestCpeWho']],
+    ['zh', 'kpi.sub2.who', '{maxImpWho} 证明中高预算也能跑出规模', ['maxImpWho']],
+    ['zh', 'matrix.h2_a', '{baselineCount} 个基准项目，', ['baselineCount']],
+    ['zh', 'matrix.scatter_note', '§ 散点图展示 {baselineCount} 个可进入常规对照的项目', ['baselineCount']],
+    ['zh', 'matrix.table.title', '完整数据表 · {baselineCount} 个基准项目', ['baselineCount']],
+    ['zh', 'why.w2.d', '{baselineCount} 个基准项目和 {baselineTweets} 条推文沉淀出一条可对照的参考线，后续做预算讨论时更容易落到具体区间。', ['baselineCount', 'baselineTweets']],
+    ['zh', 'footer.stats', '{baselineCount} 个基准项目 · {baselineTweets} 条推文 · 总曝光 {totalImpFmt} · 可作为后续合作参照', ['baselineCount', 'baselineTweets', 'totalImpFmt']],
+    ['en', 'hero.stats_tl', '{baselineCount} baseline projects · {baselineTweets} tweets · Q4·25 — Q2·26', ['baselineCount', 'baselineTweets']],
+    ['en', 'hero.sub', JSON.stringify(['Built on ', '{baselineCount} baseline projects', ', ', '{baselineTweets} tweets', ', and ', 'more than {totalImpLabel} impressions', ', this case study shows how Lighthouse helps teams align budget, expected efficiency, and delivery scope earlier — so each campaign leaves behind something useful for the next growth decision.']), ['baselineCount', 'baselineTweets', 'totalImpLabel']],
+    ['en', 'hero.stat2.u', 'across {baselineCount} baseline projects · {baselineTweets} tweets', ['baselineCount', 'baselineTweets']],
+    ['en', 'hero.stat3.u', 'set by {peakErWho} · industry avg ≈ 0.4%', ['peakErWho']],
+    ['en', 'hero.foot', '{baselineCount} baseline project samples · {baselineTweets} tweets · reviewable records · benchmarkable results', ['baselineCount', 'baselineTweets']],
+    ['en', 'about.f2', '◇ 40+ projects served ({totalCount} sampled here · {baselineCount} in baseline)', ['totalCount', 'baselineCount']],
+    ['en', 'kpi.p', 'These 6 KPIs come from complete campaign records across {baselineCount} baseline projects. The swings are left intact and the sample is not polished for appearance. What matters is that teams now have a reference line they can use when discussing budget, efficiency, and goals the next time around.', ['baselineCount']],
+    ['en', 'kpi.k1n', 'A budget reference built from {baselineCount} baseline projects', ['baselineCount']],
+    ['en', 'kpi.k2n', 'Real delivery scale built from {baselineTweets} tweets', ['baselineTweets']],
+    ['en', 'kpi.k5n', 'A reach-efficiency sample delivered by {lowestCpmWho}', ['lowestCpmWho']],
+    ['en', 'kpi.k6n', '{peakErWho} pushed depth of participation above common market levels', ['peakErWho']],
+    ['en', 'kpi.sub1.who', '{lowestCpeWho} pushed interaction cost into a very efficient range', ['lowestCpeWho']],
+    ['en', 'kpi.sub2.who', '{maxImpWho} shows that mid-to-large budgets can still scale cleanly', ['maxImpWho']],
+    ['en', 'matrix.h2_a', '{baselineCount} baseline projects,', ['baselineCount']],
+    ['en', 'matrix.scatter_note', '§ Scatter shows {baselineCount} projects (CPM 10–100)', ['baselineCount']],
+    ['en', 'matrix.table.title', 'Full data table · {baselineCount} baseline projects', ['baselineCount']],
+    ['en', 'why.w2.d', '{baselineCount} baseline projects and {baselineTweets} tweets have built a reference line that makes it easier to land on specific ranges in future budget discussions.', ['baselineCount', 'baselineTweets']],
+    ['en', 'footer.stats', '{baselineCount} baseline projects · {baselineTweets} tweets · {totalImpFmt} total impressions · benchmark reference on Base', ['baselineCount', 'baselineTweets', 'totalImpFmt']],
+  ];
+  for (const [lang, key, value, required] of dynamicI18nTemplates) {
+    const section = key.split('.')[0] || 'misc';
+    await pool.query(
+      'INSERT INTO i18n (lang, key, value, section) VALUES ($1, $2, $3, $4) ON CONFLICT (lang, key) DO NOTHING',
+      [lang, key, value, section]
+    );
+    const missingPlaceholderClauses = required.map((_, i) => `value NOT LIKE $${i + 4}`).join(' OR ');
+    await pool.query(
+      `UPDATE i18n SET value = $3, updated_at = NOW() WHERE lang = $1 AND key = $2 AND (${missingPlaceholderClauses})`,
+      [lang, key, value, ...required.map(name => `%{${name}}%`)]
+    );
+  }
+
   await pool.query("UPDATE projects SET slug = '' WHERE slug IS NULL");
   const { rows: duplicateSlugRows } = await pool.query(`
     SELECT slug, array_agg(id ORDER BY id) AS ids

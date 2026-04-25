@@ -119,6 +119,16 @@ test('Database init should keep KAIO in the baseline sample on existing database
   assert.ok(/UPDATE projects SET is_baseline = 1 WHERE \(slug = 'kaio' OR name = 'KAIO'\)/.test(read('server/db.js')), 'missing KAIO baseline backfill for existing databases');
 });
 
+test('Database init should backfill stale dynamic i18n copies without overwriting placeholder templates', () => {
+  const db = read('server/db.js');
+  assert.ok(/dynamicI18nTemplates/.test(db), 'missing dynamic i18n template backfill list');
+  assert.ok(/ON CONFLICT \(lang, key\) DO NOTHING/.test(db), 'dynamic i18n backfill should insert missing keys without overwriting existing rows');
+  assert.ok(/value NOT LIKE/.test(db), 'dynamic i18n backfill should only update rows missing required placeholders');
+  for (const key of ['hero.stat2.u', 'kpi.k2n', 'footer.stats']) {
+    assert.ok(db.includes(key), `missing DB backfill for ${key}`);
+  }
+});
+
 test('Matrix table title i18n entries should be comma-separated from following keys', () => {
   const separatedTitleEntries = i18n.match(/"matrix\.table\.title":\s*"[^"]*",\s*\n\s*"matrix\.table\.sub":/g) || [];
   assert.strictEqual(separatedTitleEntries.length, 2, 'both zh and en matrix.table.title entries must end with a comma before matrix.table.sub');
