@@ -505,12 +505,54 @@ const DICT = {
 
 const LangContext = React.createContext({ lang: "zh", setLang: ()=>{}, t: (k)=>k });
 
+const LIVE_I18N_PLACEHOLDER_REQUIREMENTS = {
+  "hero.stats_tl": ["baselineCount", "baselineTweets"],
+  "hero.sub": ["baselineCount", "baselineTweets", "totalImpLabel"],
+  "hero.stat2.u": ["baselineCount", "baselineTweets"],
+  "hero.foot": ["baselineCount", "baselineTweets"],
+  "about.f2": ["totalCount", "baselineCount"],
+  "kpi.p": ["baselineCount"],
+  "kpi.k1n": ["baselineCount"],
+  "matrix.h2_a": ["baselineCount"],
+  "matrix.scatter_note": ["baselineCount"],
+  "matrix.table.title": ["baselineCount"],
+  "why.w2.d": ["baselineCount", "baselineTweets"],
+  "footer.stats": ["baselineCount", "baselineTweets", "totalImpFmt"],
+};
+
+function liveI18nPlaceholders(value) {
+  const text = Array.isArray(value) ? value.join(" ") : String(value ?? "");
+  return new Set([...text.matchAll(/\{(\w+)\}/g)].map(m => m[1]));
+}
+
+function shouldUseLiveI18nValue(key, value) {
+  const required = LIVE_I18N_PLACEHOLDER_REQUIREMENTS[key];
+  if (!required) return true;
+  const placeholders = liveI18nPlaceholders(value);
+  return required.every(k => placeholders.has(k));
+}
+
 // Try to load i18n from API, merge over hardcoded DICT
 let _liveDict = null;
 function loadLiveDict() {
   if (_liveDict) return Promise.resolve(_liveDict);
   return fetch('/api/i18n').then(r => r.ok ? r.json() : null).then(d => {
-    if (d) { _liveDict = d; for (const lang of Object.keys(d)) { DICT[lang] = { ...DICT[lang], ...d[lang] }; } }
+    if (d) {
+      _liveDict = {};
+      for (const lang of Object.keys(d)) {
+        const merged = { ...(DICT[lang] || {}) };
+        _liveDict[lang] = {};
+        for (const [key, value] of Object.entries(d[lang] || {})) {
+          if (shouldUseLiveI18nValue(key, value)) {
+            merged[key] = value;
+            _liveDict[lang][key] = value;
+          } else {
+            _liveDict[lang][key] = merged[key];
+          }
+        }
+        DICT[lang] = merged;
+      }
+    }
     return DICT;
   }).catch(() => DICT);
 }

@@ -69,6 +69,15 @@ test('Hero and footer stats should use baseline wording, not ambiguous total sam
   assert.ok(!/"footer\.stats":\s*"\{totalCount\}.*\{totalTweets\}/.test(i18n), 'footer.stats still mixes totalCount and totalTweets');
 });
 
+test('Live i18n should not let stale persisted copy overwrite dynamic stat placeholders', () => {
+  assert.ok(/LIVE_I18N_PLACEHOLDER_REQUIREMENTS/.test(i18n), 'missing dynamic i18n placeholder guard list');
+  assert.ok(/shouldUseLiveI18nValue/.test(i18n), 'missing dynamic i18n live-value guard');
+  assert.ok(/shouldUseLiveI18nValue\(key, value\)/.test(i18n), 'live i18n merge does not use placeholder guard');
+  for (const key of ['hero.stat2.u', 'hero.foot', 'footer.stats', 'kpi.p', 'matrix.table.title']) {
+    assert.ok(i18n.includes(`"${key}"`), `missing guarded dynamic i18n key ${key}`);
+  }
+});
+
 test('Matrix reference labels should be dynamic values, not stale hardcoded copy', () => {
   assert.ok(/ReferenceLine x=\{ds\.avgCpm\}/.test(appPart3), 'missing dynamic avg CPM reference line');
   assert.ok(/ReferenceLine y=\{ds\.avgEr\}/.test(appPart3), 'missing dynamic avg ER reference line');
@@ -92,6 +101,10 @@ test('Matrix table title should not split baseline and flagship counts', () => {
 test('Database init should enforce a non-empty unique slug index for projects', () => {
   assert.ok(/CREATE UNIQUE INDEX IF NOT EXISTS projects_slug_unique_nonempty ON projects\(slug\) WHERE slug IS NOT NULL AND slug <> ''/.test(read('server/db.js')), 'missing partial unique index for non-empty project slugs');
   assert.ok(/GROUP BY slug HAVING COUNT\(\*\) > 1/.test(read('server/db.js')), 'missing duplicate slug detection before creating project slug index');
+});
+
+test('Database init should keep KAIO in the baseline sample on existing databases', () => {
+  assert.ok(/UPDATE projects SET is_baseline = 1 WHERE \(slug = 'kaio' OR name = 'KAIO'\)/.test(read('server/db.js')), 'missing KAIO baseline backfill for existing databases');
 });
 
 test('Matrix table title i18n entries should be comma-separated from following keys', () => {

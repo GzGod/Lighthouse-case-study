@@ -75,6 +75,7 @@ async function initDB() {
   for (const [name, slug] of Object.entries(slugMap)) {
     await pool.query("UPDATE projects SET slug = $1 WHERE name = $2 AND (slug = '' OR slug IS NULL)", [slug, name]);
   }
+  await pool.query("UPDATE projects SET is_baseline = 1 WHERE (slug = 'kaio' OR name = 'KAIO')");
 
   await pool.query("UPDATE projects SET slug = '' WHERE slug IS NULL");
   const { rows: duplicateSlugRows } = await pool.query(`
