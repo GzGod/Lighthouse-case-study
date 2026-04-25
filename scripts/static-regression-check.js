@@ -47,6 +47,10 @@ test('Admin project save should validate required fields before calling the API'
   assert.ok(/const error = validateProjectForm\(form\);\s*if \(error\) \{\s*toast\(error\);\s*return;\s*\}/.test(admin), 'project save still lacks front-end validation before API call');
 });
 
+test('Admin project save should surface API errors as toast messages', () => {
+  assert.ok(/try\s*\{[\s\S]*await api\('\/projects'[\s\S]*await api\(`\/projects\/\$\{editing\}`[\s\S]*\}\s*catch\s*\(err\)\s*\{[\s\S]*toast\(`保存失败：\$\{err\.message\}`\)/.test(admin), 'project save API errors are not caught and shown via toast');
+});
+
 test('Curated stars should filter out missing projects instead of rendering zero-value fallbacks', () => {
   assert.ok(/CURATED_STARS\.map\(\(cs, i\) => \{[\s\S]*if \(!p\) return null;[\s\S]*\}\)\.filter\(Boolean\)/.test(appPart2), 'missing curated-star filter for deleted projects');
   assert.ok(!/const budget = p\?\.budget \|\| 0;/.test(appPart2), 'still falls back to zero-value curated-star stats');
@@ -88,6 +92,11 @@ test('Matrix table title should not split baseline and flagship counts', () => {
 test('Database init should enforce a non-empty unique slug index for projects', () => {
   assert.ok(/CREATE UNIQUE INDEX IF NOT EXISTS projects_slug_unique_nonempty ON projects\(slug\) WHERE slug IS NOT NULL AND slug <> ''/.test(read('server/db.js')), 'missing partial unique index for non-empty project slugs');
   assert.ok(/GROUP BY slug HAVING COUNT\(\*\) > 1/.test(read('server/db.js')), 'missing duplicate slug detection before creating project slug index');
+});
+
+test('Matrix table title i18n entries should be comma-separated from following keys', () => {
+  const separatedTitleEntries = i18n.match(/"matrix\.table\.title":\s*"[^"]*",\s*\n\s*"matrix\.table\.sub":/g) || [];
+  assert.strictEqual(separatedTitleEntries.length, 2, 'both zh and en matrix.table.title entries must end with a comma before matrix.table.sub');
 });
 
 if (process.exitCode) process.exit(process.exitCode);

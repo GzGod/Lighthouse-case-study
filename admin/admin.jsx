@@ -304,15 +304,19 @@ function ProjectsPage() {
       toast(error);
       return;
     }
-    if (editing === 'new') {
-      await api('/projects', { method:'POST', body:JSON.stringify(form) });
-      toast('项目已添加');
-    } else {
-      await api(`/projects/${editing}`, { method:'PUT', body:JSON.stringify(form) });
-      toast('项目已更新');
+    try {
+      if (editing === 'new') {
+        await api('/projects', { method:'POST', body:JSON.stringify(form) });
+        toast('项目已添加');
+      } else {
+        await api(`/projects/${editing}`, { method:'PUT', body:JSON.stringify(form) });
+        toast('项目已更新');
+      }
+      setEditing(null); load();
+      setTimeout(() => { if (iframeRef.current) iframeRef.current.src = iframeRef.current.src; }, 200);
+    } catch (err) {
+      toast(`保存失败：${err.message}`);
     }
-    setEditing(null); load();
-    setTimeout(() => { if (iframeRef.current) iframeRef.current.src = iframeRef.current.src; }, 200);
   };
 
   const del = async (id) => {

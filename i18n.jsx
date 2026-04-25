@@ -206,7 +206,7 @@ const DICT = {
     "matrix.axis_x": "CPM (USDC) →",
     "matrix.axis_y": "← 互动率 (%)",
     "matrix.tip.budget": "预算", "matrix.tip.imp": "曝光", "matrix.tip.cpm": "CPM", "matrix.tip.er": "互动率", "matrix.tip.cpe": "CPE",
-    "matrix.table.title": "完整数据表 · {baselineCount} 个基准项目"
+    "matrix.table.title": "完整数据表 · {baselineCount} 个基准项目",
     "matrix.table.sub": "点击表头排序 · 代表项目高亮",
     "matrix.table.compiled": "编制 · Q2 2026 · 全部金额以 USDC 计",
     "matrix.col.num": "#",
@@ -451,7 +451,7 @@ const DICT = {
     "matrix.axis_x": "CPM (USDC) →",
     "matrix.axis_y": "← ENGAGEMENT RATE (%)",
     "matrix.tip.budget": "Budget", "matrix.tip.imp": "Imp.", "matrix.tip.cpm": "CPM", "matrix.tip.er": "ER", "matrix.tip.cpe": "CPE",
-    "matrix.table.title": "Full data table · {baselineCount} baseline projects"
+    "matrix.table.title": "Full data table · {baselineCount} baseline projects",
     "matrix.table.sub": "Click a column to sort · star projects highlighted",
     "matrix.table.compiled": "COMPILED · Q2 2026 · ALL AMOUNTS IN USDC",
     "matrix.col.num": "#",
