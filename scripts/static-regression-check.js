@@ -73,7 +73,19 @@ test('Live i18n should not let stale persisted copy overwrite dynamic stat place
   assert.ok(/LIVE_I18N_PLACEHOLDER_REQUIREMENTS/.test(i18n), 'missing dynamic i18n placeholder guard list');
   assert.ok(/shouldUseLiveI18nValue/.test(i18n), 'missing dynamic i18n live-value guard');
   assert.ok(/shouldUseLiveI18nValue\(key, value\)/.test(i18n), 'live i18n merge does not use placeholder guard');
-  for (const key of ['hero.stat2.u', 'hero.foot', 'footer.stats', 'kpi.p', 'matrix.table.title']) {
+  for (const key of [
+    'hero.stat2.u',
+    'hero.stat3.u',
+    'hero.foot',
+    'footer.stats',
+    'kpi.p',
+    'kpi.k2n',
+    'kpi.k5n',
+    'kpi.k6n',
+    'kpi.sub1.who',
+    'kpi.sub2.who',
+    'matrix.table.title',
+  ]) {
     assert.ok(i18n.includes(`"${key}"`), `missing guarded dynamic i18n key ${key}`);
   }
 });
