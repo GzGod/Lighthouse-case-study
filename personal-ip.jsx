@@ -77,23 +77,23 @@ function NavIP() {
   return (
     <header className="fixed top-0 left-0 right-0 z-40" style={{ backdropFilter: "blur(12px)", background: "rgba(7,8,10,0.55)", borderBottom: "1px solid var(--rule)" }}>
       <div className="max-w-[1360px] mx-auto px-6 md:px-10 h-14 flex items-center justify-between gap-4">
-        <a href="Lighthouse Case Study.html" className="flex items-center gap-3 shrink-0">
+        <a href="/" className="flex items-center gap-3 shrink-0">
           <span className="font-display text-[17px] tracking-wide" style={{ letterSpacing: ".02em" }}>{t("brand.cn")}</span>
           <span className="h-4 w-px bg-[var(--rule-strong)]" />
           <img src="assets/lighthouse-logo.svg" alt="Lighthouse" className="h-[18px] w-auto opacity-95" />
         </a>
         <nav className="hidden lg:flex items-center gap-7 text-[11px] font-mono uppercase tracking-[0.22em] text-[var(--bone-dim)]">
-          <a href="Lighthouse Case Study.html#about" className="hover:text-[var(--bone)] transition">{t("nav.about")}</a>
-          <a href="Lighthouse Case Study.html#kpi" className="hover:text-[var(--bone)] transition">{t("nav.kpi")}</a>
-          <a href="Lighthouse Case Study.html#winners" className="hover:text-[var(--bone)] transition">{t("nav.winners")}</a>
+          <a href="/#about" className="hover:text-[var(--bone)] transition">{t("nav.about")}</a>
+          <a href="/#kpi" className="hover:text-[var(--bone)] transition">{t("nav.kpi")}</a>
+          <a href="/#winners" className="hover:text-[var(--bone)] transition">{t("nav.winners")}</a>
           <span className="text-[var(--ember)]">{t("nav.ip")}</span>
-          <a href="Lighthouse Case Study.html#stars" className="hover:text-[var(--bone)] transition">{t("nav.stars")}</a>
-          <a href="Lighthouse Case Study.html#matrix" className="hover:text-[var(--bone)] transition">{t("nav.matrix")}</a>
-          <a href="Lighthouse Case Study.html#cta" className="hover:text-[var(--bone)] transition">{t("nav.cta")}</a>
+          <a href="/#stars" className="hover:text-[var(--bone)] transition">{t("nav.stars")}</a>
+          <a href="/#matrix" className="hover:text-[var(--bone)] transition">{t("nav.matrix")}</a>
+          <a href="/#cta" className="hover:text-[var(--bone)] transition">{t("nav.cta")}</a>
         </nav>
         <div className="flex items-center gap-2">
           <LangToggleIP />
-          <a href="Lighthouse Case Study.html#cta" className="hidden md:inline-block text-[11px] font-mono uppercase tracking-[0.22em] px-3.5 py-1.5 btn-bone rounded-[2px] hover:text-[var(--ember)] transition">{t("nav.cta_btn")}</a>
+          <a href="/#cta" className="hidden md:inline-block text-[11px] font-mono uppercase tracking-[0.22em] px-3.5 py-1.5 btn-bone rounded-[2px] hover:text-[var(--ember)] transition">{t("nav.cta_btn")}</a>
         </div>
       </div>
     </header>);
@@ -132,7 +132,7 @@ function IPHero() {
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 70% 45% at 80% 20%, rgba(255,122,69,0.14), transparent 60%)" }} />
       <div className="max-w-[1360px] mx-auto px-6 md:px-10 relative pt-24 pb-14 md:pt-32 md:pb-20">
         <RevealIP>
-          <a href="Lighthouse Case Study.html" className="inline-block kicker hover:text-[var(--ember)] transition mb-10">{t("ip.back")}</a>
+          <a href="/" className="inline-block kicker hover:text-[var(--ember)] transition mb-10">{t("ip.back")}</a>
         </RevealIP>
         <RevealIP delay={100} className="grid md:grid-cols-12 gap-8 items-end">
           <div className="md:col-span-2 kicker">{t("ip.kicker")}</div>

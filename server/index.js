@@ -81,11 +81,22 @@ async function start() {
 
   // Serve static files
   const staticRoot = path.join(__dirname, '..');
-  app.use(express.static(staticRoot));
-
   app.get('/', (req, res) => {
     res.sendFile(path.join(staticRoot, 'Lighthouse Case Study.html'));
   });
+  app.get('/case-study', (req, res) => {
+    res.sendFile(path.join(staticRoot, 'Lighthouse Case Study.html'));
+  });
+  app.get('/personal-ip', (req, res) => {
+    res.sendFile(path.join(staticRoot, 'Personal IP.html'));
+  });
+  app.get('/Lighthouse Case Study.html', (req, res) => {
+    res.redirect(301, '/');
+  });
+  app.get('/Personal IP.html', (req, res) => {
+    res.redirect(301, '/personal-ip');
+  });
+  app.use(express.static(staticRoot));
 
   app.get('/admin', (req, res) => {
     res.sendFile(path.join(staticRoot, 'admin', 'index.html'));

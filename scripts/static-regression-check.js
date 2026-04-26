@@ -102,6 +102,15 @@ test('Top navigation should include the Lighthouse app entry next to the CTA but
   assert.ok(/href="https:\/\/app\.lhdao\.top\/"[\s\S]*\{t\("nav\.app_btn"\)\}/.test(app), 'missing Lighthouse app link in top navigation');
 });
 
+test('Public page links should use canonical extensionless routes', () => {
+  assert.ok(/app\.get\('\/case-study'[\s\S]*Lighthouse Case Study\.html/.test(serverIndex), 'missing extensionless case-study route');
+  assert.ok(/app\.get\('\/personal-ip'[\s\S]*Personal IP\.html/.test(serverIndex), 'missing extensionless personal-ip route');
+  assert.ok(/app\.get\('\/Lighthouse Case Study\.html'[\s\S]*res\.redirect\(301, '\/'\)/.test(serverIndex), 'missing redirect from case-study html URL');
+  assert.ok(/app\.get\('\/Personal IP\.html'[\s\S]*res\.redirect\(301, '\/personal-ip'\)/.test(serverIndex), 'missing redirect from personal IP html URL');
+  assert.ok(!/href="Personal IP\.html"/.test(app), 'main nav still links to Personal IP.html');
+  assert.ok(!/Lighthouse Case Study\.html/.test(personalIp), 'personal IP page still links back to .html URLs');
+});
+
 test('Homepage copy should position Lighthouse as a safe Web3 attention marketplace', () => {
   assert.ok(/Web3 注意力市场/.test(i18n), 'missing zh attention-market positioning');
   assert.ok(/Web3 attention marketplace/.test(i18n), 'missing en attention-market positioning');

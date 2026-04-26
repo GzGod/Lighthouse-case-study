@@ -170,7 +170,7 @@ function Nav(){
           <a href="#about" className="hover:text-[var(--bone)] transition">{t("nav.about")}</a>
           <a href="#kpi" className="hover:text-[var(--bone)] transition">{t("nav.kpi")}</a>
           <a href="#winners" className="hover:text-[var(--bone)] transition">{t("nav.winners")}</a>
-          <a href="Personal IP.html" className="hover:text-[var(--ember)] transition">{t("nav.ip")} ↗</a>
+          <a href="/personal-ip" className="hover:text-[var(--ember)] transition">{t("nav.ip")} ↗</a>
           <a href="#stars" className="hover:text-[var(--bone)] transition">{t("nav.stars")}</a>
           <a href="#matrix" className="hover:text-[var(--bone)] transition">{t("nav.matrix")}</a>
           <a href="#cta" className="hover:text-[var(--bone)] transition">{t("nav.cta")}</a>
