@@ -90,11 +90,11 @@ async function start() {
   app.get('/personal-ip', (req, res) => {
     res.sendFile(path.join(staticRoot, 'Personal IP.html'));
   });
-  app.get('/Lighthouse Case Study.html', (req, res) => {
-    res.redirect(301, '/');
-  });
-  app.get('/Personal IP.html', (req, res) => {
-    res.redirect(301, '/personal-ip');
+  app.use((req, res, next) => {
+    const pathname = decodeURIComponent(req.path);
+    if (pathname === '/Lighthouse Case Study.html') return res.redirect(301, '/');
+    if (pathname === '/Personal IP.html') return res.redirect(301, '/personal-ip');
+    next();
   });
   app.use(express.static(staticRoot));
 
