@@ -55,7 +55,7 @@ const DICT = {
     "about.cap4.en": "CREATOR SUPPORT",
     "about.cap4.d": "如果你喜欢某个 KOL、分析师或社区主理人，也可以通过灯塔给 TA 一次可见的助推，让支持变成真实曝光。",
     "about.f1": "◇ 可调用 KOL / 创作者池 2,400+",
-    "about.f2": "◇ 累计服务项目与个人需求 40+（本报告取样 {totalCount} 个 · {baselineCount} 个进入基准）",
+    "about.f2": "◇ 服务项目/个人需求 40+（取样 {totalCount} · 基准 {baselineCount}）",
     "about.f3": "◇ 项目宣发 · 个人 IP · 议题讨论 · USDC 结算",
 
     "kpi.kicker": "§ 03 · 注意力交易要看的价格基准",
@@ -311,7 +311,7 @@ const DICT = {
     "about.cap4.en": "创作者支持",
     "about.cap4.d": "If you like a KOL, analyst, or community lead, Lighthouse can turn that support into a visible boost with real reach.",
     "about.f1": "◇ 2,400+ callable KOLs / creators",
-    "about.f2": "◇ 40+ project and individual demands served ({totalCount} sampled here · {baselineCount} in baseline)",
+    "about.f2": "◇ 40+ projects / individual demands ({totalCount} sampled · {baselineCount} baseline)",
     "about.f3": "◇ Project launches · personal IP · market conversation · USDC settlement",
 
     "kpi.kicker": "§ 03 · PRICE BENCHMARKS FOR ATTENTION TRADES",

@@ -110,6 +110,14 @@ test('Homepage copy should position Lighthouse as a safe Web3 attention marketpl
   assert.ok(!/黑稿|雇佣兵|控评|刷火箭/.test(i18n), 'homepage copy contains unsafe grey-market wording');
 });
 
+test('About facts should keep the sampled baseline note short enough for one desktop line', () => {
+  const zhAboutF2 = i18n.match(/"about\.f2":\s*"([^"]+)"/)?.[1] || '';
+  const rendered = zhAboutF2.replace('{totalCount}', '15').replace('{baselineCount}', '15');
+  assert.ok(/取样 \{totalCount\} · 基准 \{baselineCount\}/.test(zhAboutF2), 'about.f2 should use compact sample/baseline wording');
+  assert.ok(!/本报告|进入基准/.test(zhAboutF2), 'about.f2 still contains long desktop-breaking wording');
+  assert.ok(rendered.length <= 32, 'about.f2 rendered zh copy is too long for the three-column fact row');
+});
+
 test('Matrix reference labels should be dynamic values, not stale hardcoded copy', () => {
   assert.ok(/ReferenceLine x=\{ds\.avgCpm\}/.test(appPart3), 'missing dynamic avg CPM reference line');
   assert.ok(/ReferenceLine y=\{ds\.avgEr\}/.test(appPart3), 'missing dynamic avg ER reference line');
