@@ -95,6 +95,12 @@ test('Live i18n should not let stale persisted copy overwrite dynamic stat place
   }
 });
 
+test('Top navigation should include the Lighthouse app entry next to the CTA button', () => {
+  assert.ok(/"nav\.app_btn":\s*"前往灯塔 →"/.test(i18n), 'missing zh Lighthouse app nav label');
+  assert.ok(/"nav\.app_btn":\s*"Go to Lighthouse →"/.test(i18n), 'missing en Lighthouse app nav label');
+  assert.ok(/href="https:\/\/app\.lhdao\.top\/"[\s\S]*\{t\("nav\.app_btn"\)\}/.test(app), 'missing Lighthouse app link in top navigation');
+});
+
 test('Matrix reference labels should be dynamic values, not stale hardcoded copy', () => {
   assert.ok(/ReferenceLine x=\{ds\.avgCpm\}/.test(appPart3), 'missing dynamic avg CPM reference line');
   assert.ok(/ReferenceLine y=\{ds\.avgEr\}/.test(appPart3), 'missing dynamic avg ER reference line');

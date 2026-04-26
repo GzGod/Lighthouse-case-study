@@ -14,6 +14,7 @@ const DICT = {
     "nav.matrix": "项目矩阵",
     "nav.cta": "开始合作",
     "nav.cta_btn": "查看合作方式 →",
+    "nav.app_btn": "前往灯塔 →",
     "nav.lang": "EN",
 
     "hero.kicker_tl": "CASE STUDY · VOL. 01 / 2026",
@@ -269,6 +270,7 @@ const DICT = {
     "nav.matrix": "Project Matrix",
     "nav.cta": "Start Here",
     "nav.cta_btn": "See how we work →",
+    "nav.app_btn": "Go to Lighthouse →",
     "nav.lang": "中文",
 
     "hero.kicker_tl": "CASE STUDY · VOL. 01 / 2026",

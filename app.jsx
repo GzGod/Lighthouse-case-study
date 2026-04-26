@@ -178,6 +178,7 @@ function Nav(){
         <div className="flex items-center gap-2">
           <LangToggle/>
           <a href="#cta" className="hidden md:inline-block text-[11px] font-mono uppercase tracking-[0.22em] px-3.5 py-1.5 btn-bone rounded-[2px] hover:text-[var(--ember)] transition">{t("nav.cta_btn")}</a>
+          <a href="https://app.lhdao.top/" target="_blank" rel="noopener noreferrer" className="hidden md:inline-block whitespace-nowrap text-[11px] font-mono uppercase tracking-[0.22em] px-3.5 py-1.5 btn-ember rounded-[2px] hover:brightness-110 transition">{t("nav.app_btn")}</a>
         </div>
       </div>
     </header>
