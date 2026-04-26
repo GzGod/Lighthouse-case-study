@@ -11,6 +11,7 @@ const NUMERIC_DEFAULTS = {
   er: 0,
   cpe: 0,
   is_baseline: 1,
+  is_visible: 1,
   tweets: 0,
   sort_order: 0,
 };
@@ -51,6 +52,9 @@ function normalizeProjectPayload(input, { partial = false } = {}) {
     if (!partial || input[field] !== undefined) {
       const parsed = parseFiniteNumber(field, input[field] === undefined ? defaultValue : input[field]);
       if (parsed.error) return parsed;
+      if (['is_baseline', 'is_visible'].includes(field) && ![0, 1].includes(parsed.value)) {
+        return { error: `Project ${field} must be 0 or 1` };
+      }
       payload[field] = parsed.value;
     }
   }
@@ -76,6 +80,11 @@ async function projectSlugExists(pool, slug, excludeId) {
 
 module.exports = function(pool) {
   router.get('/', async (req, res) => {
+    const { rows } = await pool.query('SELECT * FROM projects WHERE is_visible <> 0 ORDER BY sort_order');
+    res.json(rows);
+  });
+
+  router.get('/all', authMiddleware, async (req, res) => {
     const { rows } = await pool.query('SELECT * FROM projects ORDER BY sort_order');
     res.json(rows);
   });
@@ -92,8 +101,8 @@ module.exports = function(pool) {
     try {
       const { rows: mx } = await pool.query('SELECT COALESCE(MAX(sort_order),0) as m FROM projects');
       const { rows } = await pool.query(
-        'INSERT INTO projects (name,logo,budget,impressions,cpm,er,cpe,tag,is_baseline,sort_order,tweets,slug) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id',
-        [payload.name, payload.logo, payload.budget, payload.impressions, payload.cpm, payload.er, payload.cpe, payload.tag, payload.is_baseline, mx[0].m + 1, payload.tweets, payload.slug]
+        'INSERT INTO projects (name,logo,budget,impressions,cpm,er,cpe,tag,is_baseline,is_visible,sort_order,tweets,slug) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id',
+        [payload.name, payload.logo, payload.budget, payload.impressions, payload.cpm, payload.er, payload.cpe, payload.tag, payload.is_baseline, payload.is_visible, mx[0].m + 1, payload.tweets, payload.slug]
       );
       res.json({ id: rows[0].id });
     } catch (error) {

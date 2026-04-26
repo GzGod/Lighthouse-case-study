@@ -3,15 +3,18 @@ const { useEffect, useRef, useState, useMemo } = React;
 const { LangProvider, useT, tpl } = window.i18n;
 
 const FALLBACK_PROJECTS = JSON.parse(document.getElementById('projects-data').textContent);
-let PROJECTS = FALLBACK_PROJECTS;
+function visibleProjects(projects) {
+  return (projects || []).filter(p => p.is_visible !== 0);
+}
+let PROJECTS = visibleProjects(FALLBACK_PROJECTS);
 let _projectsReady = null;
 let _apiLoaded = false;
 
 function loadProjectsFromAPI() {
   if (!_projectsReady) {
     _projectsReady = fetch('/api/projects').then(r => r.ok ? r.json() : null).then(data => {
-      if (data && data.length) {
-        PROJECTS = data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag, is_baseline: p.is_baseline ?? 1, tweets: p.tweets ?? 0, slug: p.slug || '' }));
+      if (Array.isArray(data)) {
+        PROJECTS = visibleProjects(data.map(p => ({ name:p.name, logo:p.logo, budget:p.budget, imp:p.impressions, cpm:p.cpm, er:p.er, cpe:p.cpe, tag:p.tag, is_baseline: p.is_baseline ?? 1, is_visible:p.is_visible ?? 1, tweets: p.tweets ?? 0, slug: p.slug || '' })));
       }
       _apiLoaded = true;
       return PROJECTS;
@@ -35,13 +38,13 @@ function deriveStats(projects) {
   const totalTweets = projects.reduce((s, p) => s + (p.tweets || 0), 0);
   const avgEr = totalImp > 0 ? (totalEng / totalImp * 100) : 0;
   const avgCpe = totalEng > 0 ? (totalBudget / totalEng) : 0;
-  const peakEr = Math.max(...projects.map(p => p.er || 0));
+  const peakEr = projects.length ? Math.max(...projects.map(p => p.er || 0)) : 0;
   const peakErProject = projects.find(p => p.er === peakEr);
-  const lowestCpm = Math.min(...base.map(p => p.cpm || Infinity));
+  const lowestCpm = base.length ? Math.min(...base.map(p => p.cpm || Infinity)) : 0;
   const lowestCpmProject = base.find(p => p.cpm === lowestCpm);
-  const lowestCpe = Math.min(...base.map(p => p.cpe || Infinity));
+  const lowestCpe = base.length ? Math.min(...base.map(p => p.cpe || Infinity)) : 0;
   const lowestCpeProject = base.find(p => p.cpe === lowestCpe);
-  const maxImp = Math.max(...base.map(p => p.imp || 0));
+  const maxImp = base.length ? Math.max(...base.map(p => p.imp || 0)) : 0;
   const maxImpProject = base.find(p => p.imp === maxImp);
   return { totalBudget, totalImp, avgCpm, avgEr, avgCpe, peakEr, peakErProject, lowestCpm, lowestCpmProject, lowestCpe, lowestCpeProject, maxImp, maxImpProject, baselineCount: base.length, totalEng, baselineTweets, totalTweets };
 }
@@ -77,8 +80,8 @@ function useProjects() {
     function onMsg(e) {
       if (!e.data || e.data.type !== 'lh-preview') return;
       if (e.data.action === 'projects-draft') {
-        draftRef.current = e.data.projects;
-        setData(e.data.projects);
+        draftRef.current = visibleProjects(e.data.projects);
+        setData(draftRef.current);
       } else if (e.data.action === 'projects-clear') {
         draftRef.current = null;
         setData([...PROJECTS]);
@@ -334,4 +337,4 @@ function AboutSection(){
   );
 }
 
-window.App_Part1 = { Nav, Footer, Hero, AboutSection, CountUp, Reveal, PROJECTS, FALLBACK_PROJECTS, getProjects, useProjects, loadProjectsFromAPI, deriveStats, buildStatsVars, fmt, useT, LangProvider, tpl };
+window.App_Part1 = { Nav, Footer, Hero, AboutSection, CountUp, Reveal, PROJECTS, FALLBACK_PROJECTS, getProjects, useProjects, loadProjectsFromAPI, deriveStats, buildStatsVars, visibleProjects, fmt, useT, LangProvider, tpl };

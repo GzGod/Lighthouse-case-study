@@ -35,6 +35,10 @@ function loadIPCases() {
   return _ipCasesLoaded;
 }
 
+function isVisibleCase(c) {
+  return c && c.is_visible !== 0;
+}
+
 // Hook: returns published IP cases from API
 function useIPCases() {
   const [cases, setCases] = useStateIP([]);
@@ -364,6 +368,7 @@ function PageIP() {
   React.useEffect(() => {document.documentElement.style.scrollBehavior = "smooth";}, []);
   const [, forceUpdate] = useStateIP(0);
   const [previewSlug, setPreviewSlug] = useStateIP(null);
+  const [previewVisible, setPreviewVisible] = useStateIP(true);
   useEffectIP(() => { if (ready) forceUpdate(n => n + 1); }, [ready]);
 
   // Listen for IP case draft overrides from admin iframe parent
@@ -381,6 +386,7 @@ function PageIP() {
               }
             }
           }
+          setPreviewVisible(e.data.is_visible !== 0);
           if (e.data.slug) setPreviewSlug(e.data.slug);
           forceUpdate(n => n + 1);
         }
@@ -399,6 +405,7 @@ function PageIP() {
         }
         _draftKeys = new Set();
         setPreviewSlug(null);
+        setPreviewVisible(true);
         forceUpdate(n => n + 1);
       }
     }
@@ -407,9 +414,9 @@ function PageIP() {
   }, []);
 
   // Build render list: published cases + preview slug if not already present
-  const validCases = ready ? cases.filter(c => isCaseComplete(c.slug)) : [];
+  const validCases = ready ? cases.filter(c => isVisibleCase(c) && (previewVisible || c.slug !== previewSlug) && isCaseComplete(c.slug)) : [];
   const renderSlugs = validCases.map(c => c.slug);
-  if (previewSlug && !renderSlugs.includes(previewSlug) && isCaseComplete(previewSlug)) {
+  if (previewVisible && previewSlug && !renderSlugs.includes(previewSlug) && isCaseComplete(previewSlug)) {
     renderSlugs.push(previewSlug);
   }
   const showAstraFallback = ready && renderSlugs.length === 0 && isCaseComplete('astra');

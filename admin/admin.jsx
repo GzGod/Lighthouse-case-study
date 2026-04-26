@@ -225,10 +225,10 @@ function ProjectsPage() {
   const [showPreview, setShowPreview] = useState(true);
   const iframeRef = useRef(null);
 
-  const load = () => api('/projects').then(setProjects);
+  const load = () => api('/projects/all').then(setProjects);
   useEffect(() => { load(); }, []);
 
-  const openNew = () => { setForm({ name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1, tweets:0, slug:'' }); setEditing('new'); };
+  const openNew = () => { setForm({ name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1, is_visible:1, tweets:0, slug:'' }); setEditing('new'); };
   const openEdit = (p) => { setForm({...p}); setEditing(p.id); };
 
   function hasProjectDraftIdentity(project) {
@@ -250,6 +250,7 @@ function ProjectsPage() {
       ['cpe', 'CPE'],
       ['tweets', '推文数'],
       ['is_baseline', '进入基准'],
+      ['is_visible', '前台展示'],
     ];
     for (const [field, label] of numericFields) {
       if (!Number.isFinite(Number(project?.[field]))) return `${label} 必须是有效数字`;
@@ -262,10 +263,10 @@ function ProjectsPage() {
     if (currentEditing === null) return null;
     const draftProjects = projects.map(p => {
       const proj = p.id === currentEditing ? currentForm : p;
-      return { name:proj.name, logo:proj.logo, budget:proj.budget, imp:proj.impressions, cpm:proj.cpm, er:proj.er, cpe:proj.cpe, tag:proj.tag, is_baseline: proj.is_baseline ?? 1, tweets: proj.tweets ?? 0, slug: proj.slug || '' };
+      return { name:proj.name, logo:proj.logo, budget:proj.budget, imp:proj.impressions, cpm:proj.cpm, er:proj.er, cpe:proj.cpe, tag:proj.tag, is_baseline: proj.is_baseline ?? 1, is_visible: proj.is_visible ?? 1, tweets: proj.tweets ?? 0, slug: proj.slug || '' };
     });
     if (currentEditing === 'new' && hasProjectDraftIdentity(currentForm)) {
-      draftProjects.push({ name:currentForm.name, logo:currentForm.logo, budget:currentForm.budget, imp:currentForm.impressions, cpm:currentForm.cpm, er:currentForm.er, cpe:currentForm.cpe, tag:currentForm.tag, is_baseline: currentForm.is_baseline ?? 1, tweets: currentForm.tweets ?? 0, slug: currentForm.slug || '' });
+      draftProjects.push({ name:currentForm.name, logo:currentForm.logo, budget:currentForm.budget, imp:currentForm.impressions, cpm:currentForm.cpm, er:currentForm.er, cpe:currentForm.cpe, tag:currentForm.tag, is_baseline: currentForm.is_baseline ?? 1, is_visible: currentForm.is_visible ?? 1, tweets: currentForm.tweets ?? 0, slug: currentForm.slug || '' });
     }
     return draftProjects;
   };
@@ -338,9 +339,10 @@ function ProjectsPage() {
       <div style={{marginBottom:16}}><button className="btn btn-primary" onClick={openNew}>+ 添加项目</button></div>
       <div className="card">
         <table>
-          <thead><tr><th>项目</th><th>预算</th><th>曝光</th><th>CPM</th><th>互动率</th><th>CPE</th><th>推文</th><th>标签</th><th>操作</th></tr></thead>
-          <tbody>{projects.map(p => <tr key={p.id} style={editing===p.id?{background:'#fff8f0'}:{}}>
+          <thead><tr><th>项目</th><th>展示</th><th>预算</th><th>曝光</th><th>CPM</th><th>互动率</th><th>CPE</th><th>推文</th><th>标签</th><th>操作</th></tr></thead>
+          <tbody>{projects.map(p => <tr key={p.id} style={editing===p.id?{background:'#fff8f0'}:p.is_visible===0?{opacity:.55}:{}}>
             <td style={{fontWeight:600}}>{p.name}</td>
+            <td><span className={`badge badge-${p.is_visible===0?'draft':'published'}`}>{p.is_visible===0?'隐藏':'展示'}</span></td>
             <td>{p.budget?.toLocaleString()}</td>
             <td>{p.impressions?.toLocaleString()}</td>
             <td>{p.cpm?.toFixed(2)}</td>
@@ -373,6 +375,7 @@ function ProjectsPage() {
           <div className="form-group"><label>标签</label><input value={form.tag||''} onChange={e=>setForm({...form,tag:e.target.value})} /></div>
           <div className="form-group"><label>推文数</label><input type="number" value={form.tweets||0} onChange={e=>setForm({...form,tweets:+e.target.value})} /></div>
           <div className="form-group"><label>进入基准</label><select value={form.is_baseline??1} onChange={e=>setForm({...form,is_baseline:+e.target.value})}><option value={1}>是</option><option value={0}>否</option></select></div>
+          <div className="form-group"><label>前台展示</label><select value={form.is_visible??1} onChange={e=>setForm({...form,is_visible:+e.target.value})}><option value={1}>展示</option><option value={0}>隐藏</option></select></div>
         </div>
         <div className="btn-group"><button className="btn btn-primary" onClick={save}>保存</button><button className="btn btn-ghost" onClick={cancelEdit}>取消</button></div>
       </div>}
@@ -479,7 +482,7 @@ function IPCasesPage() {
   const openNew = () => {
     const defaultSlug = 'new-case';
     setEditing('new');
-    setCaseData({ slug: defaultSlug, status: 'draft', texts: { zh: {}, en: {} } });
+    setCaseData({ is_visible: 1, slug: defaultSlug, status: 'draft', texts: { zh: {}, en: {} } });
     setTextEdits(generateTemplateKeys(defaultSlug));
   };
 
@@ -521,7 +524,7 @@ function IPCasesPage() {
   useEffect(() => {
     const drafts = buildIpDraft();
     if (!drafts) return;
-    sendToIpIframe({ type: 'lh-preview', action: 'ip-draft', drafts, slug: caseData?.slug, status: caseData?.status });
+    sendToIpIframe({ type: 'lh-preview', action: 'ip-draft', drafts, slug: caseData?.slug, status: caseData?.status, is_visible: caseData?.is_visible ?? 1 });
     sendToIpIframe({ type: 'lh-preview', action: 'i18n-draft', drafts });
   }, [textEdits, caseData, sendToIpIframe, buildIpDraft]);
 
@@ -531,7 +534,7 @@ function IPCasesPage() {
       if (!e.data || e.data.type !== 'lh-preview-ready') return;
       const drafts = buildIpDraft();
       if (!drafts) return;
-      sendToIpIframe({ type: 'lh-preview', action: 'ip-draft', drafts, slug: caseData?.slug, status: caseData?.status });
+      sendToIpIframe({ type: 'lh-preview', action: 'ip-draft', drafts, slug: caseData?.slug, status: caseData?.status, is_visible: caseData?.is_visible ?? 1 });
       sendToIpIframe({ type: 'lh-preview', action: 'i18n-draft', drafts });
       sendToIpIframe({ type: 'lh-preview', action: 'set-lang', lang: previewLang });
     }
@@ -565,20 +568,20 @@ function IPCasesPage() {
     }
     try {
       if (editing === 'new') {
-        const res = await api('/ip-cases', { method: 'POST', body: JSON.stringify({ slug: caseData.slug, status: 'draft' }) });
+        const res = await api('/ip-cases', { method: 'POST', body: JSON.stringify({ slug: caseData.slug, status: 'draft', is_visible: caseData.is_visible ?? 1 }) });
         const merged = { zh: { ...(textEdits.zh || {}) }, en: { ...(textEdits.en || {}) } };
         if (Object.keys(merged.zh).length || Object.keys(merged.en).length) {
           await api(`/ip-cases/${res.id}/i18n`, { method: 'PUT', body: JSON.stringify({ texts: merged }) });
         }
         if (caseData.status === 'published') {
-          await api(`/ip-cases/${res.id}`, { method: 'PUT', body: JSON.stringify({ status: 'published' }) });
+          await api(`/ip-cases/${res.id}`, { method: 'PUT', body: JSON.stringify({ status: 'published', is_visible: caseData.is_visible ?? 1 }) });
         }
         toast('案例已创建');
       } else {
         const merged = { zh: { ...(caseData.texts?.zh || {}), ...(textEdits.zh || {}) }, en: { ...(caseData.texts?.en || {}), ...(textEdits.en || {}) } };
         const hasTextEdits = Object.keys(textEdits.zh || {}).length || Object.keys(textEdits.en || {}).length;
         if (hasTextEdits) await api(`/ip-cases/${editing}/i18n`, { method: 'PUT', body: JSON.stringify({ texts: merged }) });
-        await api(`/ip-cases/${editing}`, { method: 'PUT', body: JSON.stringify({ slug: caseData.slug, status: caseData.status }) });
+        await api(`/ip-cases/${editing}`, { method: 'PUT', body: JSON.stringify({ slug: caseData.slug, status: caseData.status, is_visible: caseData.is_visible ?? 1 }) });
         toast('案例已更新');
       }
       closeIPEditor(); load();
@@ -607,10 +610,11 @@ function IPCasesPage() {
     <div style={{marginBottom:16}}><button className="btn btn-primary" onClick={openNew}>+ 新建案例</button></div>
     <div className="card">
       <table>
-        <thead><tr><th>Slug</th><th>状态</th><th>排序</th><th>更新时间</th><th>操作</th></tr></thead>
-        <tbody>{cases.map(c => <tr key={c.id}>
+        <thead><tr><th>Slug</th><th>状态</th><th>展示</th><th>排序</th><th>更新时间</th><th>操作</th></tr></thead>
+        <tbody>{cases.map(c => <tr key={c.id} style={c.is_visible===0?{opacity:.55}:{}}>
           <td style={{fontWeight:600}}>{c.slug}</td>
           <td><span className={`badge badge-${c.status}`}>{c.status}</span></td>
+          <td><span className={`badge badge-${c.is_visible===0?'draft':'published'}`}>{c.is_visible===0?'隐藏':'展示'}</span></td>
           <td>{c.sort_order}</td>
           <td>{c.updated_at}</td>
           <td><button className="btn btn-ghost btn-sm" onClick={()=>openEdit(c)}>编辑</button> <button className="btn btn-danger btn-sm" onClick={()=>del(c.id)}>删除</button></td>
@@ -641,6 +645,7 @@ function IPCasesPage() {
           <div className="form-row">
             <div className="form-group"><label>Slug（唯一标识）</label><input value={caseData.slug} onChange={e=>handleSlugChange(e.target.value)} placeholder="例如: nova" disabled={editing !== 'new' && Object.values(caseData.texts?.zh || {}).some(v => v && v.trim())} />{editing !== 'new' && Object.values(caseData.texts?.zh || {}).some(v => v && v.trim()) && <div style={{fontSize:11,color:'#888',marginTop:4}}>已有内容的案例不可修改 Slug</div>}</div>
             <div className="form-group"><label>状态</label><select value={caseData.status} onChange={e=>setCaseData({...caseData,status:e.target.value})}><option value="draft">草稿</option><option value="published">已发布</option></select></div>
+            <div className="form-group"><label>前台展示</label><select value={caseData.is_visible??1} onChange={e=>setCaseData({...caseData,is_visible:+e.target.value})}><option value={1}>展示</option><option value={0}>隐藏</option></select></div>
           </div>
 
           {groupedDisplay.map(g => <div key={g.label} className="card" style={{marginTop:16}}>

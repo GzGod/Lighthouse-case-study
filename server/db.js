@@ -34,6 +34,7 @@ async function initDB() {
       cpe REAL DEFAULT 0,
       tag TEXT DEFAULT '',
       is_baseline INTEGER DEFAULT 1,
+      is_visible INTEGER DEFAULT 1,
       sort_order INTEGER DEFAULT 0,
       tweets INTEGER DEFAULT 0,
       slug TEXT DEFAULT ''
@@ -43,6 +44,7 @@ async function initDB() {
       slug TEXT UNIQUE NOT NULL,
       sort_order INTEGER DEFAULT 0,
       status TEXT DEFAULT 'draft',
+      is_visible INTEGER DEFAULT 1,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
@@ -65,6 +67,8 @@ async function initDB() {
 
   await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS tweets INTEGER DEFAULT 0`).catch(() => {});
   await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS slug TEXT DEFAULT ''`).catch(() => {});
+  await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_visible INTEGER DEFAULT 1`).catch(() => {});
+  await pool.query(`ALTER TABLE ip_cases ADD COLUMN IF NOT EXISTS is_visible INTEGER DEFAULT 1`).catch(() => {});
 
   // Backfill tweets and slugs for existing rows
   const tweetMap = { 'HashKey Exchange':8, 'Portals':18, 'zkVerify':42, 'SonicSVM':30, 'Puffpaw':15, 'Allora':38, 'Maiga':20, 'Yei Finance':26, 'Kamino':24, 'Fight.ID':28, 'Sentient':25, 'FF':22, 'Lit Protocol':24, 'HeyElsa':20, 'ZetaChain':16, 'KAIO':15 };

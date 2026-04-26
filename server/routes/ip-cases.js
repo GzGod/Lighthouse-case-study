@@ -2,9 +2,15 @@ const express = require('express');
 const { authMiddleware } = require('../auth');
 const router = express.Router();
 
+function normalizeVisibility(value) {
+  const number = Number(value);
+  if (![0, 1].includes(number)) return { error: 'is_visible must be 0 or 1' };
+  return { value: number };
+}
+
 module.exports = function(pool) {
   router.get('/', async (req, res) => {
-    const { rows: cases } = await pool.query("SELECT * FROM ip_cases WHERE status = 'published' ORDER BY sort_order");
+    const { rows: cases } = await pool.query("SELECT * FROM ip_cases WHERE status = 'published' AND is_visible <> 0 ORDER BY sort_order");
     const result = [];
     for (const c of cases) {
       const { rows } = await pool.query('SELECT lang, key, value FROM ip_case_i18n WHERE case_id = $1', [c.id]);
@@ -30,17 +36,19 @@ module.exports = function(pool) {
   });
 
   router.post('/', authMiddleware, async (req, res) => {
-    const { slug, status } = req.body;
+    const { slug, status, is_visible } = req.body;
     if (status === 'published') {
       return res.status(400).json({ error: '新建案例不可直接设为 published，请先填写内容后再发布' });
     }
+    const visible = normalizeVisibility(is_visible ?? 1);
+    if (visible.error) return res.status(400).json({ error: visible.error });
     const { rows: mx } = await pool.query('SELECT COALESCE(MAX(sort_order),0) as m FROM ip_cases');
-    const { rows } = await pool.query('INSERT INTO ip_cases (slug, sort_order, status) VALUES ($1,$2,$3) RETURNING id', [slug, mx[0].m+1, 'draft']);
+    const { rows } = await pool.query('INSERT INTO ip_cases (slug, sort_order, status, is_visible) VALUES ($1,$2,$3,$4) RETURNING id', [slug, mx[0].m+1, 'draft', visible.value]);
     res.json({ id: rows[0].id });
   });
 
   router.put('/:id', authMiddleware, async (req, res) => {
-    const { slug, sort_order, status } = req.body;
+    const { slug, sort_order, status, is_visible } = req.body;
 
     if (slug !== undefined) {
       const { rows: current } = await pool.query('SELECT slug FROM ip_cases WHERE id = $1', [req.params.id]);
@@ -76,6 +84,11 @@ module.exports = function(pool) {
     if (slug !== undefined) { sets.push(`slug = $${idx}`); vals.push(slug); idx++; }
     if (sort_order !== undefined) { sets.push(`sort_order = $${idx}`); vals.push(sort_order); idx++; }
     if (status !== undefined) { sets.push(`status = $${idx}`); vals.push(status); idx++; }
+    if (is_visible !== undefined) {
+      const visible = normalizeVisibility(is_visible);
+      if (visible.error) return res.status(400).json({ error: visible.error });
+      sets.push(`is_visible = $${idx}`); vals.push(visible.value); idx++;
+    }
     if (sets.length) {
       sets.push(`updated_at = NOW()`);
       vals.push(req.params.id);

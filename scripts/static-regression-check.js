@@ -6,10 +6,15 @@ const root = path.resolve(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 const appPart2 = read('app-part2.jsx');
+const app = read('app.jsx');
+const personalIp = read('personal-ip.jsx');
 const admin = read('admin/admin.jsx');
 const i18n = read('i18n.jsx');
 const appPart3 = read('app-part3.jsx');
 const projectsRoute = read('server/routes/projects.js');
+const ipCasesRoute = read('server/routes/ip-cases.js');
+const db = read('server/db.js');
+const caseStudyHtml = read('Lighthouse Case Study.html');
 
 function test(name, fn) {
   try {
@@ -132,6 +137,52 @@ test('Database init should backfill stale dynamic i18n copies without overwritin
 test('Matrix table title i18n entries should be comma-separated from following keys', () => {
   const separatedTitleEntries = i18n.match(/"matrix\.table\.title":\s*"[^"]*",\s*\n\s*"matrix\.table\.sub":/g) || [];
   assert.strictEqual(separatedTitleEntries.length, 2, 'both zh and en matrix.table.title entries must end with a comma before matrix.table.sub');
+});
+
+test('Database schema should include visibility flags for projects and IP cases', () => {
+  assert.ok(/is_visible INTEGER DEFAULT 1/.test(db), 'missing is_visible default column in table definitions');
+  assert.ok(/ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_visible INTEGER DEFAULT 1/.test(db), 'missing projects is_visible migration');
+  assert.ok(/ALTER TABLE ip_cases ADD COLUMN IF NOT EXISTS is_visible INTEGER DEFAULT 1/.test(db), 'missing ip_cases is_visible migration');
+});
+
+test('Project APIs should filter public rows while keeping an authenticated all endpoint', () => {
+  assert.ok(/router\.get\('\/all', authMiddleware[\s\S]*SELECT \* FROM projects ORDER BY sort_order/.test(projectsRoute), 'missing authenticated full project list endpoint');
+  assert.ok(/router\.get\('\/'[\s\S]*WHERE is_visible <> 0[\s\S]*ORDER BY sort_order/.test(projectsRoute), 'public project endpoint does not filter hidden projects');
+  assert.ok(/is_visible:\s*1/.test(projectsRoute), 'project payload defaults do not include is_visible');
+  assert.ok(/\['is_baseline', 'is_visible'\]\.includes\(field\)/.test(projectsRoute), 'project route does not validate boolean-ish flags');
+});
+
+test('IP case APIs should filter public rows by published and visible while persisting visibility', () => {
+  assert.ok(/WHERE status = 'published' AND is_visible <> 0 ORDER BY sort_order/.test(ipCasesRoute), 'public IP cases endpoint does not filter hidden published cases');
+  assert.ok(/const \{ slug, status, is_visible \} = req\.body;/.test(ipCasesRoute), 'IP case create does not accept is_visible');
+  assert.ok(/if \(is_visible !== undefined\)/.test(ipCasesRoute), 'IP case update does not persist is_visible');
+});
+
+test('Frontend project data should carry and filter visibility', () => {
+  assert.ok(/is_visible:p\.is_visible \?\? 1/.test(app), 'API project mapper does not carry is_visible');
+  assert.ok(/Array\.isArray\(data\)/.test(app), 'empty public project API responses should replace stale fallback data');
+  assert.ok(/function visibleProjects/.test(app), 'missing visibleProjects helper');
+  assert.ok(/projects\.length \? Math\.max/.test(app), 'deriveStats should not produce -Infinity when all projects are hidden');
+  assert.ok(/base\.length \? Math\.min/.test(app), 'deriveStats should not produce Infinity when no visible baseline projects remain');
+  assert.ok(/visibleProjects\(e\.data\.projects\)/.test(app), 'project preview drafts are not filtered by visibility');
+  assert.ok(/"is_visible":1/.test(caseStudyHtml), 'static project fallback is missing is_visible defaults');
+});
+
+test('Personal IP preview and render list should respect visibility', () => {
+  assert.ok(/isVisibleCase\(c\)/.test(personalIp), 'published IP render list does not filter hidden cases');
+  assert.ok(/setPreviewVisible\(e\.data\.is_visible !== 0\)/.test(personalIp), 'IP preview message does not track visible flag');
+  assert.ok(/c\.slug !== previewSlug/.test(personalIp), 'hidden preview case is not removed from the persisted published render list');
+  assert.ok(/previewVisible && previewSlug/.test(personalIp), 'hidden IP preview slug can still be rendered');
+});
+
+test('Admin project and IP editors should expose and transmit visibility', () => {
+  assert.ok(/api\('\/projects\/all'\)/.test(admin), 'project admin should load full project list');
+  assert.ok(/is_visible:1/.test(admin), 'new project form does not default to visible');
+  assert.ok(/is_visible: proj\.is_visible \?\? 1/.test(admin), 'project preview draft does not include is_visible');
+  assert.ok(/value=\{form\.is_visible\?\?1\}/.test(admin), 'project form lacks visibility select');
+  assert.ok(/is_visible: 1, slug: defaultSlug/.test(admin), 'new IP case data does not default to visible');
+  assert.ok(/action: 'ip-draft'[\s\S]*is_visible: caseData\?\.is_visible/.test(admin), 'IP preview draft does not transmit is_visible');
+  assert.ok(/value=\{caseData\.is_visible\?\?1\}/.test(admin), 'IP editor lacks visibility select');
 });
 
 if (process.exitCode) process.exit(process.exitCode);
