@@ -14,6 +14,7 @@ const appPart3 = read('app-part3.jsx');
 const projectsRoute = read('server/routes/projects.js');
 const ipCasesRoute = read('server/routes/ip-cases.js');
 const db = read('server/db.js');
+const serverIndex = read('server/index.js');
 const caseStudyHtml = read('Lighthouse Case Study.html');
 
 function test(name, fn) {
@@ -155,6 +156,17 @@ test('Database init should backfill stale dynamic i18n copies without overwritin
   for (const key of ['hero.stat2.u', 'kpi.k2n', 'footer.stats']) {
     assert.ok(db.includes(key), `missing DB backfill for ${key}`);
   }
+});
+
+test('Server startup should migrate existing DB i18n rows to the attention-market copy once', () => {
+  assert.ok(/refreshAttentionMarketI18n/.test(db), 'missing attention-market i18n refresh function');
+  assert.ok(/copy\.attention_market\.v1/.test(db), 'missing one-time attention-market copy migration marker');
+  assert.ok(/ATTENTION_MARKET_COPY_KEYS/.test(db), 'missing explicit homepage copy key allowlist');
+  assert.ok(/'brand\.tagline'/.test(db), 'attention-market refresh should include brand.tagline');
+  assert.ok(/'hero\.eyebrow'/.test(db), 'attention-market refresh should include hero.eyebrow');
+  assert.ok(/'hero\.cta2'/.test(db), 'attention-market refresh should include hero.cta2');
+  assert.ok(/'about\.f2'/.test(db), 'attention-market refresh should include the shortened about.f2');
+  assert.ok(/refreshAttentionMarketI18n\(dict\)/.test(serverIndex), 'server startup does not refresh existing DB i18n from parsed DICT');
 });
 
 test('Matrix table title i18n entries should be comma-separated from following keys', () => {

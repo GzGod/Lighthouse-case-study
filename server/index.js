@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { pool, initDB, seedProjects, seedI18n, seedIPCases } = require('./db');
+const { pool, initDB, seedProjects, seedI18n, seedIPCases, refreshAttentionMarketI18n } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
@@ -16,35 +16,36 @@ async function start() {
   await seedProjects();
   await seedIPCases();
 
-  // Seed i18n from existing DICT if empty
-  const { rows: i18nCount } = await pool.query('SELECT COUNT(*) as c FROM i18n');
-  if (parseInt(i18nCount[0].c) === 0) {
-    try {
-      const i18nPath = path.join(__dirname, '..', 'i18n.jsx');
-      const src = fs.readFileSync(i18nPath, 'utf-8');
-      const extractBlock = (lang) => {
-        const re = new RegExp(`${lang}:\\s*\\{([\\s\\S]*?)\\n  \\}`, 'm');
-        const m = src.match(re);
-        if (!m) return {};
-        const block = m[1];
-        const entries = {};
-        const lineRe = new RegExp('"([^"]+)":\\s*"((?:[^"\\\\]|\\\\.)*)"', 'g');
-        let match;
-        while ((match = lineRe.exec(block)) !== null) {
-          entries[match[1]] = match[2].replace(/\\"/g, '"');
-        }
-        const arrRe = new RegExp('"([^"]+)":\\s*\\[([\\s\\S]*?)\\]', 'g');
-        while ((match = arrRe.exec(block)) !== null) {
-          try { entries[match[1]] = '[' + match[2] + ']'; } catch {}
-        }
-        return entries;
-      };
-      const dict = { zh: extractBlock('zh'), en: extractBlock('en') };
+  // Seed i18n from existing DICT if empty, then migrate curated copy defaults once.
+  try {
+    const i18nPath = path.join(__dirname, '..', 'i18n.jsx');
+    const src = fs.readFileSync(i18nPath, 'utf-8');
+    const extractBlock = (lang) => {
+      const re = new RegExp(`${lang}:\\s*\\{([\\s\\S]*?)\\n  \\}`, 'm');
+      const m = src.match(re);
+      if (!m) return {};
+      const block = m[1];
+      const entries = {};
+      const lineRe = new RegExp('"([^"]+)":\\s*"((?:[^"\\\\]|\\\\.)*)"', 'g');
+      let match;
+      while ((match = lineRe.exec(block)) !== null) {
+        entries[match[1]] = match[2].replace(/\\"/g, '"');
+      }
+      const arrRe = new RegExp('"([^"]+)":\\s*\\[([\\s\\S]*?)\\]', 'g');
+      while ((match = arrRe.exec(block)) !== null) {
+        try { entries[match[1]] = '[' + match[2] + ']'; } catch {}
+      }
+      return entries;
+    };
+    const dict = { zh: extractBlock('zh'), en: extractBlock('en') };
+    const { rows: i18nCount } = await pool.query('SELECT COUNT(*) as c FROM i18n');
+    if (parseInt(i18nCount[0].c) === 0) {
       await seedI18n(dict);
       console.log(`Seeded i18n: zh=${Object.keys(dict.zh).length}, en=${Object.keys(dict.en).length}`);
-    } catch (e) {
-      console.error('Failed to seed i18n:', e.message);
     }
+    await refreshAttentionMarketI18n(dict);
+  } catch (e) {
+    console.error('Failed to seed or refresh i18n:', e.message);
   }
 
   // Seed Astra IP case i18n

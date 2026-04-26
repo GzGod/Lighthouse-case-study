@@ -6,6 +6,63 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false,
 });
 
+const ATTENTION_MARKET_COPY_KEYS = [
+  'brand.tagline',
+  'nav.about', 'nav.kpi', 'nav.winners', 'nav.matrix', 'nav.cta',
+  'hero.kicker_tr', 'hero.eyebrow', 'hero.h1_a', 'hero.h1_b', 'hero.h1_c',
+  'hero.sub', 'hero.stat1.k', 'hero.stat2.k', 'hero.cta1', 'hero.cta2', 'hero.foot',
+  'about.kicker', 'about.h2_a', 'about.h2_b', 'about.p',
+  'about.cap1.t', 'about.cap1.en', 'about.cap1.d',
+  'about.cap2.t', 'about.cap2.en', 'about.cap2.d',
+  'about.cap3.t', 'about.cap3.en', 'about.cap3.d',
+  'about.cap4.t', 'about.cap4.en', 'about.cap4.d',
+  'about.f1', 'about.f2', 'about.f3',
+  'kpi.kicker', 'kpi.h2_b', 'kpi.p', 'kpi.k1n', 'kpi.k2n', 'kpi.k3n', 'kpi.k4n', 'kpi.k6n', 'kpi.sub2.who',
+  'win.kicker', 'win.h2_a', 'win.h2_b', 'win.p', 'win.d1.en', 'win.d1.take', 'win.d2.en', 'win.d2.take', 'win.d3.lead',
+  'stars.kicker', 'ip.h2_b', 'ip.p',
+  'stars.h2_b', 'stars.p', 'stars.s1.tag', 'stars.s1.take', 'stars.s2.take', 'stars.s3.tag', 'stars.s3.take', 'stars.s4.take',
+  'matrix.kicker', 'matrix.h2_a', 'matrix.h2_b', 'matrix.p', 'matrix.legend_other', 'matrix.scatter_note',
+  'matrix.foot1', 'matrix.foot2', 'matrix.foot3', 'matrix.table.title', 'matrix.col.name',
+  'why.kicker', 'why.h2_a', 'why.h2_b', 'why.w1.d', 'why.w2.d', 'why.w3.t', 'why.w3.d', 'why.w4.d', 'why.w5.t', 'why.w5.d', 'why.w6.d',
+  'cta.kicker', 'cta.h2_a', 'cta.h2_b', 'cta.p', 'cta.s1.k', 'cta.s3.k',
+];
+
+function i18nValueToString(value) {
+  return Array.isArray(value) ? JSON.stringify(value) : String(value);
+}
+
+async function refreshAttentionMarketI18n(dict) {
+  const markerLang = '__system';
+  const markerKey = 'copy.attention_market.v1';
+  const { rows } = await pool.query(
+    'SELECT 1 FROM i18n WHERE lang = $1 AND key = $2 AND value = $3 LIMIT 1',
+    [markerLang, markerKey, 'applied']
+  );
+  if (rows[0]) return;
+
+  for (const lang of ['zh', 'en']) {
+    for (const key of ATTENTION_MARKET_COPY_KEYS) {
+      const value = dict?.[lang]?.[key];
+      if (value === undefined) continue;
+      const section = key.split('.')[0] || 'misc';
+      const strVal = i18nValueToString(value);
+      await pool.query(
+        'INSERT INTO i18n (lang, key, value, section) VALUES ($1, $2, $3, $4) ON CONFLICT (lang, key) DO NOTHING',
+        [lang, key, strVal, section]
+      );
+      await pool.query(
+        'UPDATE i18n SET value = $3, section = $4, updated_at = NOW() WHERE lang = $1 AND key = $2',
+        [lang, key, strVal, section]
+      );
+    }
+  }
+
+  await pool.query(
+    'INSERT INTO i18n (lang, key, value, section) VALUES ($1, $2, $3, $4) ON CONFLICT (lang, key) DO UPDATE SET value = $3, section = $4, updated_at = NOW()',
+    [markerLang, markerKey, 'applied', 'system']
+  );
+}
+
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -83,40 +140,40 @@ async function initDB() {
 
   const dynamicI18nTemplates = [
     ['zh', 'hero.stats_tl', '{baselineCount} 个基准项目 · {baselineTweets} 条推文 · Q4·25 — Q2·26', ['baselineCount', 'baselineTweets']],
-    ['zh', 'hero.sub', JSON.stringify(['基于 ', '{baselineCount} 个基准项目', '、', '{baselineTweets} 条推文', '、', '超 {totalImpLabel} 次曝光', '的投放记录，这份 Case Study 展示灯塔如何帮助项目方更早对齐预算、效率预期和交付边界，让每一次合作都能为下一次增长决策提供参照。']), ['baselineCount', 'baselineTweets', 'totalImpLabel']],
+    ['zh', 'hero.sub', JSON.stringify(['基于 ', '{baselineCount} 个基准项目', '、', '{baselineTweets} 条推文', '、', '超 {totalImpLabel} 次曝光', '的真实记录，灯塔把项目宣发、KOL 助推、个人 IP 增长、议题讨论和声量对冲组织成一套可报价、可执行、可复盘的注意力协作。']), ['baselineCount', 'baselineTweets', 'totalImpLabel']],
     ['zh', 'hero.stat2.u', '{baselineCount} 个基准项目 · {baselineTweets} 条推文', ['baselineCount', 'baselineTweets']],
     ['zh', 'hero.stat3.u', '由 {peakErWho} 创造 · 行业均值 ≈ 0.4%', ['peakErWho']],
-    ['zh', 'hero.foot', '{baselineCount} 个基准项目样本 · {baselineTweets} 条推文 · 可回看数据 · 可对照基准', ['baselineCount', 'baselineTweets']],
-    ['zh', 'about.f2', '◇ 累计服务项目 40+（本报告取样 {totalCount} 个 · {baselineCount} 个进入基准）', ['totalCount', 'baselineCount']],
-    ['zh', 'kpi.p', '以下 6 个 KPI 来自 {baselineCount} 个基准项目的完整投放记录，保留真实波动，不做样本美化。它们让团队在下一次讨论预算、效率和目标时，有一套可以直接对照的参考线。', ['baselineCount']],
-    ['zh', 'kpi.k1n', '{baselineCount} 个基准项目共同形成的预算参考', ['baselineCount']],
-    ['zh', 'kpi.k2n', '{baselineTweets} 条推文沉淀出的真实交付体量', ['baselineTweets']],
+    ['zh', 'hero.foot', '{baselineCount} 个基准样本 · {baselineTweets} 条推文 · 投流曝光 · 支持喜欢的 KOL · 声量对冲', ['baselineCount', 'baselineTweets']],
+    ['zh', 'about.f2', '◇ 服务项目/个人需求 40+（取样 {totalCount} · 基准 {baselineCount}）', ['totalCount', 'baselineCount']],
+    ['zh', 'kpi.p', '以下 6 个 KPI 来自 {baselineCount} 个基准项目的完整投放记录，保留真实波动，不做样本美化。它们让投流曝光、KOL 助推、议题讨论和个人 IP 增长都有一套可以先对照的价格与效果参考。', ['baselineCount']],
+    ['zh', 'kpi.k1n', '{baselineCount} 个基准样本共同形成的注意力预算参考', ['baselineCount']],
+    ['zh', 'kpi.k2n', '{baselineTweets} 条推文沉淀出的真实流量交付体量', ['baselineTweets']],
     ['zh', 'kpi.k5n', '{lowestCpmWho} 跑出的高效曝光样本', ['lowestCpmWho']],
-    ['zh', 'kpi.k6n', '{peakErWho} 把深度参与拉到行业均值上方', ['peakErWho']],
+    ['zh', 'kpi.k6n', '{peakErWho} 把讨论深度拉到行业均值上方', ['peakErWho']],
     ['zh', 'kpi.sub1.who', '{lowestCpeWho} 把互动成本压到很低的区间', ['lowestCpeWho']],
-    ['zh', 'kpi.sub2.who', '{maxImpWho} 证明中高预算也能跑出规模', ['maxImpWho']],
-    ['zh', 'matrix.h2_a', '{baselineCount} 个基准项目，', ['baselineCount']],
-    ['zh', 'matrix.scatter_note', '§ 散点图展示 {baselineCount} 个可进入常规对照的项目', ['baselineCount']],
-    ['zh', 'matrix.table.title', '完整数据表 · {baselineCount} 个基准项目', ['baselineCount']],
-    ['zh', 'why.w2.d', '{baselineCount} 个基准项目和 {baselineTweets} 条推文沉淀出一条可对照的参考线，后续做预算讨论时更容易落到具体区间。', ['baselineCount', 'baselineTweets']],
+    ['zh', 'kpi.sub2.who', '{maxImpWho} 证明中高预算也能跑出声量规模', ['maxImpWho']],
+    ['zh', 'matrix.h2_a', '{baselineCount} 个基准样本，', ['baselineCount']],
+    ['zh', 'matrix.scatter_note', '§ 散点图展示 {baselineCount} 个可进入常规对照的注意力样本', ['baselineCount']],
+    ['zh', 'matrix.table.title', '完整数据表 · {baselineCount} 个基准样本', ['baselineCount']],
+    ['zh', 'why.w2.d', '{baselineCount} 个基准项目和 {baselineTweets} 条推文沉淀出一条可对照的参考线，后续不管是投流、助推还是议题讨论，都更容易落到具体预算区间。', ['baselineCount', 'baselineTweets']],
     ['zh', 'footer.stats', '{baselineCount} 个基准项目 · {baselineTweets} 条推文 · 总曝光 {totalImpFmt} · 可作为后续合作参照', ['baselineCount', 'baselineTweets', 'totalImpFmt']],
     ['en', 'hero.stats_tl', '{baselineCount} baseline projects · {baselineTweets} tweets · Q4·25 — Q2·26', ['baselineCount', 'baselineTweets']],
-    ['en', 'hero.sub', JSON.stringify(['Built on ', '{baselineCount} baseline projects', ', ', '{baselineTweets} tweets', ', and ', 'more than {totalImpLabel} impressions', ', this case study shows how Lighthouse helps teams align budget, expected efficiency, and delivery scope earlier — so each campaign leaves behind something useful for the next growth decision.']), ['baselineCount', 'baselineTweets', 'totalImpLabel']],
+    ['en', 'hero.sub', JSON.stringify(['Built on ', '{baselineCount} baseline projects', ', ', '{baselineTweets} tweets', ', and ', 'more than {totalImpLabel} impressions', ', this case study shows how Lighthouse organizes project launches, KOL boosts, personal IP growth, market conversation, and share-of-voice defense into priced, executable, reviewable attention coordination.']), ['baselineCount', 'baselineTweets', 'totalImpLabel']],
     ['en', 'hero.stat2.u', 'across {baselineCount} baseline projects · {baselineTweets} tweets', ['baselineCount', 'baselineTweets']],
     ['en', 'hero.stat3.u', 'set by {peakErWho} · industry avg ≈ 0.4%', ['peakErWho']],
-    ['en', 'hero.foot', '{baselineCount} baseline project samples · {baselineTweets} tweets · reviewable records · benchmarkable results', ['baselineCount', 'baselineTweets']],
-    ['en', 'about.f2', '◇ 40+ projects served ({totalCount} sampled here · {baselineCount} in baseline)', ['totalCount', 'baselineCount']],
-    ['en', 'kpi.p', 'These 6 KPIs come from complete campaign records across {baselineCount} baseline projects. The swings are left intact and the sample is not polished for appearance. What matters is that teams now have a reference line they can use when discussing budget, efficiency, and goals the next time around.', ['baselineCount']],
-    ['en', 'kpi.k1n', 'A budget reference built from {baselineCount} baseline projects', ['baselineCount']],
-    ['en', 'kpi.k2n', 'Real delivery scale built from {baselineTweets} tweets', ['baselineTweets']],
+    ['en', 'hero.foot', '{baselineCount} baseline samples · {baselineTweets} tweets · paid reach · KOL support · share-of-voice defense', ['baselineCount', 'baselineTweets']],
+    ['en', 'about.f2', '◇ 40+ projects / individual demands ({totalCount} sampled · {baselineCount} baseline)', ['totalCount', 'baselineCount']],
+    ['en', 'kpi.p', 'These 6 KPIs come from complete campaign records across {baselineCount} baseline projects. The swings are left intact and the sample is not polished for appearance. What matters is that paid reach, KOL boosts, market conversation, and personal IP growth now have a first reference for price and expected effect.', ['baselineCount']],
+    ['en', 'kpi.k1n', 'An attention-budget reference built from {baselineCount} baseline samples', ['baselineCount']],
+    ['en', 'kpi.k2n', 'Real traffic delivery scale built from {baselineTweets} tweets', ['baselineTweets']],
     ['en', 'kpi.k5n', 'A reach-efficiency sample delivered by {lowestCpmWho}', ['lowestCpmWho']],
-    ['en', 'kpi.k6n', '{peakErWho} pushed depth of participation above common market levels', ['peakErWho']],
+    ['en', 'kpi.k6n', '{peakErWho} pushed conversation depth above common market levels', ['peakErWho']],
     ['en', 'kpi.sub1.who', '{lowestCpeWho} pushed interaction cost into a very efficient range', ['lowestCpeWho']],
-    ['en', 'kpi.sub2.who', '{maxImpWho} shows that mid-to-large budgets can still scale cleanly', ['maxImpWho']],
-    ['en', 'matrix.h2_a', '{baselineCount} baseline projects,', ['baselineCount']],
-    ['en', 'matrix.scatter_note', '§ Scatter shows {baselineCount} projects (CPM 10–100)', ['baselineCount']],
-    ['en', 'matrix.table.title', 'Full data table · {baselineCount} baseline projects', ['baselineCount']],
-    ['en', 'why.w2.d', '{baselineCount} baseline projects and {baselineTweets} tweets have built a reference line that makes it easier to land on specific ranges in future budget discussions.', ['baselineCount', 'baselineTweets']],
+    ['en', 'kpi.sub2.who', '{maxImpWho} shows that mid-to-large budgets can still scale share of voice cleanly', ['maxImpWho']],
+    ['en', 'matrix.h2_a', '{baselineCount} baseline samples,', ['baselineCount']],
+    ['en', 'matrix.scatter_note', '§ Scatter shows {baselineCount} benchmarkable attention samples (CPM 10–100)', ['baselineCount']],
+    ['en', 'matrix.table.title', 'Full data table · {baselineCount} baseline samples', ['baselineCount']],
+    ['en', 'why.w2.d', '{baselineCount} baseline projects and {baselineTweets} tweets have built a reference line that makes it easier to price paid reach, boosts, and market conversation within concrete ranges.', ['baselineCount', 'baselineTweets']],
     ['en', 'footer.stats', '{baselineCount} baseline projects · {baselineTweets} tweets · {totalImpFmt} total impressions · benchmark reference on Base', ['baselineCount', 'baselineTweets', 'totalImpFmt']],
   ];
   for (const [lang, key, value, required] of dynamicI18nTemplates) {
@@ -220,4 +277,4 @@ async function seedIPCases() {
   await pool.query('INSERT INTO ip_cases (slug, sort_order, status) VALUES ($1, $2, $3)', ['astra', 0, 'published']);
 }
 
-module.exports = { pool, initDB, seedProjects, seedI18n, seedIPCases };
+module.exports = { pool, initDB, seedProjects, seedI18n, seedIPCases, refreshAttentionMarketI18n };
