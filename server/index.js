@@ -16,7 +16,7 @@ async function start() {
   await seedProjects();
   await seedIPCases();
 
-  // Seed i18n from existing DICT if empty, then migrate curated copy defaults once.
+  // Keep every default DICT key editable without overwriting CMS edits.
   try {
     const i18nPath = path.join(__dirname, '..', 'i18n.jsx');
     const src = fs.readFileSync(i18nPath, 'utf-8');
@@ -38,11 +38,8 @@ async function start() {
       return entries;
     };
     const dict = { zh: extractBlock('zh'), en: extractBlock('en') };
-    const { rows: i18nCount } = await pool.query('SELECT COUNT(*) as c FROM i18n');
-    if (parseInt(i18nCount[0].c) === 0) {
-      await seedI18n(dict);
-      console.log(`Seeded i18n: zh=${Object.keys(dict.zh).length}, en=${Object.keys(dict.en).length}`);
-    }
+    await seedI18n(dict);
+    console.log(`Ensured i18n defaults: zh=${Object.keys(dict.zh).length}, en=${Object.keys(dict.en).length}`);
     await refreshAttentionMarketI18n(dict);
   } catch (e) {
     console.error('Failed to seed or refresh i18n:', e.message);

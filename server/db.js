@@ -256,13 +256,10 @@ async function seedProjects() {
 }
 
 async function seedI18n(dict) {
-  const { rows } = await pool.query('SELECT COUNT(*) as c FROM i18n');
-  if (parseInt(rows[0].c) > 0) return;
-
   for (const [lang, entries] of Object.entries(dict)) {
     for (const [key, val] of Object.entries(entries)) {
       const section = key.split('.')[0] || 'misc';
-      const strVal = Array.isArray(val) ? JSON.stringify(val) : String(val);
+      const strVal = i18nValueToString(val);
       await pool.query(
         'INSERT INTO i18n (lang, key, value, section) VALUES ($1, $2, $3, $4) ON CONFLICT (lang, key) DO NOTHING',
         [lang, key, strVal, section]

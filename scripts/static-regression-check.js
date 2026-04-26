@@ -179,6 +179,16 @@ test('Server startup should migrate existing DB i18n rows to the attention-marke
   assert.ok(/refreshAttentionMarketI18n\(dict\)/.test(serverIndex), 'server startup does not refresh existing DB i18n from parsed DICT');
 });
 
+test('Server startup should ensure every default i18n key remains editable after partial DB seeds', () => {
+  const seedI18nBody = db.match(/async function seedI18n\(dict\) \{([\s\S]*?)\n\}/)?.[1] || '';
+  assert.ok(seedI18nBody, 'missing seedI18n implementation');
+  assert.ok(!/SELECT COUNT\(\*\) as c FROM i18n/.test(seedI18nBody), 'seedI18n still counts existing i18n rows before syncing defaults');
+  assert.ok(!/if \(parseInt\(rows\[0\]\.c\) > 0\) return;/.test(seedI18nBody), 'seedI18n still exits when the i18n table already has rows');
+  assert.ok(!/if \(parseInt\(i18nCount\[0\]\.c\) === 0\)[\s\S]*await seedI18n\(dict\)/.test(serverIndex), 'server startup still gates default i18n sync behind an empty-table check');
+  assert.ok(/await seedI18n\(dict\);[\s\S]*await refreshAttentionMarketI18n\(dict\);/.test(serverIndex), 'server should ensure missing defaults before refreshing curated copy');
+  assert.ok(/ON CONFLICT \(lang, key\) DO NOTHING/.test(db), 'default i18n sync should preserve edited DB rows');
+});
+
 test('Matrix table title i18n entries should be comma-separated from following keys', () => {
   const separatedTitleEntries = i18n.match(/"matrix\.table\.title":\s*"[^"]*",\s*\n\s*"matrix\.table\.sub":/g) || [];
   assert.strictEqual(separatedTitleEntries.length, 2, 'both zh and en matrix.table.title entries must end with a comma before matrix.table.sub');
