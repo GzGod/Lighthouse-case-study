@@ -15,6 +15,12 @@ module.exports = function(pool) {
     res.json(dict);
   });
 
+  // Admin: get all editable copy rows
+  router.get('/all', authMiddleware, async (req, res) => {
+    const { rows } = await pool.query('SELECT * FROM i18n ORDER BY section, key, lang');
+    res.json(rows);
+  });
+
   // Admin: get by section
   router.get('/section/:section', authMiddleware, async (req, res) => {
     const { rows } = await pool.query('SELECT * FROM i18n WHERE section = $1 ORDER BY key, lang', [req.params.section]);
@@ -31,7 +37,11 @@ module.exports = function(pool) {
   router.put('/:lang/:key', authMiddleware, async (req, res) => {
     const { value } = req.body;
     const strVal = Array.isArray(value) ? JSON.stringify(value) : String(value);
-    await pool.query('UPDATE i18n SET value = $1, updated_at = NOW() WHERE lang = $2 AND key = $3', [strVal, req.params.lang, req.params.key]);
+    const sec = req.body.section || req.params.key.split('.')[0] || 'misc';
+    await pool.query(
+      'INSERT INTO i18n (lang, key, value, section) VALUES ($1,$2,$3,$4) ON CONFLICT (lang, key) DO UPDATE SET value = $3, section = $4, updated_at = NOW()',
+      [req.params.lang, req.params.key, strVal, sec]
+    );
     res.json({ ok: true });
   });
 
@@ -40,7 +50,11 @@ module.exports = function(pool) {
     const { updates } = req.body;
     for (const u of updates) {
       const strVal = Array.isArray(u.value) ? JSON.stringify(u.value) : String(u.value);
-      await pool.query('UPDATE i18n SET value = $1, updated_at = NOW() WHERE lang = $2 AND key = $3', [strVal, u.lang, u.key]);
+      const sec = u.section || u.key.split('.')[0] || 'misc';
+      await pool.query(
+        'INSERT INTO i18n (lang, key, value, section) VALUES ($1,$2,$3,$4) ON CONFLICT (lang, key) DO UPDATE SET value = $3, section = $4, updated_at = NOW()',
+        [u.lang, u.key, strVal, sec]
+      );
     }
     res.json({ ok: true, count: updates.length });
   });

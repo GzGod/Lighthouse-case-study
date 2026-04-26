@@ -13,6 +13,7 @@ const i18n = read('i18n.jsx');
 const appPart3 = read('app-part3.jsx');
 const projectsRoute = read('server/routes/projects.js');
 const ipCasesRoute = read('server/routes/ip-cases.js');
+const i18nRoute = read('server/routes/i18n.js');
 const db = read('server/db.js');
 const serverIndex = read('server/index.js');
 const caseStudyHtml = read('Lighthouse Case Study.html');
@@ -55,6 +56,20 @@ test('Admin project save should validate required fields before calling the API'
 
 test('Admin project save should surface API errors as toast messages', () => {
   assert.ok(/try\s*\{[\s\S]*await api\('\/projects'[\s\S]*await api\(`\/projects\/\$\{editing\}`[\s\S]*\}\s*catch\s*\(err\)\s*\{[\s\S]*toast\(`保存失败：\$\{err\.message\}`\)/.test(admin), 'project save API errors are not caught and shown via toast');
+});
+
+test('Admin i18n editor should expose every copy key in an all-items view', () => {
+  assert.ok(/router\.get\('\/all', authMiddleware/.test(i18nRoute), 'missing authenticated all-i18n endpoint');
+  assert.ok(/SELECT \* FROM i18n ORDER BY section, key, lang/.test(i18nRoute), 'all-i18n endpoint should return rows grouped by section and key');
+  assert.ok(/const ALL_I18N_SECTION = '__all';/.test(admin), 'missing all-i18n section sentinel in admin');
+  assert.ok(/\[ALL_I18N_SECTION, \.\.\.list\.filter\(s => s !== ALL_I18N_SECTION\)\]/.test(admin), 'all tab is not prepended to i18n sections');
+  assert.ok(/active === ALL_I18N_SECTION \? api\('\/i18n\/all'\) : api\(`\/i18n\/section\/\$\{active\}`\)/.test(admin), 'admin does not load all i18n rows for the all tab');
+  assert.ok(/\{s === ALL_I18N_SECTION \? '全部' : s\}/.test(admin), 'all tab should be labeled clearly');
+});
+
+test('I18n batch save should upsert missing language rows from the editor', () => {
+  assert.ok(/const sec = u\.section \|\| u\.key\.split\('\.'\)\[0\] \|\| 'misc';/.test(i18nRoute), 'batch i18n save should derive section for upserts');
+  assert.ok(/INSERT INTO i18n \(lang, key, value, section\) VALUES \(\$1,\$2,\$3,\$4\) ON CONFLICT \(lang, key\) DO UPDATE SET value = \$3, section = \$4, updated_at = NOW\(\)/.test(i18nRoute), 'batch i18n save should upsert instead of update-only');
 });
 
 test('Curated stars should filter out missing projects instead of rendering zero-value fallbacks', () => {

@@ -92,6 +92,7 @@ const SECTION_ANCHORS = {
   nav: '#top', brand: '#top', footer: '#top', div1: '#about', div2: '#about',
   tag: '#matrix', sample: '#top',
 };
+const ALL_I18N_SECTION = '__all';
 function sectionAnchor(key) {
   const prefix = key.split('.')[0];
   return SECTION_ANCHORS[prefix] || '#top';
@@ -108,23 +109,29 @@ function I18nPage() {
   const [showPreview, setShowPreview] = useState(true);
   const iframeRef = useRef(null);
 
-  useEffect(() => { api('/i18n/sections').then(setSections); }, []);
-  useEffect(() => { if (sections.length && !active) setActive(sections[0]); }, [sections]);
-  useEffect(() => { if (active) api(`/i18n/section/${active}`).then(r => { setRows(r); setEdits({}); sendToIframe({ type: 'lh-preview', action: 'clear-draft' }); }); }, [active]);
-
-  const grouped = {};
-  rows.forEach(r => { if (!grouped[r.key]) grouped[r.key] = {}; grouped[r.key][r.lang] = r.value; });
-  const keys = Object.keys(grouped).sort();
-
-  const handleChange = (lang, key, val) => {
-    setEdits(prev => ({ ...prev, [`${lang}:${key}`]: { lang, key, value: val } }));
-  };
-
   const sendToIframe = useCallback((msg) => {
     if (iframeRef.current && iframeRef.current.contentWindow) {
       iframeRef.current.contentWindow.postMessage(msg, '*');
     }
   }, []);
+
+  useEffect(() => { api('/i18n/sections').then(list => setSections([ALL_I18N_SECTION, ...list.filter(s => s !== ALL_I18N_SECTION)])); }, []);
+  useEffect(() => { if (sections.length && !active) setActive(ALL_I18N_SECTION); }, [sections]);
+  useEffect(() => {
+    if (!active) return;
+    const request = active === ALL_I18N_SECTION ? api('/i18n/all') : api(`/i18n/section/${active}`);
+    request.then(r => { setRows(r); setEdits({}); sendToIframe({ type: 'lh-preview', action: 'clear-draft' }); });
+  }, [active, sendToIframe]);
+
+  const grouped = {};
+  rows.forEach(r => { if (!grouped[r.key]) grouped[r.key] = { section: r.section }; grouped[r.key][r.lang] = r.value; });
+  const keys = Object.keys(grouped).sort((a,b) => active === ALL_I18N_SECTION
+    ? `${grouped[a]?.section || ''}.${a}`.localeCompare(`${grouped[b]?.section || ''}.${b}`)
+    : a.localeCompare(b));
+
+  const handleChange = (lang, key, val) => {
+    setEdits(prev => ({ ...prev, [`${lang}:${key}`]: { lang, key, value: val, section: grouped[key]?.section || key.split('.')[0] || 'misc' } }));
+  };
 
   // Build current draft snapshot
   const buildI18nDraft = useCallback(() => {
@@ -187,17 +194,17 @@ function I18nPage() {
       </div>
       <p className="page-desc">按板块编辑中英文案，右侧实时预览</p>
       <div className="section-tabs">
-        {sections.map(s => <button key={s} className={`section-tab ${s===active?'active':''}`} onClick={()=>setActive(s)}>{s}</button>)}
+        {sections.map(s => <button key={s} className={`section-tab ${s===active?'active':''}`} onClick={()=>setActive(s)}>{s === ALL_I18N_SECTION ? '全部' : s}</button>)}
       </div>
       <div className="card">
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-          <h3 style={{margin:0,border:'none',padding:0}}>{active} · {keys.length} 条</h3>
+          <h3 style={{margin:0,border:'none',padding:0}}>{active === ALL_I18N_SECTION ? '全部' : active} · {keys.length} 条</h3>
           <button className="btn btn-primary" onClick={save} disabled={saving || !Object.keys(edits).length}>
             {saving ? '保存中...' : `保存修改 (${Object.keys(edits).length})`}
           </button>
         </div>
         {keys.map(k => <div className="i18n-pair" key={k}>
-          <div className="i18n-key">{k}</div>
+          <div className="i18n-key">{k}{active === ALL_I18N_SECTION && <div style={{fontSize:10,color:'#aaa',marginTop:4}}>{grouped[k]?.section}</div>}</div>
           <div className="i18n-val">
             <div className="lang-tag">中文</div>
             <textarea value={edits[`zh:${k}`]?.value ?? grouped[k]?.zh ?? ''} onChange={e=>handleChange('zh',k,e.target.value)} rows={1} />
