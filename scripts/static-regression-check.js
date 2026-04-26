@@ -101,6 +101,15 @@ test('Top navigation should include the Lighthouse app entry next to the CTA but
   assert.ok(/href="https:\/\/app\.lhdao\.top\/"[\s\S]*\{t\("nav\.app_btn"\)\}/.test(app), 'missing Lighthouse app link in top navigation');
 });
 
+test('Homepage copy should position Lighthouse as a safe Web3 attention marketplace', () => {
+  assert.ok(/Web3 注意力市场/.test(i18n), 'missing zh attention-market positioning');
+  assert.ok(/Web3 attention marketplace/.test(i18n), 'missing en attention-market positioning');
+  assert.ok(/支持喜欢的 KOL/.test(i18n), 'missing creator-support use case');
+  assert.ok(/声量对冲/.test(i18n), 'missing safe share-of-voice framing');
+  assert.ok(/聊聊你的流量需求/.test(i18n), 'CTA should broaden from project-only to traffic needs');
+  assert.ok(!/黑稿|雇佣兵|控评|刷火箭/.test(i18n), 'homepage copy contains unsafe grey-market wording');
+});
+
 test('Matrix reference labels should be dynamic values, not stale hardcoded copy', () => {
   assert.ok(/ReferenceLine x=\{ds\.avgCpm\}/.test(appPart3), 'missing dynamic avg CPM reference line');
   assert.ok(/ReferenceLine y=\{ds\.avgEr\}/.test(appPart3), 'missing dynamic avg ER reference line');
