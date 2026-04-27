@@ -169,12 +169,19 @@ test('About facts should keep the sampled baseline note short enough for one des
 test('Homepage dense sections should use mobile-first responsive layouts', () => {
   assert.ok(/min-h-\[100svh\]/.test(app), 'hero should use small-viewport height for mobile browser chrome');
   assert.ok(/pt-32 sm:pt-36 md:pt-0/.test(app), 'hero should reserve top breathing room on small screens');
-  assert.ok(/grid grid-cols-1 sm:grid-cols-3/.test(app), 'hero stats should stack before becoming three columns');
+  assert.ok(/grid grid-cols-1 lg:grid-cols-3/.test(app), 'hero stats should stay stacked until there is enough width for three large numbers');
   assert.ok(/basis-full sm:basis-auto/.test(app), 'hero footnote should wrap below CTA buttons on small screens');
   assert.ok(/grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3/.test(appPart2), 'KPI grid should be one column on narrow screens');
   assert.ok(/grid grid-cols-2 sm:grid-cols-4/.test(appPart2), 'Star metric grid should not force four columns on narrow screens');
   assert.ok(/grid grid-cols-1 sm:grid-cols-3/.test(appPart3), 'CTA metric grid should stack before becoming three columns');
   assert.ok(/flex flex-wrap items-center gap-x-5 gap-y-2/.test(appPart3), 'Matrix legends should wrap instead of overflowing on narrow screens');
+});
+
+test('Large metric numbers should use card-safe type scales', () => {
+  assert.ok(/fontSize:"clamp\(42px, 7vw, 72px\)"/.test(app), 'hero metric numbers are still too large for narrow stat columns');
+  assert.ok(/fontSize:"clamp\(38px, 6\.5vw, 64px\)"/.test(appPart2), 'KPI metric numbers are still too large for narrow cards');
+  assert.ok(!/fontSize:"clamp\(34px, 12vw, 78px\)"/.test(app), 'hero still has the old oversized metric clamp');
+  assert.ok(!/fontSize:"clamp\(34px, 11vw, 80px\)"/.test(appPart2), 'KPI still has the old oversized metric clamp');
 });
 
 test('Matrix reference labels should be dynamic values, not stale hardcoded copy', () => {

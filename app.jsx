@@ -252,24 +252,24 @@ function Hero(){
           <Reveal delay={2} className="mt-7 sm:mt-8 max-w-2xl font-cn text-[15px] sm:text-[16px] md:text-[18px] leading-[1.7] text-[var(--bone-dim)]">
             {Array.isArray(sub) ? <>{sub[0]}<span className="text-[var(--bone)]">{sub[1]}</span>{sub[2]}<span className="text-[var(--bone)]">{sub[3]}</span>{sub[4]}<span className="text-[var(--bone)]">{sub[5]}</span>{sub[6]}</> : sub}
           </Reveal>
-          <div className="mt-10 sm:mt-16 rule-t rule-b py-6 sm:py-8 grid grid-cols-1 sm:grid-cols-3 gap-7 sm:gap-4 md:gap-10">
+          <div className="mt-10 sm:mt-16 rule-t rule-b py-6 sm:py-8 grid grid-cols-1 lg:grid-cols-3 gap-7 sm:gap-8 lg:gap-10">
             <Reveal delay={2}>
               <div className="kicker">{t("hero.stat1.k")}</div>
-              <div className="mt-3 font-display font-black ember-glow tnum" style={{fontSize:"clamp(34px, 12vw, 78px)", color:"var(--ember-soft)", letterSpacing:"-0.02em"}}>
+              <div className="mt-3 font-display font-black ember-glow tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", color:"var(--ember-soft)", letterSpacing:"-0.03em", lineHeight:0.98}}>
                 <CountUp to={stats.totalBudget} />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{t("hero.stat1.u")}</div>
             </Reveal>
-            <Reveal delay={3} className="pt-6 sm:pt-0 sm:border-l sm:border-[var(--rule)] sm:pl-4 md:pl-10">
+            <Reveal delay={3} className="pt-6 lg:pt-0 lg:border-l lg:border-[var(--rule)] lg:pl-10">
               <div className="kicker">{t("hero.stat2.k")}</div>
-              <div className="mt-3 font-display font-black bone-glow tnum" style={{fontSize:"clamp(34px, 12vw, 78px)", letterSpacing:"-0.02em"}}>
+              <div className="mt-3 font-display font-black bone-glow tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", letterSpacing:"-0.03em", lineHeight:0.98}}>
                 <CountUp to={stats.totalImp} />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{tp("hero.stat2.u")}</div>
             </Reveal>
-            <Reveal delay={4} className="pt-6 sm:pt-0 sm:border-l sm:border-[var(--rule)] sm:pl-4 md:pl-10">
+            <Reveal delay={4} className="pt-6 lg:pt-0 lg:border-l lg:border-[var(--rule)] lg:pl-10">
               <div className="kicker">{t("hero.stat3.k")}</div>
-              <div className="mt-3 font-display font-black teal-glow tnum" style={{fontSize:"clamp(34px, 12vw, 78px)", color:"var(--teal)", letterSpacing:"-0.02em"}}>
+              <div className="mt-3 font-display font-black teal-glow tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", color:"var(--teal)", letterSpacing:"-0.03em", lineHeight:0.98}}>
                 <CountUp to={stats.peakEr} decimals={2} suffix="%" />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{tp("hero.stat3.u")}</div>

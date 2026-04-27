@@ -52,7 +52,7 @@ function KpiSection(){
                   <div className="kicker">{k.k}</div>
                   <div className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{k.unit}</div>
                 </div>
-                <div className={`font-display font-black tnum ${glow}`} style={{fontSize:"clamp(34px, 11vw, 80px)", color, letterSpacing:"-0.02em", lineHeight:0.95}}>
+                <div className={`font-display font-black tnum whitespace-nowrap ${glow}`} style={{fontSize:"clamp(38px, 6.5vw, 64px)", color, letterSpacing:"-0.035em", lineHeight:0.98}}>
                   <CountUp2 to={k.v} decimals={k.d} suffix={k.suf}/>
                 </div>
                 <div className="text-[12px] font-mono text-[var(--bone-dim)] tracking-[0.12em]">{k.note}</div>
