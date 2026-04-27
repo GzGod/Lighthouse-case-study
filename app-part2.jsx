@@ -18,7 +18,7 @@ function KpiSection(){
   const tp = (k) => tpl2(t(k), v);
   const kpis = [
     {k:t("kpi.k1"), v:ds.totalBudget, d:0, suf:"", unit:t("kpi.k1u"), note:tp("kpi.k1n"), tone:"ember"},
-    {k:t("kpi.k2"), v:ds.totalImp, d:0, suf:"", unit:t("kpi.k2u"), note:t("kpi.k2n"), tone:"bone"},
+    {k:t("kpi.k2"), v:ds.totalImp, d:0, suf:"", unit:t("kpi.k2u"), note:tp("kpi.k2n"), tone:"bone"},
     {k:t("kpi.k3"), v:ds.totalEng, d:0, suf:"", unit:t("kpi.k3u"), note:t("kpi.k3n"), tone:"bone"},
     {k:t("kpi.k4"), v:ds.avgCpm, d:2, suf:"", unit:t("kpi.k4u"), note:t("kpi.k4n"), tone:"ember"},
     {k:t("kpi.k5"), v:ds.lowestCpm, d:2, suf:"", unit:t("kpi.k5u"), note:tp("kpi.k5n"), tone:"teal"},

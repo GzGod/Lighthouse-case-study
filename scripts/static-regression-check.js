@@ -129,6 +129,10 @@ test('Live i18n should not let stale persisted copy overwrite dynamic stat place
   }
 });
 
+test('KPI notes with dynamic placeholders should be rendered through tpl variables', () => {
+  assert.ok(/note:tp\("kpi\.k2n"\)/.test(appPart2), 'kpi.k2n still renders raw {baselineTweets}');
+});
+
 test('Top navigation should include the Lighthouse app entry next to the CTA button', () => {
   assert.ok(/"nav\.app_btn":\s*"前往灯塔 →"/.test(i18n), 'missing zh Lighthouse app nav label');
   assert.ok(/"nav\.app_btn":\s*"Go to Lighthouse →"/.test(i18n), 'missing en Lighthouse app nav label');
