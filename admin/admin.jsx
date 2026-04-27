@@ -206,10 +206,12 @@ function I18nPage() {
     }, 120);
   }, [rows, active, focusTarget]);
 
-  // Build current draft snapshot
+  // Build current draft snapshot. English is generated on save, so live draft
+  // preview only uses the Chinese edits the operator is actively changing.
   const buildI18nDraft = useCallback(() => {
     const drafts = { zh: {}, en: {} };
     for (const e of Object.values(edits)) {
+      if (e.lang !== 'zh') continue;
       drafts[e.lang][e.key] = e.value;
     }
     return drafts;
@@ -250,11 +252,21 @@ function I18nPage() {
     const updates = Object.values(edits);
     if (!updates.length) return;
     setSaving(true);
-    await api('/i18n', { method: 'PUT', body: JSON.stringify({ updates }) });
-    setSaving(false);
-    setEdits({});
-    toast(`已保存 ${updates.length} 条文案`);
-    if (iframeRef.current) iframeRef.current.src = iframeRef.current.src;
+    try {
+      const res = await api('/i18n', { method: 'PUT', body: JSON.stringify({ updates }) });
+      setEdits({});
+      const translationErrors = res.translation_errors || [];
+      if (translationErrors.length) {
+        toast(`已保存中文；${translationErrors.length} 条英文自动翻译失败`);
+      } else {
+        toast(`已保存 ${updates.length} 条中文文案，英文已自动生成`);
+      }
+      if (iframeRef.current) iframeRef.current.src = iframeRef.current.src;
+    } catch (err) {
+      toast(`保存失败：${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return <div className={`i18n-layout ${showPreview ? 'with-preview' : ''}`}>
@@ -265,7 +277,7 @@ function I18nPage() {
           {showPreview ? '隐藏预览' : '显示预览'}
         </button>
       </div>
-      <p className="page-desc">按板块编辑中英文案，右侧是草稿预览；点击保存后主页生效，已打开的主页需要刷新。</p>
+      <p className="page-desc">只需要编辑中文文案，英文会在保存时自动翻译生成；右侧是草稿预览，点击保存后主页生效，已打开的主页需要刷新。</p>
       <div className="section-tabs">
         {sections.map(s => <button key={s} className={`section-tab ${s===active?'active':''}`} onClick={()=>setActive(s)}>{s === ALL_I18N_SECTION ? '全部' : s}</button>)}
       </div>
@@ -282,9 +294,10 @@ function I18nPage() {
             <div className="lang-tag">中文</div>
             <textarea data-i18n-field={`zh:${k}`} value={edits[`zh:${k}`]?.value ?? grouped[k]?.zh ?? ''} onChange={e=>handleChange('zh',k,e.target.value)} rows={1} />
           </div>
-          <div className="i18n-val">
-            <div className="lang-tag">English</div>
-            <textarea data-i18n-field={`en:${k}`} value={edits[`en:${k}`]?.value ?? grouped[k]?.en ?? ''} onChange={e=>handleChange('en',k,e.target.value)} rows={1} />
+          <div className="i18n-val i18n-auto-en">
+            <div className="lang-tag">English · 自动翻译</div>
+            <textarea data-i18n-field={`en:${k}`} value={grouped[k]?.en ?? ''} readOnly rows={1} />
+            <div className="auto-translate-hint">英文不需要手填，保存中文后自动更新。</div>
           </div>
         </div>)}
       </div>

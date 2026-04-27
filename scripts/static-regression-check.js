@@ -73,6 +73,23 @@ test('I18n batch save should upsert missing language rows from the editor', () =
   assert.ok(/INSERT INTO i18n \(lang, key, value, section\) VALUES \(\$1,\$2,\$3,\$4\) ON CONFLICT \(lang, key\) DO UPDATE SET value = \$3, section = \$4, updated_at = NOW\(\)/.test(i18nRoute), 'batch i18n save should upsert instead of update-only');
 });
 
+test('I18n editor should auto-translate English from Chinese instead of requiring manual English edits', () => {
+  assert.ok(/async function translateZhToEnglish/.test(i18nRoute), 'missing server-side zh-to-en translation helper');
+  assert.ok(/OPENAI_API_KEY/.test(i18nRoute), 'auto translation should support configured OpenAI-compatible translation');
+  assert.ok(/translate\.googleapis\.com/.test(i18nRoute), 'auto translation should have a no-extra-dependency fallback provider');
+  assert.ok(/await autoTranslateEnglish\(pool, \{ \.\.\.u, section: sec \}\)/.test(i18nRoute), 'batch i18n save does not auto-translate zh edits');
+  assert.ok(/if \(e\.lang !== 'zh'\) continue;/.test(admin), 'draft preview should only be driven by editable Chinese rows');
+  assert.ok(/English · 自动翻译/.test(admin), 'admin should label the English column as auto-translated');
+  assert.ok(/data-i18n-field=\{`en:\$\{k\}`\} value=\{grouped\[k\]\?\.en \?\? ''\} readOnly/.test(admin), 'English i18n field should be read-only');
+});
+
+test('Live i18n should reject corrupted persisted values that embed other i18n keys', () => {
+  assert.ok(/function looksLikeEmbeddedI18nValue/.test(i18n), 'client live i18n merge lacks corrupt-value detection');
+  assert.ok(/looksLikeEmbeddedI18nValue\(value\)/.test(i18n), 'client live i18n merge does not reject corrupt values');
+  assert.ok(/if \(r\.lang === 'en' && looksLikeEmbeddedI18nValue\(r\.value\)\) continue;/.test(i18nRoute), 'public i18n API should not expose corrupted English rows');
+  assert.ok(/sanitizeRowsForAdmin/.test(i18nRoute), 'admin i18n rows should hide corrupted English values until regenerated');
+});
+
 test('Visual preview clicks should jump to the matching i18n editor field', () => {
   assert.ok(/function installPreviewEditBridge/.test(i18n), 'missing preview click bridge installer');
   assert.ok(/lh-preview-copy-click/.test(i18n), 'preview click bridge does not notify the admin editor');
@@ -145,6 +162,13 @@ test('Top navigation should include the Lighthouse app entry next to the CTA but
   assert.ok(/"nav\.app_btn":\s*"前往灯塔 →"/.test(i18n), 'missing zh Lighthouse app nav label');
   assert.ok(/"nav\.app_btn":\s*"Go to Lighthouse →"/.test(i18n), 'missing en Lighthouse app nav label');
   assert.ok(/href="https:\/\/app\.lhdao\.top\/"[\s\S]*\{t\("nav\.app_btn"\)\}/.test(app), 'missing Lighthouse app link in top navigation');
+});
+
+test('Top navigation labels should stay on one line in English', () => {
+  assert.ok(/gap-4 xl:gap-6/.test(app), 'desktop nav should tighten spacing before labels wrap');
+  assert.ok(/tracking-\[0\.16em\] xl:tracking-\[0\.22em\]/.test(app), 'desktop nav should reduce letter spacing at narrower desktop widths');
+  assert.ok((app.match(/className="whitespace-nowrap hover:text/g) || []).length >= 7, 'nav links should use whitespace-nowrap to prevent vertical word wrapping');
+  assert.ok(/hidden md:inline-block whitespace-nowrap[\s\S]*\{t\("nav\.cta_btn"\)\}/.test(app), 'CTA nav button should not wrap');
 });
 
 test('Public page links should use canonical extensionless routes', () => {

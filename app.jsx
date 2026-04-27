@@ -179,18 +179,18 @@ function Nav(){
           <span className="h-4 w-px bg-[var(--rule-strong)]"/>
           <img src="assets/lighthouse-logo.svg" alt="Lighthouse" className="h-[18px] w-auto opacity-95"/>
         </a>
-        <nav className="hidden lg:flex items-center gap-7 text-[11px] font-mono uppercase tracking-[0.22em] text-[var(--bone-dim)]">
-          <a href="#about" className="hover:text-[var(--bone)] transition">{t("nav.about")}</a>
-          <a href="#kpi" className="hover:text-[var(--bone)] transition">{t("nav.kpi")}</a>
-          <a href="#winners" className="hover:text-[var(--bone)] transition">{t("nav.winners")}</a>
-          <a href="/personal-ip" className="hover:text-[var(--ember)] transition">{t("nav.ip")} ↗</a>
-          <a href="#stars" className="hover:text-[var(--bone)] transition">{t("nav.stars")}</a>
-          <a href="#matrix" className="hover:text-[var(--bone)] transition">{t("nav.matrix")}</a>
-          <a href="#cta" className="hover:text-[var(--bone)] transition">{t("nav.cta")}</a>
+        <nav className="hidden lg:flex items-center gap-4 xl:gap-6 text-[10px] xl:text-[11px] font-mono uppercase tracking-[0.16em] xl:tracking-[0.22em] text-[var(--bone-dim)]">
+          <a href="#about" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.about")}</a>
+          <a href="#kpi" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.kpi")}</a>
+          <a href="#winners" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.winners")}</a>
+          <a href="/personal-ip" className="whitespace-nowrap hover:text-[var(--ember)] transition">{t("nav.ip")} ↗</a>
+          <a href="#stars" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.stars")}</a>
+          <a href="#matrix" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.matrix")}</a>
+          <a href="#cta" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.cta")}</a>
         </nav>
         <div className="flex items-center gap-2">
           <LangToggle/>
-          <a href="#cta" className="hidden md:inline-block text-[11px] font-mono uppercase tracking-[0.22em] px-3.5 py-1.5 btn-bone rounded-[2px] hover:text-[var(--ember)] transition">{t("nav.cta_btn")}</a>
+          <a href="#cta" className="hidden md:inline-block whitespace-nowrap text-[11px] font-mono uppercase tracking-[0.22em] px-3.5 py-1.5 btn-bone rounded-[2px] hover:text-[var(--ember)] transition">{t("nav.cta_btn")}</a>
           <a href="https://app.lhdao.top/" target="_blank" rel="noopener noreferrer" className="hidden md:inline-block whitespace-nowrap text-[11px] font-mono uppercase tracking-[0.22em] px-3.5 py-1.5 btn-ember rounded-[2px] hover:brightness-110 transition">{t("nav.app_btn")}</a>
         </div>
       </div>

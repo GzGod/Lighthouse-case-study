@@ -533,7 +533,13 @@ function liveI18nPlaceholders(value) {
   return new Set([...text.matchAll(/\{(\w+)\}/g)].map(m => m[1]));
 }
 
+function looksLikeEmbeddedI18nValue(value) {
+  const text = Array.isArray(value) ? value.join(" ") : String(value ?? "");
+  return /"[\w.-]+\.[\w.-]+"\s*:/.test(text) || /why\.w\d+\.d/.test(text);
+}
+
 function shouldUseLiveI18nValue(key, value) {
+  if (looksLikeEmbeddedI18nValue(value)) return false;
   const required = LIVE_I18N_PLACEHOLDER_REQUIREMENTS[key];
   if (!required) return true;
   const placeholders = liveI18nPlaceholders(value);

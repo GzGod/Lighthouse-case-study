@@ -64,6 +64,8 @@ tr:hover td { background:#fafaf8; }
 .i18n-val textarea { width:100%; padding:8px 10px; border:1px solid #e8e8e4; border-radius:5px; font-size:13px; font-family:inherit; min-height:38px; resize:vertical; }
 .i18n-val textarea:focus { outline:none; border-color:#1a1a1a; }
 .i18n-val .lang-tag { font-size:10px; color:#aaa; margin-bottom:3px; text-transform:uppercase; }
+.i18n-auto-en textarea { background:#fafaf8; color:#777; cursor:not-allowed; }
+.auto-translate-hint { margin-top:4px; font-size:11px; color:#999; }
 
 /* Section tabs */
 .section-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:24px; }
