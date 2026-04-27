@@ -28,6 +28,74 @@ function imageSrc(path) {
   return value.startsWith('/') ? value : `/${value}`;
 }
 
+function imagePublicPath(img) {
+  return img?.public_path || img?.path || '';
+}
+
+function imageDisplayPath(img) {
+  if (img?.display_path) return img.display_path;
+  const path = imagePublicPath(img);
+  if (path.startsWith('data:')) return `db-image://${img?.id || 'new'}/${img?.original_name || img?.filename || 'image'}`;
+  return path;
+}
+
+const ADMIN_PROJECT_TAG_LABELS = {
+  cpm: '最低 CPM',
+  value: '最佳性价比',
+  reach: '最高曝光',
+  eng: '最高互动率',
+  eng2: '高互动率',
+  flagship: '旗舰预算',
+};
+
+function adminProjectTagKey(project) {
+  return String(project?.slug || project?.name || '').trim();
+}
+
+function adminFinitePositive(project, key) {
+  const field = key === 'imp' ? (project?.impressions ?? project?.imp) : project?.[key];
+  const value = Number(field);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function buildAdminProjectTagMap(projects) {
+  const tagMap = new Map();
+  const addTag = (project, tag) => {
+    const key = adminProjectTagKey(project);
+    if (!key) return;
+    const tags = tagMap.get(key) || [];
+    if (!tags.includes(tag)) tags.push(tag);
+    tagMap.set(key, tags);
+  };
+  const visible = (projects || []).filter(p => p.is_visible !== 0);
+  const baseline = visible.filter(p => p.is_baseline !== 0);
+  const addExtrema = (metric, tag, mode) => {
+    const candidates = baseline
+      .map(project => ({ project, value: adminFinitePositive(project, metric) }))
+      .filter(item => item.value !== null);
+    if (!candidates.length) return;
+    const target = mode === 'min'
+      ? Math.min(...candidates.map(item => item.value))
+      : Math.max(...candidates.map(item => item.value));
+    candidates
+      .filter(item => item.value === target)
+      .forEach(item => addTag(item.project, tag));
+  };
+  addExtrema('cpm', 'cpm', 'min');
+  addExtrema('cpe', 'value', 'min');
+  addExtrema('imp', 'reach', 'max');
+  const erLeaders = baseline
+    .map(project => ({ project, value: adminFinitePositive(project, 'er') }))
+    .filter(item => item.value !== null)
+    .sort((a, b) => b.value - a.value);
+  if (erLeaders[0]) addTag(erLeaders[0].project, 'eng');
+  if (erLeaders[1]) addTag(erLeaders[1].project, 'eng2');
+  visible
+    .filter(project => project.is_baseline === 0)
+    .forEach(project => addTag(project, 'flagship'));
+  return tagMap;
+}
+
 const ToastCtx = createContext(() => {});
 function ToastProvider({ children }) {
   const [msg, setMsg] = useState(null);
@@ -420,6 +488,8 @@ function ProjectsPage() {
     setTimeout(() => { if (iframeRef.current) iframeRef.current.src = iframeRef.current.src; }, 200);
   };
 
+  const projectTagMap = buildAdminProjectTagMap(projects);
+
   return <div className={`i18n-layout ${showPreview ? 'with-preview' : ''}`}>
     <div className="i18n-editor-col">
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
@@ -433,18 +503,21 @@ function ProjectsPage() {
       <div className="card">
         <table>
           <thead><tr><th>项目</th><th>展示</th><th>预算</th><th>曝光</th><th>CPM</th><th>互动率</th><th>CPE</th><th>推文</th><th>标签</th><th>操作</th></tr></thead>
-          <tbody>{projects.map(p => <tr key={p.id} style={editing===p.id?{background:'#fff8f0'}:p.is_visible===0?{opacity:.55}:{}}>
-            <td style={{fontWeight:600}}>{p.name}</td>
-            <td><span className={`badge badge-${p.is_visible===0?'draft':'published'}`}>{p.is_visible===0?'隐藏':'展示'}</span></td>
-            <td>{p.budget?.toLocaleString()}</td>
-            <td>{p.impressions?.toLocaleString()}</td>
-            <td>{p.cpm?.toFixed(2)}</td>
-            <td>{p.er?.toFixed(2)}%</td>
-            <td>{p.cpe?.toFixed(2)}</td>
-            <td>{p.tweets ?? 0}</td>
-            <td>{p.tag}</td>
-            <td><button className="btn btn-ghost btn-sm" onClick={()=>openEdit(p)}>编辑</button> <button className="btn btn-danger btn-sm" onClick={()=>del(p.id)}>删除</button></td>
-          </tr>)}</tbody>
+          <tbody>{projects.map(p => {
+            const tagKeys = projectTagMap.get(adminProjectTagKey(p)) || [];
+            return <tr key={p.id} style={editing===p.id?{background:'#fff8f0'}:p.is_visible===0?{opacity:.55}:{}}>
+              <td style={{fontWeight:600}}>{p.name}</td>
+              <td><span className={`badge badge-${p.is_visible===0?'draft':'published'}`}>{p.is_visible===0?'隐藏':'展示'}</span></td>
+              <td>{p.budget?.toLocaleString()}</td>
+              <td>{p.impressions?.toLocaleString()}</td>
+              <td>{p.cpm?.toFixed(2)}</td>
+              <td>{p.er?.toFixed(2)}%</td>
+              <td>{p.cpe?.toFixed(2)}</td>
+              <td>{p.tweets ?? 0}</td>
+              <td>{tagKeys.length ? <div className="admin-tag-list">{tagKeys.map(key => <span key={key} className="admin-tag-pill">{ADMIN_PROJECT_TAG_LABELS[key] || key}</span>)}</div> : '—'}</td>
+              <td><button className="btn btn-ghost btn-sm" onClick={()=>openEdit(p)}>编辑</button> <button className="btn btn-danger btn-sm" onClick={()=>del(p.id)}>删除</button></td>
+            </tr>;
+          })}</tbody>
         </table>
       </div>
 
@@ -453,7 +526,7 @@ function ProjectsPage() {
         <div className="form-row">
           <div className="form-group"><label>项目名称</label><input value={form.name||''} onChange={e=>setForm({...form,name:e.target.value})} /></div>
           <div className="form-group"><label>Slug（稳定标识）</label><input value={form.slug||''} onChange={e=>setForm({...form,slug:e.target.value})} placeholder="如 portals" disabled={editing !== 'new' && !!form.slug} />{editing !== 'new' && !!form.slug && <div style={{fontSize:11,color:'#888',marginTop:4}}>已有 slug 不可修改</div>}</div>
-          <div className="form-group"><label>Logo 路径</label><input value={form.logo||''} onChange={e=>setForm({...form,logo:e.target.value})} /></div>
+          <div className="form-group"><label>Logo 路径</label><ImagePicker value={form.logo||''} onChange={v=>setForm({...form,logo:v})} /></div>
         </div>
         <div className="form-row">
           <div className="form-group"><label>预算 (USDC)</label><input type="number" value={form.budget||0} onChange={e=>setForm({...form,budget:+e.target.value})} /></div>
@@ -539,15 +612,18 @@ function ImagePicker({ value, onChange }) {
   return <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
     <div style={{flex:1}}>
       <input value={value} onChange={e=>onChange(e.target.value)} placeholder="图片路径" style={{width:'100%'}} />
-      {value && <img src={value.startsWith('http')?value:'/'+value} alt="" style={{marginTop:6,maxHeight:80,maxWidth:160,objectFit:'contain',borderRadius:4,border:'1px solid #333'}} onError={e=>{e.target.style.display='none'}} />}
+      {value && <img src={imageSrc(value)} alt="" style={{marginTop:6,maxHeight:80,maxWidth:160,objectFit:'contain',borderRadius:4,border:'1px solid #333'}} onError={e=>{e.target.style.display='none'}} />}
     </div>
     <div style={{position:'relative'}}>
       <button className="btn btn-ghost btn-sm" onClick={()=>{loadImages();setOpen(!open)}}>图片库</button>
       {open && <div style={{position:'absolute',right:0,top:'100%',zIndex:50,background:'#1a1a1a',border:'1px solid #333',borderRadius:6,padding:8,width:320,maxHeight:280,overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-        {images.map(img => <div key={img.id} style={{cursor:'pointer',borderRadius:4,overflow:'hidden',border:value===img.path?'2px solid #ff7a45':'2px solid transparent'}} onClick={()=>{onChange(img.path);setOpen(false)}}>
-          <img src={'/'+img.path} alt={img.original_name} style={{width:'100%',height:64,objectFit:'cover'}} />
-          <div style={{fontSize:9,color:'#888',padding:'2px 4px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{img.original_name}</div>
-        </div>)}
+        {images.map(img => {
+          const path = imagePublicPath(img);
+          return <div key={img.id} style={{cursor:'pointer',borderRadius:4,overflow:'hidden',border:value===path?'2px solid #ff7a45':'2px solid transparent'}} onClick={()=>{onChange(path);setOpen(false)}}>
+            <img src={imageSrc(path)} alt={img.original_name} style={{width:'100%',height:64,objectFit:'cover'}} />
+            <div style={{fontSize:9,color:'#888',padding:'2px 4px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{img.original_name || imageDisplayPath(img)}</div>
+          </div>;
+        })}
         {!images.length && <div style={{gridColumn:'1/-1',color:'#666',fontSize:12,padding:8}}>暂无图片</div>}
       </div>}
     </div>
@@ -810,12 +886,25 @@ function ImagesPage() {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const res = await apiUpload(file);
-    setUploading(false);
-    if (res.path) { toast(`已上传: ${res.path}`); load(); }
+    try {
+      const res = await apiUpload(file);
+      if (res.path) { toast(`已上传: ${res.display_path || res.path}`); load(); }
+    } catch (err) {
+      toast(`上传失败：${err.message}`);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
   const copyPath = (p) => { navigator.clipboard.writeText(p); toast('路径已复制'); };
+
+  const del = async (img) => {
+    if (!confirm(`确定删除图片 ${img.original_name || img.filename || img.id}？`)) return;
+    await api(`/upload/${img.id}`, { method:'DELETE' });
+    toast('删除图片成功');
+    load();
+  };
 
   return <div>
     <h1>图片库</h1>
@@ -827,11 +916,19 @@ function ImagesPage() {
       </label>
     </div>
     <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:16}}>
-      {images.map(img => <div key={img.id} className="card" style={{padding:12,textAlign:'center'}}>
-        <img src={imageSrc(img.path)} alt={img.original_name} style={{width:'100%',height:140,objectFit:'cover',borderRadius:6,marginBottom:8}} />
-        <div style={{fontSize:11,color:'#888',cursor:'pointer',wordBreak:'break-all'}} onClick={()=>copyPath(img.path)}>{img.path}</div>
-        <div style={{fontSize:11,color:'#aaa',marginTop:4}}>{img.original_name}</div>
-      </div>)}
+      {images.map(img => {
+        const path = imagePublicPath(img);
+        const displayPath = imageDisplayPath(img);
+        return <div key={img.id} className="card" style={{padding:12,textAlign:'center'}}>
+          <img src={imageSrc(path)} alt={img.original_name} style={{width:'100%',height:140,objectFit:'cover',borderRadius:6,marginBottom:8}} />
+          <div className="image-path-short" onClick={()=>copyPath(path)} title={path}>{displayPath}</div>
+          <div style={{fontSize:11,color:'#aaa',marginTop:4}}>{img.original_name}</div>
+          <div className="image-card-actions">
+            <button className="btn btn-ghost btn-sm" onClick={()=>copyPath(path)}>复制路径</button>
+            <button className="btn btn-danger btn-sm" onClick={()=>del(img)}>删除图片</button>
+          </div>
+        </div>;
+      })}
     </div>
   </div>;
 }

@@ -81,6 +81,12 @@ tr:hover td { background:#fafaf8; }
 .badge-published { background:#e6f9e6; color:#1a7a1a; }
 .badge-draft { background:#f0f0ec; color:#888; }
 
+.admin-tag-list { display:flex; flex-wrap:wrap; gap:4px; min-width:120px; }
+.admin-tag-pill { display:inline-flex; align-items:center; padding:3px 7px; border-radius:999px; background:#fff1e8; color:#d84f22; border:1px solid #ffd4bf; font-size:11px; line-height:1.2; white-space:nowrap; }
+.image-path-short { font-size:11px; color:#666; cursor:pointer; word-break:break-all; min-height:32px; }
+.image-path-short:hover { color:#1a1a1a; text-decoration:underline; }
+.image-card-actions { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; margin-top:10px; }
+
 /* Modal */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:1000; }
 .modal { background:#fff; border-radius:12px; padding:32px; width:90%; max-width:700px; max-height:85vh; overflow-y:auto; }

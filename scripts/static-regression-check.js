@@ -235,6 +235,14 @@ test('Matrix table tags should be derived from live project metrics', () => {
   assert.ok(!/const tagLabel = r\.tag/.test(appPart3), 'matrix table still uses manually stored project tag');
 });
 
+test('Admin project table tags should be derived from live metrics, not stale DB tag text', () => {
+  assert.ok(/function buildAdminProjectTagMap/.test(admin), 'missing admin computed project tag map');
+  assert.ok(/ADMIN_PROJECT_TAG_LABELS/.test(admin), 'missing admin project tag labels');
+  assert.ok(/const projectTagMap = buildAdminProjectTagMap\(projects\);/.test(admin), 'project admin table does not build computed tags from current rows');
+  assert.ok(/projectTagMap\.get\(adminProjectTagKey\(p\)\)/.test(admin), 'project admin table does not read computed tags per row');
+  assert.ok(!/<td>\{p\.tag\}<\/td>/.test(admin), 'project admin table still renders stale p.tag directly');
+});
+
 test('Why section should use the corrected why.wN key pattern', () => {
   assert.ok(/why\.w1\.t/.test(i18n), 'missing why.w1.t');
   assert.ok(/why\.w3\.t/.test(i18n), 'missing why.w3.t');
@@ -267,9 +275,20 @@ test('Surf logo should have a durable bundled fallback instead of an ephemeral u
 test('Image uploads should persist through deploys by storing data URLs in the database', () => {
   assert.ok(/multer\.memoryStorage\(\)/.test(uploadRoute), 'upload route should not depend on Railway local disk storage');
   assert.ok(/req\.file\.buffer\.toString\('base64'\)/.test(uploadRoute), 'upload route should encode image bytes into the stored path');
-  assert.ok(/`data:\$\{mime\};base64,\$\{/.test(uploadRoute), 'upload route should return a data URL path');
+  assert.ok(/`data:\$\{mime\};base64,\$\{/.test(uploadRoute), 'upload route should store a data URL in the database');
+  assert.ok(/function publicImagePath/.test(uploadRoute), 'upload route should expose a short public image path');
+  assert.ok(/router\.get\('\/:id\/raw'/.test(uploadRoute), 'upload route should serve stored DB images through a short raw URL');
+  assert.ok(/path: publicPath/.test(uploadRoute), 'upload response should return the short public path instead of the full data URL');
   assert.ok(!/assets\/uploads\/\$\{req\.file\.filename\}/.test(uploadRoute), 'upload route still returns ephemeral assets/uploads paths');
   assert.ok(/function imageSrc/.test(admin), 'admin should resolve data URL image paths without prefixing a slash');
+});
+
+test('Admin image library should show short paths and allow image deletion', () => {
+  assert.ok(/function imageDisplayPath/.test(admin), 'admin image library should have a short display-path helper');
+  assert.ok(/const path = imagePublicPath\(img\);/.test(admin), 'admin image cards should use a short public image path');
+  assert.ok(/copyPath\(path\)/.test(admin), 'admin image cards should copy the short public path');
+  assert.ok(/api\(`\/upload\/\$\{img\.id\}`,\s*\{ method:'DELETE' \}\)/.test(admin), 'admin image library should call delete image API');
+  assert.ok(/删除图片/.test(admin), 'admin image library should expose a delete image action');
 });
 
 test('Database init should backfill stale dynamic i18n copies without overwriting placeholder templates', () => {
