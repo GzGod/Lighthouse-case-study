@@ -191,6 +191,18 @@ test('Matrix reference labels should be dynamic values, not stale hardcoded copy
   assert.ok(/\$\{tr\("matrix\.col\.er"\)\}\s*\$\{ds\.avgEr\.toFixed\(2\)\}%/.test(appPart3), 'ER reference label is not dynamic');
 });
 
+test('Matrix table tags should be derived from live project metrics', () => {
+  assert.ok(/function projectTagKey/.test(appPart3), 'missing stable project key helper for computed tags');
+  assert.ok(/function buildMatrixTagMap/.test(appPart3), 'missing computed matrix tag map');
+  assert.ok(/MATRIX_TAGS\.cpm/.test(appPart3), 'computed tags should include lowest CPM');
+  assert.ok(/MATRIX_TAGS\.value/.test(appPart3), 'computed tags should include best value / lowest CPE');
+  assert.ok(/MATRIX_TAGS\.reach/.test(appPart3), 'computed tags should include top reach');
+  assert.ok(/MATRIX_TAGS\.eng/.test(appPart3), 'computed tags should include top ER');
+  assert.ok(/MATRIX_TAGS\.eng2/.test(appPart3), 'computed tags should include high ER runner-up');
+  assert.ok(/tagMap\.get\(projectTagKey\(r\)\)/.test(appPart3), 'table rows should read tags from the computed tag map');
+  assert.ok(!/const tagLabel = r\.tag/.test(appPart3), 'matrix table still uses manually stored project tag');
+});
+
 test('Why section should use the corrected why.wN key pattern', () => {
   assert.ok(/why\.w1\.t/.test(i18n), 'missing why.w1.t');
   assert.ok(/why\.w3\.t/.test(i18n), 'missing why.w3.t');

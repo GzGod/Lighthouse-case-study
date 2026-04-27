@@ -4,14 +4,62 @@ const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivide
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
 
-const TAG_KEYS = {
-  "CPM 王":"tag.cpm_king",
-  "性价比王":"tag.value_king",
-  "曝光王":"tag.reach_king",
-  "互动王":"tag.eng_king",
-  "互动亚军":"tag.eng_2",
-  "旗舰预算":"tag.flagship",
+const MATRIX_TAGS = {
+  cpm: "tag.cpm_king",
+  value: "tag.value_king",
+  reach: "tag.reach_king",
+  eng: "tag.eng_king",
+  eng2: "tag.eng_2",
+  flagship: "tag.flagship",
 };
+
+function projectTagKey(project) {
+  return String(project?.slug || project?.name || '').trim();
+}
+
+function finitePositive(project, key) {
+  const value = Number(project?.[key]);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function buildMatrixTagMap(projects) {
+  const tagMap = new Map();
+  const addTag = (project, tag) => {
+    const key = projectTagKey(project);
+    if (!key) return;
+    const tags = tagMap.get(key) || [];
+    if (!tags.includes(tag)) tags.push(tag);
+    tagMap.set(key, tags);
+  };
+  const baseline = projects.filter(p => p.is_baseline !== 0);
+  const addExtrema = (metric, tag, mode) => {
+    const candidates = baseline
+      .map(project => ({ project, value: finitePositive(project, metric) }))
+      .filter(item => item.value !== null);
+    if (!candidates.length) return;
+    const target = mode === 'min'
+      ? Math.min(...candidates.map(item => item.value))
+      : Math.max(...candidates.map(item => item.value));
+    candidates
+      .filter(item => item.value === target)
+      .forEach(item => addTag(item.project, tag));
+  };
+  addExtrema('cpm', MATRIX_TAGS.cpm, 'min');
+  addExtrema('cpe', MATRIX_TAGS.value, 'min');
+  addExtrema('imp', MATRIX_TAGS.reach, 'max');
+
+  const erLeaders = baseline
+    .map(project => ({ project, value: finitePositive(project, 'er') }))
+    .filter(item => item.value !== null)
+    .sort((a, b) => b.value - a.value);
+  if (erLeaders[0]) addTag(erLeaders[0].project, MATRIX_TAGS.eng);
+  if (erLeaders[1]) addTag(erLeaders[1].project, MATRIX_TAGS.eng2);
+
+  projects
+    .filter(project => project.is_baseline === 0)
+    .forEach(project => addTag(project, MATRIX_TAGS.flagship));
+  return tagMap;
+}
 
 function MatrixSection(){
   const { t } = useT3();
@@ -31,6 +79,7 @@ function MatrixSection(){
     });
     return d;
   },[P3, sortKey,sortDir]);
+  const tagMap = React.useMemo(() => buildMatrixTagMap(P3), [P3]);
   function setSort(k){
     if(sortKey===k) setSortDir(s=>s==="asc"?"desc":"asc");
     else { setSortKey(k); setSortDir("asc"); }
@@ -105,7 +154,7 @@ function MatrixSection(){
                 {rows.map((r,i)=>{
                   const isStar = stars.has(r.slug || '');
                   const isNonBase = r.is_baseline === 0;
-                  const tagLabel = r.tag ? (TAG_KEYS[r.tag] ? t(TAG_KEYS[r.tag]) : r.tag) : "—";
+                  const tagKeys = tagMap.get(projectTagKey(r)) || [];
                   return (
                     <tr key={r.name} className="rule-t hover:bg-[var(--ink-2)] transition" style={isNonBase?{background:"rgba(237,232,225,0.025)", opacity:0.85}:isStar?{background:"rgba(255,122,69,0.05)"}:{}}>
                       <td className="py-4 pr-4 font-mono text-[12px] text-[var(--bone-dim)]">{String(i+1).padStart(2,"0")}</td>
@@ -120,7 +169,13 @@ function MatrixSection(){
                       <td className="py-4 pr-4 text-right font-mono" style={{color: r.cpm<=30?"var(--ember-soft)":r.cpm>=80?"var(--bone-dim)":"var(--bone)"}}>{r.cpm.toFixed(2)}</td>
                       <td className="py-4 pr-4 text-right font-mono" style={{color: r.er>=1?"var(--teal)":"var(--bone)"}}>{r.er.toFixed(2)}%</td>
                       <td className="py-4 pr-4 text-right font-mono" style={{color: r.cpe<=3?"var(--ember-soft)":r.cpe>=10?"var(--bone-dim)":"var(--bone)"}}>{r.cpe.toFixed(2)}</td>
-                      <td className="py-4 pr-4 text-right font-mono text-[11px] tracking-[0.14em] uppercase" style={{color: isStar?"var(--ember)":"var(--bone-dim)"}}>{tagLabel}</td>
+                      <td className="py-4 pr-4 text-right font-mono text-[11px] tracking-[0.14em] uppercase" style={{color: tagKeys.length?"var(--ember)":"var(--bone-dim)"}}>
+                        {tagKeys.length ? (
+                          <div className="flex flex-col items-end gap-1">
+                            {tagKeys.map(key => <span key={key}>{t(key)}</span>)}
+                          </div>
+                        ) : "—"}
+                      </td>
                     </tr>
                   );
                 })}
