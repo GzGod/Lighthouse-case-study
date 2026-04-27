@@ -162,6 +162,17 @@ test('About facts should keep the sampled baseline note short enough for one des
   assert.ok(rendered.length <= 32, 'about.f2 rendered zh copy is too long for the three-column fact row');
 });
 
+test('Homepage dense sections should use mobile-first responsive layouts', () => {
+  assert.ok(/min-h-\[100svh\]/.test(app), 'hero should use small-viewport height for mobile browser chrome');
+  assert.ok(/pt-32 sm:pt-36 md:pt-0/.test(app), 'hero should reserve top breathing room on small screens');
+  assert.ok(/grid grid-cols-1 sm:grid-cols-3/.test(app), 'hero stats should stack before becoming three columns');
+  assert.ok(/basis-full sm:basis-auto/.test(app), 'hero footnote should wrap below CTA buttons on small screens');
+  assert.ok(/grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3/.test(appPart2), 'KPI grid should be one column on narrow screens');
+  assert.ok(/grid grid-cols-2 sm:grid-cols-4/.test(appPart2), 'Star metric grid should not force four columns on narrow screens');
+  assert.ok(/grid grid-cols-1 sm:grid-cols-3/.test(appPart3), 'CTA metric grid should stack before becoming three columns');
+  assert.ok(/flex flex-wrap items-center gap-x-5 gap-y-2/.test(appPart3), 'Matrix legends should wrap instead of overflowing on narrow screens');
+});
+
 test('Matrix reference labels should be dynamic values, not stale hardcoded copy', () => {
   assert.ok(/ReferenceLine x=\{ds\.avgCpm\}/.test(appPart3), 'missing dynamic avg CPM reference line');
   assert.ok(/ReferenceLine y=\{ds\.avgEr\}/.test(appPart3), 'missing dynamic avg ER reference line');

@@ -227,14 +227,14 @@ function Hero(){
   const tp = (k) => tpl(t(k), v);
   const sub = tpl(t("hero.sub"), v);
   return (
-    <section id="top" className="relative min-h-[100vh] flex flex-col overflow-hidden">
+    <section id="top" className="relative min-h-[100svh] md:min-h-[100vh] flex flex-col overflow-hidden">
       <div className="absolute inset-0 hero-img"/>
       <div className="absolute inset-0" style={{background:"linear-gradient(180deg, rgba(7,8,10,0.45) 0%, rgba(7,8,10,0.15) 35%, rgba(7,8,10,0.55) 75%, var(--ink) 100%)"}}/>
       <div className="absolute inset-0 grid-bg opacity-40"/>
       <Nav/>
-      <div className="relative flex-1 flex flex-col justify-end pb-20 md:pb-28">
-        <div className="max-w-[1360px] mx-auto w-full px-6 md:px-10">
-          <Reveal className="absolute top-24 left-6 md:left-10">
+      <div className="relative flex-1 flex flex-col justify-end pt-32 sm:pt-36 md:pt-0 pb-14 sm:pb-20 md:pb-28">
+        <div className="max-w-[1360px] mx-auto w-full px-5 sm:px-6 md:px-10">
+          <Reveal className="absolute top-24 left-6 md:left-10 hide-sm">
             <div className="kicker">{t("hero.kicker_tl")}</div>
             <div className="mt-2 text-[11px] font-mono tnum text-[var(--bone-dim)]">{tp("hero.stats_tl")}</div>
           </Reveal>
@@ -244,41 +244,41 @@ function Hero(){
           </Reveal>
           <Reveal><div className="kicker mb-6">{t("hero.eyebrow")}</div></Reveal>
           <Reveal delay={1}>
-            <h1 className="font-display font-black leading-[0.98] bone-glow" style={{fontSize:"clamp(40px, 6.2vw, 92px)", letterSpacing:"-0.01em"}}>
+            <h1 className="font-display font-black leading-[0.98] bone-glow" style={{fontSize:"clamp(34px, 10.5vw, 92px)", letterSpacing:"-0.01em"}}>
               <span data-i18n-key="hero.h1_a">{t("hero.h1_a")}</span><br/>
               <span className="text-[var(--ember)] ember-glow"><span data-i18n-key="hero.h1_b">{t("hero.h1_b")}</span><br/><span data-i18n-key="hero.h1_c">{t("hero.h1_c")}</span></span>
             </h1>
           </Reveal>
-          <Reveal delay={2} className="mt-8 max-w-2xl font-cn text-[17px] md:text-[18px] leading-[1.7] text-[var(--bone-dim)]">
+          <Reveal delay={2} className="mt-7 sm:mt-8 max-w-2xl font-cn text-[15px] sm:text-[16px] md:text-[18px] leading-[1.7] text-[var(--bone-dim)]">
             {Array.isArray(sub) ? <>{sub[0]}<span className="text-[var(--bone)]">{sub[1]}</span>{sub[2]}<span className="text-[var(--bone)]">{sub[3]}</span>{sub[4]}<span className="text-[var(--bone)]">{sub[5]}</span>{sub[6]}</> : sub}
           </Reveal>
-          <div className="mt-16 rule-t rule-b py-8 grid grid-cols-3 gap-4 md:gap-10">
+          <div className="mt-10 sm:mt-16 rule-t rule-b py-6 sm:py-8 grid grid-cols-1 sm:grid-cols-3 gap-7 sm:gap-4 md:gap-10">
             <Reveal delay={2}>
               <div className="kicker">{t("hero.stat1.k")}</div>
-              <div className="mt-3 font-display font-black ember-glow tnum" style={{fontSize:"clamp(36px, 5.5vw, 78px)", color:"var(--ember-soft)", letterSpacing:"-0.02em"}}>
+              <div className="mt-3 font-display font-black ember-glow tnum" style={{fontSize:"clamp(34px, 12vw, 78px)", color:"var(--ember-soft)", letterSpacing:"-0.02em"}}>
                 <CountUp to={stats.totalBudget} />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{t("hero.stat1.u")}</div>
             </Reveal>
-            <Reveal delay={3} className="rule-l pl-4 md:pl-10">
+            <Reveal delay={3} className="pt-6 sm:pt-0 sm:border-l sm:border-[var(--rule)] sm:pl-4 md:pl-10">
               <div className="kicker">{t("hero.stat2.k")}</div>
-              <div className="mt-3 font-display font-black bone-glow tnum" style={{fontSize:"clamp(36px, 5.5vw, 78px)", letterSpacing:"-0.02em"}}>
+              <div className="mt-3 font-display font-black bone-glow tnum" style={{fontSize:"clamp(34px, 12vw, 78px)", letterSpacing:"-0.02em"}}>
                 <CountUp to={stats.totalImp} />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{tp("hero.stat2.u")}</div>
             </Reveal>
-            <Reveal delay={4} className="rule-l pl-4 md:pl-10">
+            <Reveal delay={4} className="pt-6 sm:pt-0 sm:border-l sm:border-[var(--rule)] sm:pl-4 md:pl-10">
               <div className="kicker">{t("hero.stat3.k")}</div>
-              <div className="mt-3 font-display font-black teal-glow tnum" style={{fontSize:"clamp(36px, 5.5vw, 78px)", color:"var(--teal)", letterSpacing:"-0.02em"}}>
+              <div className="mt-3 font-display font-black teal-glow tnum" style={{fontSize:"clamp(34px, 12vw, 78px)", color:"var(--teal)", letterSpacing:"-0.02em"}}>
                 <CountUp to={stats.peakEr} decimals={2} suffix="%" />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{tp("hero.stat3.u")}</div>
             </Reveal>
           </div>
           <Reveal delay={3} className="mt-10 flex flex-wrap items-center gap-4">
-            <a href="#about" className="btn-ember px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:brightness-110 transition">{t("hero.cta1")}</a>
-            <a href="#cta" className="btn-bone px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:text-[var(--ember)] transition">{t("hero.cta2")}</a>
-            <div className="text-[11px] font-mono tracking-[0.18em] text-[var(--bone-dim)] ml-2">{tp("hero.foot")}</div>
+            <a href="#about" className="btn-ember inline-flex justify-center w-full sm:w-auto px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:brightness-110 transition">{t("hero.cta1")}</a>
+            <a href="#cta" className="btn-bone inline-flex justify-center w-full sm:w-auto px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:text-[var(--ember)] transition">{t("hero.cta2")}</a>
+            <div className="basis-full sm:basis-auto text-[11px] font-mono tracking-[0.18em] leading-relaxed text-[var(--bone-dim)] sm:ml-2">{tp("hero.foot")}</div>
           </Reveal>
           <div className="hidden md:flex items-center gap-3 mt-16 text-[var(--bone-dim)]">
             <div className="h-[1px] w-16" style={{background:"var(--rule-strong)"}}/>

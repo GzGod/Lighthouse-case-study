@@ -55,18 +55,18 @@ function MatrixSection(){
 
         <Reveal3 delay={1} className="mt-14 ring-soft p-5 md:p-8" style={{background:"linear-gradient(180deg, rgba(237,232,225,0.03), rgba(237,232,225,0.005))"}}>
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-5 text-[11px] font-mono uppercase tracking-[0.2em] text-[var(--bone-dim)]">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] font-mono uppercase tracking-[0.2em] text-[var(--bone-dim)]">
               <span>{t("matrix.legend1")}</span><span>{t("matrix.legend2")}</span><span>{t("matrix.legend3")}</span>
             </div>
-            <div className="flex items-center gap-4 text-[11px] font-mono uppercase tracking-[0.2em]">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-mono uppercase tracking-[0.2em]">
               <span className="flex items-center gap-2"><span className="dot" style={{background:"var(--ember)"}}/>{t("matrix.legend_star")}</span>
               <span className="flex items-center gap-2"><span className="dot" style={{background:"var(--teal)"}}/>{t("matrix.legend_other")}</span>
             </div>
           </div>
-          <div className="w-full" style={{height:"520px"}}>
+          <div className="w-full h-[360px] sm:h-[430px] md:h-[520px]">
             <ScatterChart rows={P3.filter(r=>r.is_baseline !== 0)} stars={stars} setHovered={setHovered} tr={t} ds={ds}/>
           </div>
-          <div className="mt-3 flex items-center justify-between gap-4 text-[11px] font-mono tracking-[0.14em] text-[var(--bone-dim)]">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-4 text-[11px] font-mono tracking-[0.14em] text-[var(--bone-dim)]">
             <div>{tp("matrix.scatter_note")}</div>
             <div className="text-[var(--bone-dim)]">{t("matrix.kaio_note")}</div>
           </div>
@@ -240,7 +240,7 @@ function WhyCta(){
       </section>
 
       <section id="cta" className="relative overflow-hidden">
-        <div className="relative h-[72vh] min-h-[560px] flex items-center justify-center">
+        <div className="relative min-h-[640px] sm:h-[72vh] sm:min-h-[560px] flex items-center justify-center py-24 sm:py-0">
           <div className="absolute inset-0" style={{backgroundImage:"url(assets/ember-portal.png)", backgroundSize:"cover", backgroundPosition:"center"}}/>
           <div className="absolute inset-0" style={{background:"radial-gradient(ellipse at center, rgba(7,8,10,0.3) 0%, rgba(7,8,10,0.7) 60%, var(--ink) 100%)"}}/>
           <div className="absolute inset-0 grid-bg opacity-30"/>
@@ -254,16 +254,16 @@ function WhyCta(){
               <a href="https://x.com/Lighthouse_2026" className="btn-ember px-6 py-3 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.22em] hover:brightness-110 transition">{t("cta.btn1")}</a>
               <a href="mailto:Lighthouse@mangolabs.org" className="btn-bone px-6 py-3 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.22em] hover:text-[var(--ember)] transition">{t("cta.btn2")}</a>
             </div>
-            <div className="mt-14 grid grid-cols-3 max-w-xl mx-auto text-center gap-6 rule-t pt-8">
+            <div className="mt-14 grid grid-cols-1 sm:grid-cols-3 max-w-xl mx-auto text-center gap-6 rule-t pt-8">
               <div>
                 <div className="font-display font-bold tnum text-[28px] ember-glow" style={{color:"var(--ember-soft)"}}>{sv.totalBudgetLabel}</div>
                 <div className="kicker mt-1 text-[10px]">{t("cta.s1.k")}</div>
               </div>
-              <div className="rule-l">
+              <div className="pt-6 sm:pt-0 sm:border-l sm:border-[var(--rule)]">
                 <div className="font-display font-bold tnum text-[28px]">{sv.totalImpLabel}</div>
                 <div className="kicker mt-1 text-[10px]">{t("cta.s2.k")}</div>
               </div>
-              <div className="rule-l">
+              <div className="pt-6 sm:pt-0 sm:border-l sm:border-[var(--rule)]">
                 <div className="font-display font-bold tnum text-[28px] teal-glow" style={{color:"var(--teal)"}}>{t("cta.s3.v")}</div>
                 <div className="kicker mt-1 text-[10px]">{t("cta.s3.k")}</div>
               </div>

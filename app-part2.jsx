@@ -42,17 +42,17 @@ function KpiSection(){
             <p className="mt-6 max-w-2xl font-cn text-[17px] leading-[1.75] text-[var(--bone-dim)]">{tp("kpi.p")}</p>
           </div>
         </Reveal2>
-        <div className="mt-16 grid grid-cols-2 lg:grid-cols-3 gap-px rule-t rule-b rule-l" style={{borderRight:"1px solid var(--rule)", background:"var(--rule)"}}>
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px rule-t rule-b rule-l" style={{borderRight:"1px solid var(--rule)", background:"var(--rule)"}}>
           {kpis.map((k,i)=>{
             const color = k.tone==="ember"?"var(--ember-soft)":k.tone==="teal"?"var(--teal)":"var(--bone)";
             const glow = k.tone==="ember"?"ember-glow":k.tone==="teal"?"teal-glow":"bone-glow";
             return (
-              <Reveal2 key={i} delay={(i%3)+1} className="bg-[var(--ink)] p-6 md:p-8 min-h-[220px] flex flex-col justify-between hover:bg-[var(--ink-2)] transition">
+              <Reveal2 key={i} delay={(i%3)+1} className="bg-[var(--ink)] p-5 sm:p-6 md:p-8 min-h-[200px] md:min-h-[220px] flex flex-col justify-between hover:bg-[var(--ink-2)] transition">
                 <div className="flex items-center justify-between">
                   <div className="kicker">{k.k}</div>
                   <div className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{k.unit}</div>
                 </div>
-                <div className={`font-display font-black tnum ${glow}`} style={{fontSize:"clamp(40px, 5.5vw, 80px)", color, letterSpacing:"-0.02em", lineHeight:0.95}}>
+                <div className={`font-display font-black tnum ${glow}`} style={{fontSize:"clamp(34px, 11vw, 80px)", color, letterSpacing:"-0.02em", lineHeight:0.95}}>
                   <CountUp2 to={k.v} decimals={k.d} suffix={k.suf}/>
                 </div>
                 <div className="text-[12px] font-mono text-[var(--bone-dim)] tracking-[0.12em]">{k.note}</div>
@@ -290,7 +290,7 @@ function StarCard({s, idx}){
           <Reveal2 delay={1} className="flex-1 flex flex-col">
             <div className="kicker">{t("stars.narr")}</div>
             <p className="mt-4 font-cn text-[17px] md:text-[19px] leading-[1.75] text-[var(--bone)] font-light">{t("stars."+s.key+".story")}</p>
-            <div className="mt-10 grid grid-cols-4 gap-px rule-t rule-b" style={{background:"var(--rule)"}}>
+            <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-px rule-t rule-b" style={{background:"var(--rule)"}}>
               {s.stats.map((st,si)=>(
                 <div key={si} className="bg-[var(--ink)] p-4 md:p-5">
                   <div className="kicker text-[10px]">{st.k}</div>
@@ -383,13 +383,13 @@ function IPCard({ caseData, index, t }){
         <p className="font-cn text-[14px] leading-[1.75] text-[var(--bone-dim)] max-w-prose">{t("ip.placeholder.desc")}</p>
 
         {/* Stat grid */}
-        <div className="grid grid-cols-3 gap-0 mt-7 rule-t pt-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 mt-7 rule-t pt-5">
           {[
             {k: t("ip.stat.followers"), v:"—"},
             {k: t("ip.stat.imp"),       v:"—"},
             {k: t("ip.stat.er"),        v:"—"},
           ].map((s, j) => (
-            <div key={j} className={"px-3 " + (j>0 ? "border-l border-[var(--rule)]" : "")}>
+            <div key={j} className={"px-0 py-3 sm:px-3 sm:py-0 " + (j>0 ? "border-t sm:border-t-0 sm:border-l border-[var(--rule)]" : "")}>
               <div className="font-mono text-[9px] tracking-[0.22em] text-[var(--bone-dim)] uppercase mb-1.5">{s.k}</div>
               <div className="font-display text-[28px] font-bold tnum" style={{color: toneColor}}>{s.v}</div>
             </div>
