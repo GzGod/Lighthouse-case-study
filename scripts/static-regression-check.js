@@ -108,9 +108,23 @@ test('Admin i18n editor should clearly separate draft preview from saved homepag
   assert.ok(/保存后主页生效/.test(admin), 'i18n editor should explain that the homepage changes after saving');
 });
 
-test('Curated stars should filter out missing projects instead of rendering zero-value fallbacks', () => {
-  assert.ok(/CURATED_STARS\.map\(\(cs, i\) => \{[\s\S]*if \(!p\) return null;[\s\S]*\}\)\.filter\(Boolean\)/.test(appPart2), 'missing curated-star filter for deleted projects');
+test('Star samples should be selected dynamically from live metrics without duplicate projects', () => {
+  assert.ok(/function selectUniqueStarProjects/.test(appPart2), 'missing dynamic star sample selector');
+  assert.ok(/const usedStarProjectIds = new Set\(\);/.test(appPart2), 'star selector should track used projects');
+  assert.ok(/pickStarProject\(base, usedStarProjectIds, 's2'/.test(appPart2), 'largest-reach slot should be picked from live data');
+  assert.ok(/pickStarProject\(base, usedStarProjectIds, 's3'/.test(appPart2), 'discussion-depth slot should be picked from live data');
+  assert.ok(/pickStarProject\(base, usedStarProjectIds, 's4'/.test(appPart2), 'low-budget reach slot should be picked from live data');
+  assert.ok(/buildStarSlugSet\(P3\)/.test(appPart3), 'Matrix highlights should follow the dynamic star samples');
+  assert.ok(!/const CURATED_STARS = \[/.test(appPart2), 'star samples are still bound to a fixed slug list');
+  assert.ok(!/P\.find\(proj => \(proj\.slug \|\| ''\) === cs\.slug\)/.test(appPart2), 'stars still find projects by fixed curated slug');
   assert.ok(!/const budget = p\?\.budget \|\| 0;/.test(appPart2), 'still falls back to zero-value curated-star stats');
+});
+
+test('Server startup should refresh dynamic star sample story placeholders', () => {
+  assert.ok(/'stars\.s1\.story'[\s\S]*'starName'[\s\S]*'starCpe'/.test(db), 'missing dynamic i18n refresh for overall-efficiency star story');
+  assert.ok(/'stars\.s2\.story'[\s\S]*'starName'[\s\S]*'starImp'/.test(db), 'missing dynamic i18n refresh for largest-reach star story');
+  assert.ok(/'stars\.s3\.story'[\s\S]*'starName'[\s\S]*'starEr'/.test(db), 'missing dynamic i18n refresh for discussion-depth star story');
+  assert.ok(/'stars\.s4\.story'[\s\S]*'starName'[\s\S]*'starBudget'[\s\S]*'starCpm'[\s\S]*'starImp'/.test(db), 'missing dynamic i18n refresh for low-budget reach star story');
 });
 
 test('Stars should not depend on missing cs.name for display data', () => {

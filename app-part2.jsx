@@ -1,14 +1,83 @@
 /* Lighthouse — part 2: KPI · Winners · Stars · ImageDivider */
 const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveStats: deriveStats2, buildStatsVars: buildStatsVars2, fmt: fmt2, useT: useT2, tpl: tpl2 } = window.App_Part1;
 
-// Curated star samples — bound to stable slug, not mutable display name
-const CURATED_STARS = [
-  { slug: "portals",          slotKey: "s1" },
-  { slug: "zkverify",         slotKey: "s2" },
-  { slug: "sentient",         slotKey: "s3" },
-  { slug: "hashkey-exchange",  slotKey: "s4" },
-];
-const CURATED_STAR_SLUGS = new Set(CURATED_STARS.map(s => s.slug));
+// Star samples are selected from live data. Pick priority is separate from
+// display order so literal labels like "largest reach" get first claim.
+const STAR_SAMPLE_DISPLAY_ORDER = ["s1", "s2", "s3", "s4"];
+
+function starProjectId(project) {
+  return String(project?.slug || project?.name || '').trim();
+}
+
+function starMetric(project, key) {
+  const imp = Number(project?.imp || 0);
+  const er = Number(project?.er || 0);
+  const budget = Number(project?.budget || 0);
+  if (key === 'eng') return imp > 0 && er > 0 ? Math.round(imp * er / 100) : null;
+  if (key === 'cpe') {
+    const direct = Number(project?.cpe);
+    if (Number.isFinite(direct) && direct > 0) return direct;
+    const eng = starMetric(project, 'eng');
+    return budget > 0 && eng > 0 ? budget / eng : null;
+  }
+  const value = Number(project?.[key]);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function compareStarMetric(a, b, key, dir = 'desc') {
+  const av = starMetric(a, key);
+  const bv = starMetric(b, key);
+  if (av === null && bv === null) return 0;
+  if (av === null) return 1;
+  if (bv === null) return -1;
+  return dir === 'asc' ? av - bv : bv - av;
+}
+
+function pickStarProject(base, usedStarProjectIds, slotKey) {
+  const candidates = base.filter(project => {
+    const id = starProjectId(project);
+    return id && !usedStarProjectIds.has(id);
+  });
+  if (!candidates.length) return null;
+
+  const sorted = [...candidates].sort((a, b) => {
+    if (slotKey === 's2') {
+      return compareStarMetric(a, b, 'imp', 'desc') || compareStarMetric(a, b, 'cpm', 'asc');
+    }
+    if (slotKey === 's3') {
+      return compareStarMetric(a, b, 'er', 'desc') || compareStarMetric(a, b, 'eng', 'desc');
+    }
+    if (slotKey === 's4') {
+      return compareStarMetric(a, b, 'budget', 'asc') || compareStarMetric(a, b, 'cpm', 'asc') || compareStarMetric(a, b, 'imp', 'desc');
+    }
+    return compareStarMetric(a, b, 'cpe', 'asc') || compareStarMetric(a, b, 'cpm', 'asc') || compareStarMetric(a, b, 'er', 'desc');
+  });
+  return sorted[0] || null;
+}
+
+function selectUniqueStarProjects(projects) {
+  const base = (projects || []).filter(p => p.is_baseline !== 0);
+  const usedStarProjectIds = new Set();
+  const selected = {};
+  const claim = (slotKey, project) => {
+    if (!project) return;
+    selected[slotKey] = project;
+    usedStarProjectIds.add(starProjectId(project));
+  };
+
+  claim('s2', pickStarProject(base, usedStarProjectIds, 's2'));
+  claim('s3', pickStarProject(base, usedStarProjectIds, 's3'));
+  claim('s4', pickStarProject(base, usedStarProjectIds, 's4'));
+  claim('s1', pickStarProject(base, usedStarProjectIds, 's1'));
+
+  return STAR_SAMPLE_DISPLAY_ORDER
+    .map(slotKey => selected[slotKey] ? { slotKey, project: selected[slotKey] } : null)
+    .filter(Boolean);
+}
+
+function buildStarSlugSet(projects) {
+  return new Set(selectUniqueStarProjects(projects).map(({ project }) => project.slug).filter(Boolean));
+}
 
 function KpiSection(){
   const { t } = useT2();
@@ -206,38 +275,47 @@ function StarsSection(){
   const stars = React.useMemo(() => {
     const tones = ["ember","teal","ember","teal"];
     const bgs = ["divider-img-2","divider-img-3","divider-img-1","divider-img-4"];
-    return CURATED_STARS.map((cs, i) => {
-      const p = P.find(proj => (proj.slug || '') === cs.slug);
-      if (!p) return null;
-      const budget = p.budget || 0;
-      const imp = p.imp || 0;
-      const cpm = p.cpm || 0;
-      const er = p.er || 0;
-      const eng = Math.round(imp * er / 100);
-      const cpe = eng > 0 ? (budget / eng) : 0;
-      const bestStat = (() => {
-        if (cpm && cpm <= 35) return {k:t("stars.stat.cpm"), v:cpm.toFixed(2), u:t("stars.u.usdc"), hl:true};
-        if (er && er >= 1) return {k:t("stars.stat.er"), v:er.toFixed(2), u:t("stars.u.pct"), hl:true};
-        if (cpe && cpe <= 5) return {k:t("stars.stat.cpe"), v:cpe.toFixed(2), u:t("stars.u.usdc"), hl:true};
-        return {k:t("stars.stat.cpm"), v:cpm.toFixed(2), u:t("stars.u.usdc"), hl:true};
+    return selectUniqueStarProjects(P).map(({ slotKey, project: p }, i) => {
+      const budget = starMetric(p, 'budget') || 0;
+      const imp = starMetric(p, 'imp') || 0;
+      const cpm = starMetric(p, 'cpm') || 0;
+      const er = starMetric(p, 'er') || 0;
+      const cpe = starMetric(p, 'cpe') || 0;
+      const highlight = (() => {
+        if (slotKey === 's2') return {k:t("stars.stat.imp"), v:fmt2(imp), u:t("stars.u.imp"), hl:true};
+        if (slotKey === 's3') return {k:t("stars.stat.er"), v:er.toFixed(2), u:t("stars.u.pct"), hl:true};
+        if (slotKey === 's4') return {k:t("stars.stat.cpm"), v:cpm.toFixed(2), u:t("stars.u.usdc"), hl:true};
+        return {k:t("stars.stat.cpe"), v:cpe.toFixed(2), u:t("stars.u.usdc"), hl:true};
       })();
+      const supportStat = slotKey === 's2'
+        ? {k:t("stars.stat.cpm"), v:cpm.toFixed(2), u:t("stars.u.usdc")}
+        : slotKey === 's3'
+          ? {k:t("stars.stat.cpe"), v:cpe.toFixed(2), u:t("stars.u.usdc")}
+          : {k:t("stars.stat.er"), v:er.toFixed(2), u:t("stars.u.pct")};
       return {
-        id: p.slug || cs.slug,
-        key: cs.slotKey,
+        id: p.slug || p.name || slotKey,
+        key: slotKey,
         name: p.name,
         logo: p.logo || '',
         bg: bgs[i],
         tone: tones[i],
+        vars: {
+          starName: p.name,
+          starBudget: fmt2(budget),
+          starImp: fmt2(imp),
+          starCpm: cpm.toFixed(2),
+          starEr: er.toFixed(2),
+          starCpe: cpe.toFixed(2),
+          starTweets: fmt2(p.tweets || 0),
+        },
         stats: [
           {k:t("stars.stat.budget"), v:fmt2(budget), u:t("stars.u.usdc")},
           {k:t("stars.stat.imp"), v:fmt2(imp), u:t("stars.u.imp")},
-          bestStat,
-          bestStat.k === t("stars.stat.cpm")
-            ? {k:t("stars.stat.er"), v:er.toFixed(2), u:t("stars.u.pct")}
-            : {k:t("stars.stat.cpm"), v:cpm.toFixed(2), u:t("stars.u.usdc")},
+          highlight,
+          supportStat,
         ],
       };
-    }).filter(Boolean);
+    });
   }, [P, t]);
   return (
     <section id="stars" className="relative overflow-hidden">
@@ -289,7 +367,7 @@ function StarCard({s, idx}){
         <div className={`md:col-span-7 flex flex-col ${reverse?"md:order-1":""}`}>
           <Reveal2 delay={1} className="flex-1 flex flex-col">
             <div className="kicker">{t("stars.narr")}</div>
-            <p className="mt-4 font-cn text-[17px] md:text-[19px] leading-[1.75] text-[var(--bone)] font-light">{t("stars."+s.key+".story")}</p>
+            <p className="mt-4 font-cn text-[17px] md:text-[19px] leading-[1.75] text-[var(--bone)] font-light">{tpl2(t("stars."+s.key+".story"), s.vars)}</p>
             <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-px rule-t rule-b" style={{background:"var(--rule)"}}>
               {s.stats.map((st,si)=>(
                 <div key={si} className="bg-[var(--ink)] p-4 md:p-5">
@@ -301,7 +379,7 @@ function StarCard({s, idx}){
             </div>
             <div className="mt-8 pl-6 border-l-[2px]" style={{borderColor:color}}>
               <div className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase mb-2">{t("stars.takeaway")}</div>
-              <div className="font-cn text-[17px] leading-[1.7]">{t("stars."+s.key+".take")}</div>
+              <div className="font-cn text-[17px] leading-[1.7]">{tpl2(t("stars."+s.key+".take"), s.vars)}</div>
             </div>
           </Reveal2>
         </div>
@@ -400,4 +478,4 @@ function IPCard({ caseData, index, t }){
   );
 }
 
-window.App_Part2 = { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, CURATED_STAR_SLUGS };
+window.App_Part2 = { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet };

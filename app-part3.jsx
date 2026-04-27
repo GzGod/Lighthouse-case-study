@@ -1,6 +1,6 @@
 /* Lighthouse — part 3: Matrix · Why · CTA · App shell */
 const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3 } = window.App_Part1;
-const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, CURATED_STAR_SLUGS } = window.App_Part2;
+const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
 
@@ -85,7 +85,7 @@ function MatrixSection(){
     else { setSortKey(k); setSortDir("asc"); }
   }
   const arrow = (k)=> sortKey===k ? (sortDir==="asc"?"↑":"↓") : "·";
-  const stars = CURATED_STAR_SLUGS;
+  const stars = React.useMemo(() => buildStarSlugSet(P3), [P3]);
 
   return (
     <section id="matrix" className="relative py-28 md:py-36 overflow-hidden">
