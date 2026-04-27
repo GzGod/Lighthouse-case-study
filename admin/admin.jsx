@@ -22,6 +22,12 @@ function apiUpload(file) {
   return fetch(API + '/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: fd }).then(r => r.json());
 }
 
+function imageSrc(path) {
+  const value = String(path || '');
+  if (/^(data:|https?:\/\/)/.test(value)) return value;
+  return value.startsWith('/') ? value : `/${value}`;
+}
+
 const ToastCtx = createContext(() => {});
 function ToastProvider({ children }) {
   const [msg, setMsg] = useState(null);
@@ -809,7 +815,7 @@ function ImagesPage() {
     </div>
     <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:16}}>
       {images.map(img => <div key={img.id} className="card" style={{padding:12,textAlign:'center'}}>
-        <img src={`/${img.path}`} alt={img.original_name} style={{width:'100%',height:140,objectFit:'cover',borderRadius:6,marginBottom:8}} />
+        <img src={imageSrc(img.path)} alt={img.original_name} style={{width:'100%',height:140,objectFit:'cover',borderRadius:6,marginBottom:8}} />
         <div style={{fontSize:11,color:'#888',cursor:'pointer',wordBreak:'break-all'}} onClick={()=>copyPath(img.path)}>{img.path}</div>
         <div style={{fontSize:11,color:'#aaa',marginTop:4}}>{img.original_name}</div>
       </div>)}

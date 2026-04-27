@@ -14,6 +14,7 @@ const appPart3 = read('app-part3.jsx');
 const projectsRoute = read('server/routes/projects.js');
 const ipCasesRoute = read('server/routes/ip-cases.js');
 const i18nRoute = read('server/routes/i18n.js');
+const uploadRoute = read('server/routes/upload.js');
 const db = read('server/db.js');
 const serverIndex = read('server/index.js');
 const caseStudyHtml = read('Lighthouse Case Study.html');
@@ -133,6 +134,13 @@ test('KPI notes with dynamic placeholders should be rendered through tpl variabl
   assert.ok(/note:tp\("kpi\.k2n"\)/.test(appPart2), 'kpi.k2n still renders raw {baselineTweets}');
 });
 
+test('CountUp should animate again when API data replaces the fallback snapshot', () => {
+  assert.ok(/const \[visible, setVisible\] = useState\(false\);/.test(app), 'CountUp should track element visibility separately from the target value');
+  assert.ok(/valueRef\.current/.test(app), 'CountUp should keep the current displayed value for re-animation');
+  assert.ok(/const target = Number\(to\) \|\| 0;/.test(app), 'CountUp should animate toward the latest numeric target');
+  assert.ok(!/startedRef/.test(app), 'CountUp still permanently blocks later target updates');
+});
+
 test('Top navigation should include the Lighthouse app entry next to the CTA button', () => {
   assert.ok(/"nav\.app_btn":\s*"前往灯塔 →"/.test(i18n), 'missing zh Lighthouse app nav label');
   assert.ok(/"nav\.app_btn":\s*"Go to Lighthouse →"/.test(i18n), 'missing en Lighthouse app nav label');
@@ -223,6 +231,21 @@ test('Database init should enforce a non-empty unique slug index for projects', 
 
 test('Database init should keep KAIO in the baseline sample on existing databases', () => {
   assert.ok(/UPDATE projects SET is_baseline = 1 WHERE \(slug = 'kaio' OR name = 'KAIO'\)/.test(read('server/db.js')), 'missing KAIO baseline backfill for existing databases');
+});
+
+test('Surf logo should have a durable bundled fallback instead of an ephemeral upload path', () => {
+  assert.ok(/assets\/logos\/surf\.svg/.test(caseStudyHtml), 'static fallback should use the bundled Surf logo');
+  assert.ok(/"name":"Surf"[\s\S]*"logo":"assets\/logos\/surf\.svg"/.test(caseStudyHtml), 'static fallback should include Surf with its durable logo');
+  assert.ok(/UPDATE projects SET logo = 'assets\/logos\/surf\.svg'[\s\S]*logo LIKE 'assets\/uploads\/%'/.test(db), 'database init should repair the old broken Surf upload logo path');
+  assert.ok(/UPDATE images SET path = 'assets\/logos\/surf\.svg'/.test(db), 'database init should repair the old Surf image-library row');
+});
+
+test('Image uploads should persist through deploys by storing data URLs in the database', () => {
+  assert.ok(/multer\.memoryStorage\(\)/.test(uploadRoute), 'upload route should not depend on Railway local disk storage');
+  assert.ok(/req\.file\.buffer\.toString\('base64'\)/.test(uploadRoute), 'upload route should encode image bytes into the stored path');
+  assert.ok(/`data:\$\{mime\};base64,\$\{/.test(uploadRoute), 'upload route should return a data URL path');
+  assert.ok(!/assets\/uploads\/\$\{req\.file\.filename\}/.test(uploadRoute), 'upload route still returns ephemeral assets/uploads paths');
+  assert.ok(/function imageSrc/.test(admin), 'admin should resolve data URL image paths without prefixing a slash');
 });
 
 test('Database init should backfill stale dynamic i18n copies without overwriting placeholder templates', () => {

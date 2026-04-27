@@ -110,27 +110,40 @@ function useReveal(ref, opts={}){
 function CountUp({to, duration=1600, decimals=0, suffix="", prefix=""}){
   const ref = useRef(null);
   const [v, setV] = useState(0);
-  const startedRef = useRef(false);
+  const valueRef = useRef(0);
+  const [visible, setVisible] = useState(false);
+  const setDisplayValue = (next) => {
+    valueRef.current = next;
+    setV(next);
+  };
   useEffect(()=>{
     const el = ref.current; if(!el) return;
     const io = new IntersectionObserver(entries=>{
       entries.forEach(e=>{
-        if(e.isIntersecting && !startedRef.current){
-          startedRef.current = true;
-          const t0 = performance.now();
-          const tick = (t)=>{
-            const p = Math.min(1,(t-t0)/duration);
-            const ee = 1 - Math.pow(1-p, 3);
-            setV(to*ee);
-            if(p<1) requestAnimationFrame(tick);
-          };
-          requestAnimationFrame(tick);
+        if(e.isIntersecting){
+          setVisible(true);
+          io.unobserve(el);
         }
       });
     },{threshold:0.4});
     io.observe(el);
     return ()=>io.disconnect();
-  },[to,duration]);
+  },[]);
+  useEffect(()=>{
+    if(!visible) return;
+    let raf = 0;
+    const from = valueRef.current;
+    const target = Number(to) || 0;
+    const t0 = performance.now();
+    const tick = (t)=>{
+      const p = Math.min(1,(t-t0)/duration);
+      const ee = 1 - Math.pow(1-p, 3);
+      setDisplayValue(from + (target - from) * ee);
+      if(p<1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  },[to,duration,visible]);
   return <span ref={ref} className="tnum">{prefix}{fmt(v, decimals)}{suffix}</span>;
 }
 

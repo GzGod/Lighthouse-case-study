@@ -4,24 +4,22 @@ const path = require('path');
 const { authMiddleware } = require('../auth');
 const router = express.Router();
 
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'assets', 'uploads');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-const storage = multer.diskStorage({
-  destination: UPLOAD_DIR,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
-    cb(null, `${base}-${Date.now()}${ext}`);
-  }
-});
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+function safeFilename(file) {
+  const ext = path.extname(file.originalname || '');
+  const base = path.basename(file.originalname || 'image', ext).replace(/[^a-zA-Z0-9_-]/g, '_') || 'image';
+  return `${base}-${Date.now()}${ext}`;
+}
 
 module.exports = function(pool) {
   router.post('/', authMiddleware, upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file' });
-    const relPath = `assets/uploads/${req.file.filename}`;
-    await pool.query('INSERT INTO images (filename, original_name, path) VALUES ($1,$2,$3)', [req.file.filename, req.file.originalname, relPath]);
-    res.json({ path: relPath, filename: req.file.filename });
+    const filename = safeFilename(req.file);
+    const mime = req.file.mimetype || 'application/octet-stream';
+    const dataUrl = `data:${mime};base64,${req.file.buffer.toString('base64')}`;
+    await pool.query('INSERT INTO images (filename, original_name, path) VALUES ($1,$2,$3)', [filename, req.file.originalname, dataUrl]);
+    res.json({ path: dataUrl, filename });
   });
 
   router.get('/', authMiddleware, async (req, res) => {
