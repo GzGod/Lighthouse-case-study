@@ -259,7 +259,7 @@ function I18nPage() {
           {showPreview ? '隐藏预览' : '显示预览'}
         </button>
       </div>
-      <p className="page-desc">按板块编辑中英文案，右侧实时预览</p>
+      <p className="page-desc">按板块编辑中英文案，右侧是草稿预览；点击保存后主页生效，已打开的主页需要刷新。</p>
       <div className="section-tabs">
         {sections.map(s => <button key={s} className={`section-tab ${s===active?'active':''}`} onClick={()=>setActive(s)}>{s === ALL_I18N_SECTION ? '全部' : s}</button>)}
       </div>
@@ -267,7 +267,7 @@ function I18nPage() {
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
           <h3 style={{margin:0,border:'none',padding:0}}>{active === ALL_I18N_SECTION ? '全部' : active} · {keys.length} 条</h3>
           <button className="btn btn-primary" onClick={save} disabled={saving || !Object.keys(edits).length}>
-            {saving ? '保存中...' : `保存修改 (${Object.keys(edits).length})`}
+            {saving ? '保存中...' : `保存到主页 (${Object.keys(edits).length})`}
           </button>
         </div>
         {keys.map(k => <div className="i18n-pair" key={k}>
@@ -284,7 +284,7 @@ function I18nPage() {
       </div>
     </div>
     {showPreview && <div className="i18n-preview-col">
-      <div className="preview-label">实时预览 · {isIPSection ? 'Personal IP' : '首页'}</div>
+      <div className="preview-label">草稿预览 · {isIPSection ? 'Personal IP' : '首页'} · 保存后主页生效</div>
       <iframe ref={iframeRef} src={previewSrc} className="preview-iframe" />
     </div>}
   </div>;

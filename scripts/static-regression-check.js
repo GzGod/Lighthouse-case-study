@@ -84,6 +84,12 @@ test('Visual preview clicks should jump to the matching i18n editor field', () =
   assert.ok(/data-i18n-field=\{`en:\$\{k\}`\}/.test(admin), 'en textarea lacks a stable i18n field marker');
 });
 
+test('Admin i18n editor should clearly separate draft preview from saved homepage copy', () => {
+  assert.ok(/保存到主页/.test(admin), 'i18n save button should say changes are saved to the homepage');
+  assert.ok(/草稿预览/.test(admin), 'i18n preview label should identify unsaved draft preview state');
+  assert.ok(/保存后主页生效/.test(admin), 'i18n editor should explain that the homepage changes after saving');
+});
+
 test('Curated stars should filter out missing projects instead of rendering zero-value fallbacks', () => {
   assert.ok(/CURATED_STARS\.map\(\(cs, i\) => \{[\s\S]*if \(!p\) return null;[\s\S]*\}\)\.filter\(Boolean\)/.test(appPart2), 'missing curated-star filter for deleted projects');
   assert.ok(!/const budget = p\?\.budget \|\| 0;/.test(appPart2), 'still falls back to zero-value curated-star stats');
