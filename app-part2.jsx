@@ -79,6 +79,28 @@ function buildStarSlugSet(projects) {
   return new Set(selectUniqueStarProjects(projects).map(({ project }) => project.slug).filter(Boolean));
 }
 
+function buildStarTagMap(projects, tagKeys = {}) {
+  const tagMap = new Map();
+  const slotTags = {
+    s1: tagKeys.value,
+    s2: tagKeys.reach,
+    s3: tagKeys.eng,
+    s4: tagKeys.cpm,
+  };
+  selectUniqueStarProjects(projects).forEach(({ slotKey, project }) => {
+    const id = starProjectId(project);
+    const tag = slotTags[slotKey];
+    if (id && tag) tagMap.set(id, [tag]);
+  });
+  (projects || [])
+    .filter(project => project.is_visible !== 0 && project.is_baseline === 0)
+    .forEach(project => {
+      const id = starProjectId(project);
+      if (id && tagKeys.flagship) tagMap.set(id, [tagKeys.flagship]);
+    });
+  return tagMap;
+}
+
 function KpiSection(){
   const { t } = useT2();
   const P = useProjects2();
@@ -478,4 +500,4 @@ function IPCard({ caseData, index, t }){
   );
 }
 
-window.App_Part2 = { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet };
+window.App_Part2 = { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet, buildStarTagMap };

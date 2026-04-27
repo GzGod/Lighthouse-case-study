@@ -40,12 +40,19 @@ function imageDisplayPath(img) {
 }
 
 const ADMIN_PROJECT_TAG_LABELS = {
-  cpm: '最低 CPM',
-  value: '最佳性价比',
+  cpm: '低预算曝光',
+  value: '综合效率',
   reach: '最高曝光',
-  eng: '最高互动率',
+  eng: '讨论深度',
   eng2: '高互动率',
   flagship: '旗舰预算',
+};
+
+const ADMIN_STAR_SLOT_TAGS = {
+  s1: 'value',
+  s2: 'reach',
+  s3: 'eng',
+  s4: 'cpm',
 };
 
 function adminProjectTagKey(project) {
@@ -58,41 +65,70 @@ function adminFinitePositive(project, key) {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
+function compareAdminStarMetric(a, b, key, dir = 'desc') {
+  const av = adminFinitePositive(a, key);
+  const bv = adminFinitePositive(b, key);
+  if (av === null && bv === null) return 0;
+  if (av === null) return 1;
+  if (bv === null) return -1;
+  return dir === 'asc' ? av - bv : bv - av;
+}
+
+function pickAdminStarProject(base, usedStarProjectIds, slotKey) {
+  const candidates = base.filter(project => {
+    const id = adminProjectTagKey(project);
+    return id && !usedStarProjectIds.has(id);
+  });
+  if (!candidates.length) return null;
+
+  return [...candidates].sort((a, b) => {
+    if (slotKey === 's2') {
+      return compareAdminStarMetric(a, b, 'imp', 'desc') || compareAdminStarMetric(a, b, 'cpm', 'asc');
+    }
+    if (slotKey === 's3') {
+      return compareAdminStarMetric(a, b, 'er', 'desc') || compareAdminStarMetric(a, b, 'imp', 'desc');
+    }
+    if (slotKey === 's4') {
+      return compareAdminStarMetric(a, b, 'budget', 'asc') || compareAdminStarMetric(a, b, 'cpm', 'asc') || compareAdminStarMetric(a, b, 'imp', 'desc');
+    }
+    return compareAdminStarMetric(a, b, 'cpe', 'asc') || compareAdminStarMetric(a, b, 'cpm', 'asc') || compareAdminStarMetric(a, b, 'er', 'desc');
+  })[0] || null;
+}
+
+function selectAdminStarProjects(projects) {
+  const base = (projects || []).filter(p => p.is_visible !== 0 && p.is_baseline !== 0);
+  const usedStarProjectIds = new Set();
+  const selected = {};
+  const claim = (slotKey, project) => {
+    if (!project) return;
+    selected[slotKey] = project;
+    usedStarProjectIds.add(adminProjectTagKey(project));
+  };
+
+  claim('s2', pickAdminStarProject(base, usedStarProjectIds, 's2'));
+  claim('s3', pickAdminStarProject(base, usedStarProjectIds, 's3'));
+  claim('s4', pickAdminStarProject(base, usedStarProjectIds, 's4'));
+  claim('s1', pickAdminStarProject(base, usedStarProjectIds, 's1'));
+
+  return ['s1', 's2', 's3', 's4']
+    .map(slotKey => selected[slotKey] ? { slotKey, project: selected[slotKey] } : null)
+    .filter(Boolean);
+}
+
 function buildAdminProjectTagMap(projects) {
   const tagMap = new Map();
-  const addTag = (project, tag) => {
-    const key = adminProjectTagKey(project);
-    if (!key) return;
-    const tags = tagMap.get(key) || [];
-    if (!tags.includes(tag)) tags.push(tag);
-    tagMap.set(key, tags);
-  };
   const visible = (projects || []).filter(p => p.is_visible !== 0);
-  const baseline = visible.filter(p => p.is_baseline !== 0);
-  const addExtrema = (metric, tag, mode) => {
-    const candidates = baseline
-      .map(project => ({ project, value: adminFinitePositive(project, metric) }))
-      .filter(item => item.value !== null);
-    if (!candidates.length) return;
-    const target = mode === 'min'
-      ? Math.min(...candidates.map(item => item.value))
-      : Math.max(...candidates.map(item => item.value));
-    candidates
-      .filter(item => item.value === target)
-      .forEach(item => addTag(item.project, tag));
-  };
-  addExtrema('cpm', 'cpm', 'min');
-  addExtrema('cpe', 'value', 'min');
-  addExtrema('imp', 'reach', 'max');
-  const erLeaders = baseline
-    .map(project => ({ project, value: adminFinitePositive(project, 'er') }))
-    .filter(item => item.value !== null)
-    .sort((a, b) => b.value - a.value);
-  if (erLeaders[0]) addTag(erLeaders[0].project, 'eng');
-  if (erLeaders[1]) addTag(erLeaders[1].project, 'eng2');
+  selectAdminStarProjects(projects).forEach(({ slotKey, project }) => {
+    const key = adminProjectTagKey(project);
+    const tag = ADMIN_STAR_SLOT_TAGS[slotKey];
+    if (key && tag) tagMap.set(key, [tag]);
+  });
   visible
     .filter(project => project.is_baseline === 0)
-    .forEach(project => addTag(project, 'flagship'));
+    .forEach(project => {
+      const key = adminProjectTagKey(project);
+      if (key) tagMap.set(key, ['flagship']);
+    });
   return tagMap;
 }
 

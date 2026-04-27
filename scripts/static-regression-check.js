@@ -120,6 +120,21 @@ test('Star samples should be selected dynamically from live metrics without dupl
   assert.ok(!/const budget = p\?\.budget \|\| 0;/.test(appPart2), 'still falls back to zero-value curated-star stats');
 });
 
+test('Matrix and admin tags should be synced to the unique star sample slots', () => {
+  assert.ok(/function buildStarTagMap/.test(appPart2), 'missing shared star-slot tag map');
+  assert.ok(/buildStarTagMap\(P3, MATRIX_TAGS\)/.test(appPart3), 'Matrix tags should use the same unique star-slot selection as Stars');
+  assert.ok(/buildAdminProjectTagMap\(projects\)[\s\S]*selectAdminStarProjects\(projects\)/.test(admin), 'admin tags should use the same unique star-slot selection');
+  assert.ok(/tag\.cpm_king",?\s*:\s*"低预算曝光"/.test(i18n), 'zh tag label should match low-budget reach sample');
+  assert.ok(/tag\.value_king",?\s*:\s*"综合效率"/.test(i18n), 'zh tag label should match efficiency sample');
+  assert.ok(/tag\.eng_king",?\s*:\s*"讨论深度"/.test(i18n), 'zh tag label should match discussion-depth sample');
+  assert.ok(/staleLabelReplacements[\s\S]*低预算曝光[\s\S]*综合效率[\s\S]*讨论深度/.test(db), 'server should migrate stale persisted tag labels');
+  assert.ok(!/addExtrema\('imp', MATRIX_TAGS\.reach/.test(appPart3), 'Matrix tags still assign independent reach extrema');
+  assert.ok(!/addExtrema\('cpm', MATRIX_TAGS\.cpm/.test(appPart3), 'Matrix tags still assign independent CPM extrema');
+  assert.ok(!/if \(erLeaders\[0\]\) addTag\(erLeaders\[0\]\.project/.test(appPart3), 'Matrix tags still assign independent ER extrema');
+  assert.ok(!/addExtrema\('imp', 'reach'/.test(admin), 'admin tags still assign independent reach extrema');
+  assert.ok(!/addExtrema\('cpm', 'cpm'/.test(admin), 'admin tags still assign independent CPM extrema');
+});
+
 test('Server startup should refresh dynamic star sample story placeholders', () => {
   assert.ok(/'stars\.s1\.story'[\s\S]*'starName'[\s\S]*'starCpe'/.test(db), 'missing dynamic i18n refresh for overall-efficiency star story');
   assert.ok(/'stars\.s2\.story'[\s\S]*'starName'[\s\S]*'starImp'/.test(db), 'missing dynamic i18n refresh for largest-reach star story');
@@ -240,11 +255,10 @@ test('Matrix reference labels should be dynamic values, not stale hardcoded copy
 test('Matrix table tags should be derived from live project metrics', () => {
   assert.ok(/function projectTagKey/.test(appPart3), 'missing stable project key helper for computed tags');
   assert.ok(/function buildMatrixTagMap/.test(appPart3), 'missing computed matrix tag map');
-  assert.ok(/MATRIX_TAGS\.cpm/.test(appPart3), 'computed tags should include lowest CPM');
-  assert.ok(/MATRIX_TAGS\.value/.test(appPart3), 'computed tags should include best value / lowest CPE');
-  assert.ok(/MATRIX_TAGS\.reach/.test(appPart3), 'computed tags should include top reach');
-  assert.ok(/MATRIX_TAGS\.eng/.test(appPart3), 'computed tags should include top ER');
-  assert.ok(/MATRIX_TAGS\.eng2/.test(appPart3), 'computed tags should include high ER runner-up');
+  assert.ok(/cpm:\s*"tag\.cpm_king"/.test(appPart3), 'computed tags should include low-budget/CPM slot');
+  assert.ok(/value:\s*"tag\.value_king"/.test(appPart3), 'computed tags should include efficiency slot');
+  assert.ok(/reach:\s*"tag\.reach_king"/.test(appPart3), 'computed tags should include top reach slot');
+  assert.ok(/eng:\s*"tag\.eng_king"/.test(appPart3), 'computed tags should include discussion depth slot');
   assert.ok(/tagMap\.get\(projectTagKey\(r\)\)/.test(appPart3), 'table rows should read tags from the computed tag map');
   assert.ok(!/const tagLabel = r\.tag/.test(appPart3), 'matrix table still uses manually stored project tag');
 });

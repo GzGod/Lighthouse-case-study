@@ -199,6 +199,26 @@ async function initDB() {
     );
   }
 
+  const staleLabelReplacements = [
+    ['zh', 'tag.cpm_king', '低预算曝光', ['最低 CPM']],
+    ['zh', 'tag.value_king', '综合效率', ['最佳性价比']],
+    ['zh', 'tag.eng_king', '讨论深度', ['最高互动率']],
+    ['en', 'tag.cpm_king', 'Low-Budget Reach', ['Lowest CPM']],
+    ['en', 'tag.value_king', 'Efficiency', ['Best Value']],
+    ['en', 'tag.eng_king', 'Deep Conversation', ['Top ER']],
+  ];
+  for (const [lang, key, value, oldValues] of staleLabelReplacements) {
+    const section = key.split('.')[0] || 'misc';
+    await pool.query(
+      'INSERT INTO i18n (lang, key, value, section) VALUES ($1, $2, $3, $4) ON CONFLICT (lang, key) DO NOTHING',
+      [lang, key, value, section]
+    );
+    await pool.query(
+      'UPDATE i18n SET value = $3, updated_at = NOW() WHERE lang = $1 AND key = $2 AND value = ANY($4::text[])',
+      [lang, key, value, oldValues]
+    );
+  }
+
   await pool.query("UPDATE projects SET slug = '' WHERE slug IS NULL");
   const { rows: duplicateSlugRows } = await pool.query(`
     SELECT slug, array_agg(id ORDER BY id) AS ids

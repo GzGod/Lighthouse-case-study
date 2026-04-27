@@ -1,6 +1,6 @@
 /* Lighthouse — part 3: Matrix · Why · CTA · App shell */
 const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3 } = window.App_Part1;
-const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet } = window.App_Part2;
+const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet, buildStarTagMap } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
 
@@ -23,42 +23,7 @@ function finitePositive(project, key) {
 }
 
 function buildMatrixTagMap(projects) {
-  const tagMap = new Map();
-  const addTag = (project, tag) => {
-    const key = projectTagKey(project);
-    if (!key) return;
-    const tags = tagMap.get(key) || [];
-    if (!tags.includes(tag)) tags.push(tag);
-    tagMap.set(key, tags);
-  };
-  const baseline = projects.filter(p => p.is_baseline !== 0);
-  const addExtrema = (metric, tag, mode) => {
-    const candidates = baseline
-      .map(project => ({ project, value: finitePositive(project, metric) }))
-      .filter(item => item.value !== null);
-    if (!candidates.length) return;
-    const target = mode === 'min'
-      ? Math.min(...candidates.map(item => item.value))
-      : Math.max(...candidates.map(item => item.value));
-    candidates
-      .filter(item => item.value === target)
-      .forEach(item => addTag(item.project, tag));
-  };
-  addExtrema('cpm', MATRIX_TAGS.cpm, 'min');
-  addExtrema('cpe', MATRIX_TAGS.value, 'min');
-  addExtrema('imp', MATRIX_TAGS.reach, 'max');
-
-  const erLeaders = baseline
-    .map(project => ({ project, value: finitePositive(project, 'er') }))
-    .filter(item => item.value !== null)
-    .sort((a, b) => b.value - a.value);
-  if (erLeaders[0]) addTag(erLeaders[0].project, MATRIX_TAGS.eng);
-  if (erLeaders[1]) addTag(erLeaders[1].project, MATRIX_TAGS.eng2);
-
-  projects
-    .filter(project => project.is_baseline === 0)
-    .forEach(project => addTag(project, MATRIX_TAGS.flagship));
-  return tagMap;
+  return buildStarTagMap(projects, MATRIX_TAGS);
 }
 
 function MatrixSection(){
@@ -79,7 +44,7 @@ function MatrixSection(){
     });
     return d;
   },[P3, sortKey,sortDir]);
-  const tagMap = React.useMemo(() => buildMatrixTagMap(P3), [P3]);
+  const tagMap = React.useMemo(() => buildStarTagMap(P3, MATRIX_TAGS), [P3]);
   function setSort(k){
     if(sortKey===k) setSortDir(s=>s==="asc"?"desc":"asc");
     else { setSortKey(k); setSortDir("asc"); }
