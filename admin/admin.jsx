@@ -93,6 +93,37 @@ const SECTION_ANCHORS = {
   tag: '#matrix', sample: '#top',
 };
 const ALL_I18N_SECTION = '__all';
+function normalizePreviewCopy(text) {
+  return String(text || '').replace(/\s+/g, '').trim();
+}
+function i18nRowText(value) {
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.join('');
+  } catch {}
+  return String(value || '');
+}
+function findMatchingI18nRow(text, rows) {
+  const clicked = normalizePreviewCopy(text);
+  if (!clicked) return null;
+  let best = null;
+  for (const row of rows || []) {
+    if (row.lang !== 'zh' && row.lang !== 'en') continue;
+    const value = i18nRowText(row.value);
+    const normalized = normalizePreviewCopy(value);
+    if (normalized.length < 2) continue;
+    let score = 0;
+    if (clicked.includes(normalized)) score = normalized.length * 2;
+    else if (normalized.includes(clicked) && clicked.length >= 2) score = clicked.length;
+    else {
+      const fragments = value.split(/\{[^}]+\}/).map(normalizePreviewCopy).filter(s => s.length >= 4);
+      const fragment = fragments.find(s => clicked.includes(s));
+      if (fragment) score = fragment.length;
+    }
+    if (score && (!best || score > best.score)) best = { row, score };
+  }
+  return best?.row || null;
+}
 function sectionAnchor(key) {
   const prefix = key.split('.')[0];
   return SECTION_ANCHORS[prefix] || '#top';
@@ -107,6 +138,7 @@ function I18nPage() {
   const [edits, setEdits] = useState({});
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [focusTarget, setFocusTarget] = useState(null);
   const iframeRef = useRef(null);
 
   const sendToIframe = useCallback((msg) => {
@@ -132,6 +164,41 @@ function I18nPage() {
   const handleChange = (lang, key, val) => {
     setEdits(prev => ({ ...prev, [`${lang}:${key}`]: { lang, key, value: val, section: grouped[key]?.section || key.split('.')[0] || 'misc' } }));
   };
+
+  const focusI18nKey = useCallback((key, lang = 'zh') => {
+    if (!key) return;
+    setFocusTarget({ key, lang });
+    const section = key.split('.')[0] || 'misc';
+    if (active !== section) setActive(section);
+  }, [active]);
+
+  useEffect(() => {
+    function onPreviewCopyClick(e) {
+      if (!e.data || e.data.type !== 'lh-preview-copy-click') return;
+      if (e.data.key) {
+        focusI18nKey(e.data.key, e.data.lang || 'zh');
+        return;
+      }
+      api('/i18n/all').then(allRows => {
+        const match = findMatchingI18nRow(e.data.text, allRows);
+        if (match) focusI18nKey(match.key, match.lang);
+      });
+    }
+    window.addEventListener('message', onPreviewCopyClick);
+    return () => window.removeEventListener('message', onPreviewCopyClick);
+  }, [focusI18nKey]);
+
+  useEffect(() => {
+    if (!focusTarget) return;
+    setTimeout(() => {
+      const wanted = `${focusTarget.lang}:${focusTarget.key}`;
+      const field = Array.from(document.querySelectorAll('textarea[data-i18n-field]')).find(el => el.dataset.i18nField === wanted);
+      if (!field) return;
+      field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      field.focus();
+      field.select();
+    }, 120);
+  }, [rows, active, focusTarget]);
 
   // Build current draft snapshot
   const buildI18nDraft = useCallback(() => {
@@ -207,11 +274,11 @@ function I18nPage() {
           <div className="i18n-key">{k}{active === ALL_I18N_SECTION && <div style={{fontSize:10,color:'#aaa',marginTop:4}}>{grouped[k]?.section}</div>}</div>
           <div className="i18n-val">
             <div className="lang-tag">中文</div>
-            <textarea value={edits[`zh:${k}`]?.value ?? grouped[k]?.zh ?? ''} onChange={e=>handleChange('zh',k,e.target.value)} rows={1} />
+            <textarea data-i18n-field={`zh:${k}`} value={edits[`zh:${k}`]?.value ?? grouped[k]?.zh ?? ''} onChange={e=>handleChange('zh',k,e.target.value)} rows={1} />
           </div>
           <div className="i18n-val">
             <div className="lang-tag">English</div>
-            <textarea value={edits[`en:${k}`]?.value ?? grouped[k]?.en ?? ''} onChange={e=>handleChange('en',k,e.target.value)} rows={1} />
+            <textarea data-i18n-field={`en:${k}`} value={edits[`en:${k}`]?.value ?? grouped[k]?.en ?? ''} onChange={e=>handleChange('en',k,e.target.value)} rows={1} />
           </div>
         </div>)}
       </div>

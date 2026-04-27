@@ -572,6 +572,9 @@ function LangProvider({children}){
   const [ready, setReady] = React.useState(false);
   const [draftOverrides, setDraftOverrides] = React.useState(null);
   React.useEffect(() => { loadLiveDict().then(() => setReady(true)); }, []);
+  React.useEffect(() => {
+    if (ready) installPreviewEditBridge();
+  }, [ready]);
 
   // Signal to parent that this iframe is ready for preview messages
   React.useEffect(() => {
@@ -619,4 +622,28 @@ function tpl(str, vars) {
   return String(str).replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? vars[k] : `{${k}}`);
 }
 
-window.i18n = { DICT, LangContext, LangProvider, useT, tpl };
+function installPreviewEditBridge() {
+  if (window.parent === window || window.__lhPreviewEditBridgeInstalled) return;
+  window.__lhPreviewEditBridgeInstalled = true;
+  document.documentElement.classList.add('lh-preview-edit');
+  document.addEventListener('click', (e) => {
+    const rawTarget = e.target;
+    if (!rawTarget || !rawTarget.closest || rawTarget.closest('input, textarea, select, [contenteditable="true"]')) return;
+    const keyed = rawTarget.closest('[data-i18n-key]');
+    const target = keyed || rawTarget.closest('h1, h2, h3, h4, p, span, a, button, li, td, th, .kicker');
+    if (!target) return;
+    const text = String(target.innerText || target.textContent || '').trim();
+    const key = keyed?.getAttribute('data-i18n-key') || '';
+    if (!key && text.length < 2) return;
+    e.preventDefault();
+    e.stopPropagation();
+    window.parent.postMessage({
+      type: 'lh-preview-copy-click',
+      key,
+      text,
+      lang: document.documentElement.lang && document.documentElement.lang.startsWith('en') ? 'en' : 'zh'
+    }, '*');
+  }, true);
+}
+
+window.i18n = { DICT, LangContext, LangProvider, useT, tpl, installPreviewEditBridge };

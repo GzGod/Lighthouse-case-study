@@ -245,8 +245,8 @@ function Hero(){
           <Reveal><div className="kicker mb-6">{t("hero.eyebrow")}</div></Reveal>
           <Reveal delay={1}>
             <h1 className="font-display font-black leading-[0.98] bone-glow" style={{fontSize:"clamp(40px, 6.2vw, 92px)", letterSpacing:"-0.01em"}}>
-              {t("hero.h1_a")}<br/>
-              <span className="text-[var(--ember)] ember-glow">{t("hero.h1_b")}<br/>{t("hero.h1_c")}</span>
+              <span data-i18n-key="hero.h1_a">{t("hero.h1_a")}</span><br/>
+              <span className="text-[var(--ember)] ember-glow"><span data-i18n-key="hero.h1_b">{t("hero.h1_b")}</span><br/><span data-i18n-key="hero.h1_c">{t("hero.h1_c")}</span></span>
             </h1>
           </Reveal>
           <Reveal delay={2} className="mt-8 max-w-2xl font-cn text-[17px] md:text-[18px] leading-[1.7] text-[var(--bone-dim)]">

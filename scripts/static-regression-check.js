@@ -72,6 +72,18 @@ test('I18n batch save should upsert missing language rows from the editor', () =
   assert.ok(/INSERT INTO i18n \(lang, key, value, section\) VALUES \(\$1,\$2,\$3,\$4\) ON CONFLICT \(lang, key\) DO UPDATE SET value = \$3, section = \$4, updated_at = NOW\(\)/.test(i18nRoute), 'batch i18n save should upsert instead of update-only');
 });
 
+test('Visual preview clicks should jump to the matching i18n editor field', () => {
+  assert.ok(/function installPreviewEditBridge/.test(i18n), 'missing preview click bridge installer');
+  assert.ok(/lh-preview-copy-click/.test(i18n), 'preview click bridge does not notify the admin editor');
+  assert.ok(/data-i18n-key="hero\.h1_a"/.test(app), 'hero.h1_a is not marked as an editable preview target');
+  assert.ok(/data-i18n-key="hero\.h1_b"/.test(app), 'hero.h1_b is not marked as an editable preview target');
+  assert.ok(/data-i18n-key="hero\.h1_c"/.test(app), 'hero.h1_c is not marked as an editable preview target');
+  assert.ok(/function findMatchingI18nRow/.test(admin), 'admin cannot match clicked preview text to an i18n row');
+  assert.ok(/type !== 'lh-preview-copy-click'/.test(admin), 'admin does not listen for preview copy click messages');
+  assert.ok(/data-i18n-field=\{`zh:\$\{k\}`\}/.test(admin), 'zh textarea lacks a stable i18n field marker');
+  assert.ok(/data-i18n-field=\{`en:\$\{k\}`\}/.test(admin), 'en textarea lacks a stable i18n field marker');
+});
+
 test('Curated stars should filter out missing projects instead of rendering zero-value fallbacks', () => {
   assert.ok(/CURATED_STARS\.map\(\(cs, i\) => \{[\s\S]*if \(!p\) return null;[\s\S]*\}\)\.filter\(Boolean\)/.test(appPart2), 'missing curated-star filter for deleted projects');
   assert.ok(!/const budget = p\?\.budget \|\| 0;/.test(appPart2), 'still falls back to zero-value curated-star stats');
