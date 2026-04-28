@@ -193,6 +193,15 @@ test('Top navigation should include the Lighthouse app entry next to the CTA but
   assert.ok(/href="https:\/\/app\.lhdao\.top\/"[\s\S]*\{t\("nav\.app_btn"\)\}/.test(app), 'missing Lighthouse app link in top navigation');
 });
 
+test('Homepage should provide a non-copy-changing UI theme switch', () => {
+  assert.ok(/lighthouse-ui-theme/.test(caseStudyHtml), 'HTML should restore the persisted UI theme before React boots');
+  assert.ok(/html\[data-ui="daylight"\]/.test(caseStudyHtml), 'missing daylight UI theme stylesheet');
+  assert.ok(/function UiThemeToggle/.test(app), 'missing UI theme toggle component');
+  assert.ok(/className=\{`ui-toggle/.test(app), 'UI toggle should use visual-only classes');
+  assert.ok(/<UiThemeToggle\/>/.test(app), 'top navigation does not render the UI theme toggle');
+  assert.ok(/hero-overlay/.test(app) && /hero-stat-card/.test(app), 'hero should expose themeable UI hooks without changing copy');
+});
+
 test('Top navigation labels should stay on one line in English', () => {
   assert.ok(/gap-4 xl:gap-6/.test(app), 'desktop nav should tighten spacing before labels wrap');
   assert.ok(/tracking-\[0\.16em\] xl:tracking-\[0\.22em\]/.test(app), 'desktop nav should reduce letter spacing at narrower desktop widths');

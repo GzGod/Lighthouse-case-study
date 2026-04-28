@@ -13,6 +13,13 @@
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
 <script>
+  try {
+    document.documentElement.dataset.ui = localStorage.getItem('lighthouse-ui-theme') || 'classic';
+  } catch (e) {
+    document.documentElement.dataset.ui = 'classic';
+  }
+</script>
+<script>
   // Suppress recharts defaultProps deprecation warnings (library issue, not our code)
   (function(){
     var origError = console.error;
@@ -104,12 +111,124 @@
     border:1px solid var(--rule-strong);
     color:var(--bone);
   }
+  .site-nav{
+    backdrop-filter:blur(12px);
+    background:rgba(7,8,10,0.55);
+    border-bottom:1px solid var(--rule);
+    transition:background .3s ease,border-color .3s ease,box-shadow .3s ease;
+  }
+  .hero-overlay{
+    background:linear-gradient(180deg, rgba(7,8,10,0.45) 0%, rgba(7,8,10,0.15) 35%, rgba(7,8,10,0.55) 75%, var(--ink) 100%);
+  }
+  .ui-toggle{
+    width:44px;height:28px;border-radius:999px;border:1px solid var(--rule-strong);
+    color:var(--bone);background:rgba(237,232,225,0.04);
+    display:inline-flex;align-items:center;justify-content:center;gap:4px;
+    font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;
+    transition:background .25s ease,border-color .25s ease,color .25s ease,box-shadow .25s ease;
+  }
+  .ui-toggle__dot{width:6px;height:6px;border-radius:999px;background:var(--ember);box-shadow:0 0 12px rgba(255,122,69,.5);}
+  .ui-toggle.is-daylight{background:rgba(12,166,166,.1);border-color:rgba(12,166,166,.38);color:var(--teal);}
+  .ui-toggle.is-daylight .ui-toggle__dot{background:var(--teal);box-shadow:0 0 12px rgba(12,166,166,.4);}
   .logo-mark{
     width:22px;height:22px;position:relative;flex-shrink:0;
   }
   .logo-mark::before,.logo-mark::after{content:"";position:absolute;inset:0;border-radius:999px;}
   .logo-mark::before{background:radial-gradient(circle at 50% 60%, rgba(255,122,69,0.9), rgba(255,122,69,0.0) 65%);}
   .logo-mark::after{border:1.25px solid rgba(237,232,225,0.95);mask:radial-gradient(circle at 50% 120%, #000 48%, transparent 50%);-webkit-mask:radial-gradient(circle at 50% 120%, #000 48%, transparent 50%);}
+
+  html[data-ui="daylight"]{
+    --ink:#f5fbfa;
+    --ink-2:#ffffff;
+    --ink-3:#e8f5f3;
+    --bone:#102233;
+    --bone-dim:#647789;
+    --rule:rgba(33,82,96,0.13);
+    --rule-strong:rgba(33,82,96,0.22);
+    --ember:#d86f25;
+    --ember-soft:#e18332;
+    --teal:#0aa6a6;
+    --amber:#c79535;
+  }
+  html[data-ui="daylight"] body{
+    background:
+      radial-gradient(circle at 75% 14%, rgba(180,232,232,.48), transparent 34%),
+      linear-gradient(180deg,#f8fcfb 0%,#eef8f7 48%,#ffffff 100%);
+    color:var(--bone);
+  }
+  html[data-ui="daylight"] .site-nav{
+    background:rgba(255,255,255,0.78);
+    border-bottom:1px solid rgba(39,91,105,.12);
+    box-shadow:0 10px 40px rgba(27,71,87,.08);
+  }
+  html[data-ui="daylight"] .hero-img{
+    background-image:
+      radial-gradient(circle at 72% 42%, rgba(255,255,255,.18) 0 18%, rgba(255,255,255,.92) 18.4% 19.3%, rgba(255,255,255,.06) 19.6% 32%, transparent 32.4%),
+      linear-gradient(180deg, rgba(238,250,250,.78), rgba(239,249,248,.48)),
+      url('assets/hero-arch.png');
+    filter:saturate(.72) brightness(1.45) contrast(.78);
+    opacity:.88;
+  }
+  html[data-ui="daylight"] .hero-overlay{
+    background:
+      radial-gradient(ellipse 60% 28% at 72% 70%, rgba(12,166,166,.18), transparent 70%),
+      linear-gradient(180deg, rgba(255,255,255,.82) 0%, rgba(245,252,251,.42) 46%, rgba(233,247,245,.72) 78%, var(--ink) 100%);
+  }
+  html[data-ui="daylight"] .grid-bg{
+    background-image:
+      linear-gradient(to right, rgba(18,78,91,0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(18,78,91,0.045) 1px, transparent 1px);
+  }
+  html[data-ui="daylight"] .radial-ember{background:radial-gradient(ellipse 60% 42% at 25% 90%, rgba(232,129,50,.13), transparent 70%);}
+  html[data-ui="daylight"] .radial-teal{background:radial-gradient(ellipse 70% 48% at 75% 5%, rgba(12,166,166,.16), transparent 70%);}
+  html[data-ui="daylight"] .vignette-b{background:linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,.35) 50%, var(--ink) 100%);}
+  html[data-ui="daylight"] .vignette-t{background:linear-gradient(to top, rgba(255,255,255,0) 0%, rgba(255,255,255,.4) 50%, var(--ink) 100%);}
+  html[data-ui="daylight"] .vignette-all{background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.62));}
+  html[data-ui="daylight"] .ring-soft{
+    box-shadow:inset 0 0 0 1px var(--rule), 0 18px 70px rgba(29,88,99,.07);
+    border-radius:22px;
+    background:rgba(255,255,255,.64);
+  }
+  html[data-ui="daylight"] .btn-bone{
+    background:rgba(255,255,255,.66);
+    border-color:rgba(33,82,96,.18);
+    color:var(--bone);
+    box-shadow:0 8px 28px rgba(31,87,100,.08);
+  }
+  html[data-ui="daylight"] .btn-ember{
+    background:linear-gradient(180deg, rgba(10,166,166,.95), rgba(5,141,141,.9));
+    border-color:rgba(10,166,166,.5);
+    color:#fff;
+    box-shadow:0 12px 30px rgba(10,166,166,.22);
+  }
+  html[data-ui="daylight"] .hero-stat-grid{
+    border:0;
+    gap:18px;
+    padding-block:10px;
+  }
+  html[data-ui="daylight"] .hero-stat-card{
+    border:1px solid var(--rule)!important;
+    border-radius:22px;
+    padding:22px!important;
+    background:linear-gradient(135deg, rgba(255,255,255,.82), rgba(236,250,248,.58));
+    box-shadow:0 20px 70px rgba(35,95,105,.1);
+  }
+  html[data-ui="daylight"] .hero-stat-card:nth-child(1){
+    background:linear-gradient(135deg, rgba(239,254,251,.9), rgba(215,246,242,.58));
+  }
+  html[data-ui="daylight"] .hero-stat-card:nth-child(2){
+    background:linear-gradient(135deg, rgba(255,250,241,.9), rgba(255,239,218,.64));
+  }
+  html[data-ui="daylight"] .hero-stat-card:nth-child(3){
+    background:linear-gradient(135deg, rgba(248,243,255,.9), rgba(235,226,255,.66));
+  }
+  html[data-ui="daylight"] .ember-glow,
+  html[data-ui="daylight"] .teal-glow,
+  html[data-ui="daylight"] .bone-glow{
+    text-shadow:none;
+  }
+  html[data-ui="daylight"] .dot{box-shadow:0 0 0 4px rgba(10,166,166,.08);}
+  html[data-ui="daylight"] ::selection{background:rgba(10,166,166,.25);color:var(--bone);}
 </style>
 </head>
 <body>
