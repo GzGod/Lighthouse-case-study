@@ -96,6 +96,12 @@ async function initDB() {
       tweets INTEGER DEFAULT 0,
       slug TEXT DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS project_case_pages (
+      id SERIAL PRIMARY KEY,
+      project_id INTEGER NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
+      page_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
     CREATE TABLE IF NOT EXISTS ip_cases (
       id SERIAL PRIMARY KEY,
       slug TEXT UNIQUE NOT NULL,

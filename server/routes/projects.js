@@ -69,6 +69,14 @@ function isProjectSlugUniqueViolation(error) {
   );
 }
 
+function normalizeCasePagePayload(input) {
+  const pageData = input?.page_data ?? input?.pageData ?? {};
+  if (!pageData || Array.isArray(pageData) || typeof pageData !== 'object') {
+    return { error: 'Project case page data must be an object' };
+  }
+  return { value: pageData };
+}
+
 async function projectSlugExists(pool, slug, excludeId) {
   if (excludeId === undefined) {
     const { rows } = await pool.query('SELECT 1 FROM projects WHERE slug = $1 LIMIT 1', [slug]);
@@ -89,6 +97,30 @@ module.exports = function(pool) {
     res.json(rows);
   });
 
+  router.get('/id/:id/case-page', authMiddleware, async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT p.*, COALESCE(cp.page_data, '{}'::jsonb) AS case_page
+       FROM projects p
+       LEFT JOIN project_case_pages cp ON cp.project_id = p.id
+       WHERE p.id = $1`,
+      [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Project not found' });
+    res.json(rows[0]);
+  });
+
+  router.get('/:slug/case-page', async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT p.*, COALESCE(cp.page_data, '{}'::jsonb) AS case_page
+       FROM projects p
+       LEFT JOIN project_case_pages cp ON cp.project_id = p.id
+       WHERE p.slug = $1 AND p.is_visible <> 0`,
+      [req.params.slug]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Project not found' });
+    res.json(rows[0]);
+  });
+
   router.post('/', authMiddleware, async (req, res) => {
     const normalized = normalizeProjectPayload(req.body || {});
     if (normalized.error) return res.status(400).json({ error: normalized.error });
@@ -97,6 +129,11 @@ module.exports = function(pool) {
     if (await projectSlugExists(pool, payload.slug)) {
       return res.status(400).json({ error: PROJECT_SLUG_EXISTS_ERROR });
     }
+    let normalizedCasePage = null;
+    if (req.body?.case_page || req.body?.page_data || req.body?.pageData) {
+      normalizedCasePage = normalizeCasePagePayload(req.body.case_page ? { page_data: req.body.case_page } : req.body);
+      if (normalizedCasePage.error) return res.status(400).json({ error: normalizedCasePage.error });
+    }
 
     try {
       const { rows: mx } = await pool.query('SELECT COALESCE(MAX(sort_order),0) as m FROM projects');
@@ -104,6 +141,14 @@ module.exports = function(pool) {
         'INSERT INTO projects (name,logo,budget,impressions,cpm,er,cpe,tag,is_baseline,is_visible,sort_order,tweets,slug) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id',
         [payload.name, payload.logo, payload.budget, payload.impressions, payload.cpm, payload.er, payload.cpe, payload.tag, payload.is_baseline, payload.is_visible, mx[0].m + 1, payload.tweets, payload.slug]
       );
+      if (normalizedCasePage) {
+        await pool.query(
+          `INSERT INTO project_case_pages (project_id, page_data, updated_at)
+           VALUES ($1, $2::jsonb, NOW())
+           ON CONFLICT (project_id) DO UPDATE SET page_data = $2::jsonb, updated_at = NOW()`,
+          [rows[0].id, JSON.stringify(normalizedCasePage.value)]
+        );
+      }
       res.json({ id: rows[0].id });
     } catch (error) {
       if (isProjectSlugUniqueViolation(error)) {
@@ -142,6 +187,20 @@ module.exports = function(pool) {
       }
       throw error;
     }
+  });
+
+  router.put('/:id/case-page', authMiddleware, async (req, res) => {
+    const normalized = normalizeCasePagePayload(req.body || {});
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const { rows: projectRows } = await pool.query('SELECT id FROM projects WHERE id = $1', [req.params.id]);
+    if (!projectRows[0]) return res.status(404).json({ error: 'Project not found' });
+    await pool.query(
+      `INSERT INTO project_case_pages (project_id, page_data, updated_at)
+       VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (project_id) DO UPDATE SET page_data = $2::jsonb, updated_at = NOW()`,
+      [req.params.id, JSON.stringify(normalized.value)]
+    );
+    res.json({ ok: true });
   });
 
   router.delete('/:id', authMiddleware, async (req, res) => {

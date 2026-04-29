@@ -87,6 +87,16 @@ tr:hover td { background:#fafaf8; }
 .image-path-short:hover { color:#1a1a1a; text-decoration:underline; }
 .image-card-actions { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; margin-top:10px; }
 
+.case-page-editor { margin-top:20px; padding:20px; border:1px solid #eee; border-radius:10px; background:#fafaf8; }
+.case-page-editor h3 { margin:0 0 8px; padding:0; border:0; font-size:16px; }
+.case-page-editor .page-desc { margin-bottom:18px; }
+.case-solution-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; margin-bottom:16px; }
+.case-solution-card { padding:12px; border:1px solid #e8e8e4; border-radius:8px; background:#fff; }
+.case-solution-card label { display:block; font-size:12px; font-weight:600; color:#666; margin-bottom:8px; }
+.case-solution-card input,
+.case-solution-card textarea { width:100%; padding:9px 12px; border:1px solid #ddd; border-radius:6px; font-size:13px; font-family:inherit; margin-bottom:8px; }
+.case-solution-card textarea { resize:vertical; min-height:72px; }
+
 /* Modal */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:1000; }
 .modal { background:#fff; border-radius:12px; padding:32px; width:90%; max-width:700px; max-height:85vh; overflow-y:auto; }

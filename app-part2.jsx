@@ -79,6 +79,11 @@ function buildStarSlugSet(projects) {
   return new Set(selectUniqueStarProjects(projects).map(({ project }) => project.slug).filter(Boolean));
 }
 
+function projectCaseHref(project) {
+  const slug = String(project?.slug || '').trim();
+  return slug ? `/projects/${encodeURIComponent(slug)}` : '#';
+}
+
 function buildStarTagMap(projects, tagKeys = {}) {
   const tagMap = new Map();
   const slotTags = {
@@ -318,6 +323,7 @@ function StarsSection(){
         id: p.slug || p.name || slotKey,
         key: slotKey,
         name: p.name,
+        href: projectCaseHref(p),
         logo: p.logo || '',
         bg: bgs[i],
         tone: tones[i],
@@ -369,22 +375,23 @@ function StarCard({s, idx}){
     <div className="rule-t">
       <div className="max-w-[1360px] mx-auto px-6 md:px-10 py-20 md:py-28 grid md:grid-cols-12 gap-8 md:gap-12 items-stretch">
         <Reveal2 className={`md:col-span-5 ${reverse?"md:order-2":""} relative`}>
-          <div className={`relative aspect-[4/5] overflow-hidden ring-soft ${s.bg}`} style={{backgroundSize:"cover",backgroundPosition:"center"}}>
+          <a href={s.href} className={`group block relative aspect-[4/5] overflow-hidden ring-soft ${s.bg}`} style={{backgroundSize:"cover",backgroundPosition:"center"}}>
             <div className="absolute inset-0 vignette-all"/>
             <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-between">
               <div>
                 <div className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{t("stars.sample")} · {String(idx+1).padStart(2,"0")}/04</div>
                 <div className="mt-2 flex items-center gap-3">
                   {s.logo && <img src={s.logo} alt="" className="w-[44px] h-[44px] rounded-md object-cover" style={{boxShadow:"0 0 0 1px var(--rule-strong), 0 8px 24px rgba(0,0,0,0.5)"}}/>}
-                  <div className="font-display font-black text-[36px] md:text-[44px] leading-none">{s.name}</div>
+                  <div className="font-display font-black text-[36px] md:text-[44px] leading-none transition group-hover:text-[var(--ember-soft)]">{s.name}</div>
                 </div>
               </div>
               <div>
                 <div className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{t("stars."+s.key+".en")}</div>
                 <div className={`mt-2 font-display font-bold text-[22px] ${glow}`} style={{color}}>{t("stars."+s.key+".tag")}</div>
+                <div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--bone-dim)] transition group-hover:text-[var(--bone)]">View Case →</div>
               </div>
             </div>
-          </div>
+          </a>
         </Reveal2>
         <div className={`md:col-span-7 flex flex-col ${reverse?"md:order-1":""}`}>
           <Reveal2 delay={1} className="flex-1 flex flex-col">

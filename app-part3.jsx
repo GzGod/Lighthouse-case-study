@@ -17,6 +17,11 @@ function projectTagKey(project) {
   return String(project?.slug || project?.name || '').trim();
 }
 
+function projectCaseHref(project) {
+  const slug = String(project?.slug || '').trim();
+  return slug ? `/projects/${encodeURIComponent(slug)}` : '#';
+}
+
 function finitePositive(project, key) {
   const value = Number(project?.[key]);
   return Number.isFinite(value) && value > 0 ? value : null;
@@ -124,10 +129,10 @@ function MatrixSection(){
                     <tr key={r.name} className="rule-t hover:bg-[var(--ink-2)] transition" style={isNonBase?{background:"rgba(237,232,225,0.025)", opacity:0.85}:isStar?{background:"rgba(255,122,69,0.05)"}:{}}>
                       <td className="py-4 pr-4 font-mono text-[12px] text-[var(--bone-dim)]">{String(i+1).padStart(2,"0")}</td>
                       <td className="py-4 pr-4 font-cn text-[16px]" style={{color: isNonBase?"var(--bone-dim)":isStar?"var(--ember-soft)":"var(--bone)"}}>
-                        <div className="flex items-center gap-3">
+                        <a href={projectCaseHref(r)} className="group flex items-center gap-3">
                           <img src={r.logo} alt="" className="w-[24px] h-[24px] rounded object-cover flex-shrink-0" style={{background:"var(--ink-2)", opacity:isNonBase?0.5:1}}/>
-                          <span>{r.name}{isNonBase && <span className="ml-2 font-mono text-[10px] tracking-[0.18em] text-[var(--bone-dim)] uppercase">· {t("matrix.nonbase")}</span>}</span>
-                        </div>
+                          <span className="transition group-hover:text-[var(--ember-soft)]">{r.name}{isNonBase && <span className="ml-2 font-mono text-[10px] tracking-[0.18em] text-[var(--bone-dim)] uppercase">· {t("matrix.nonbase")}</span>}</span>
+                        </a>
                       </td>
                       <td className="py-4 pr-4 text-right font-mono">{fmt3(r.budget)}</td>
                       <td className="py-4 pr-4 text-right font-mono">{fmt3(r.imp)}</td>

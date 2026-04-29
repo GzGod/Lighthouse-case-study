@@ -217,9 +217,27 @@ test('Project case detail page should be reusable and project-linked', () => {
   assert.ok(/id="project-case-root"/.test(projectCaseHtml), 'project case HTML should mount a dedicated React app');
   assert.ok(/src="\/project-case\.jsx"/.test(projectCaseHtml), 'project case HTML should load the single-file React component');
   assert.ok(/const mockData/.test(projectCase), 'project case page should be mockData-driven for future CMS mapping');
-  assert.ok(/function slugFromPath/.test(projectCase) && /fetch\("\/api\/projects"\)/.test(projectCase), 'project case page should resolve content from the project slug');
+  assert.ok(/function slugFromPath/.test(projectCase) && /\/api\/projects\/\$\{encodeURIComponent\(slug\)\}\/case-page/.test(projectCase), 'project case page should resolve CMS content from the project slug');
+  assert.ok(/function pageField/.test(projectCase), 'project case page should map editable CMS fields onto the template');
+  assert.ok(/action !== 'project-case-draft'/.test(projectCase), 'project case page should accept admin draft preview messages');
   assert.ok(/Twitter \/ X 推文嵌入/.test(projectCase), 'project case page should reserve a Twitter/X embed area');
   assert.ok(/projectCasePath\(p\)/.test(admin), 'admin project table should link each project to its case detail page');
+});
+
+test('Project case pages should be editable in the admin and linked from homepage projects', () => {
+  assert.ok(/CREATE TABLE IF NOT EXISTS project_case_pages/.test(db), 'missing project case page table');
+  assert.ok(/page_data JSONB NOT NULL DEFAULT '\{\}'::jsonb/.test(db), 'project case page content should be stored as JSONB');
+  assert.ok(/router\.get\('\/:slug\/case-page'/.test(projectsRoute), 'missing public project case page API by slug');
+  assert.ok(/router\.get\('\/id\/:id\/case-page', authMiddleware/.test(projectsRoute), 'missing authenticated project case page API by id');
+  assert.ok(/router\.put\('\/:id\/case-page', authMiddleware/.test(projectsRoute), 'missing authenticated project case page save API');
+  assert.ok(/DEFAULT_PROJECT_CASE_PAGE/.test(admin), 'admin lacks project case page default editable fields');
+  assert.ok(/api\(`\/projects\/id\/\$\{p\.id\}\/case-page`\)/.test(admin), 'admin project editor does not load case page content');
+  assert.ok(/api\(`\/projects\/\$\{editing\}\/case-page`/.test(admin), 'admin project editor does not save case page content');
+  assert.ok(/className="case-page-editor"/.test(admin), 'admin project form lacks the case page editor UI');
+  assert.ok(/action: 'project-case-draft'/.test(admin), 'admin project editor does not send live case page draft previews');
+  assert.ok(/projectPreviewSrc/.test(admin), 'admin preview should switch to the project case page while editing a project');
+  assert.ok(/href=\{s\.href\}/.test(appPart2), 'Star sample cards should link to project case pages');
+  assert.ok(/projectCaseHref\(r\)/.test(appPart3), 'Matrix table project rows should link to project case pages');
 });
 
 test('Homepage copy should position Lighthouse as a safe Web3 attention marketplace', () => {

@@ -137,6 +137,47 @@ function projectCasePath(project) {
   return slug ? `/projects/${encodeURIComponent(slug)}` : '';
 }
 
+const DEFAULT_PROJECT_CASE_PAGE = {
+  hero_line_1: '一句话概括项目核心价值',
+  hero_line_2: '或成果亮点',
+  summary: '这是一个面向 Web3 项目的高级案例展示模板，用于承载项目背景、核心成果、执行路径与传播资产。',
+  tags: 'Web3\n品牌策略\n市场营销\n产品设计',
+  client_name: '',
+  period: '2026.01 - 2026.04',
+  scope: '策略 / 设计 / 开发 / 运营',
+  team: '灯塔团队',
+  outcomes: '品牌知名度提升 200%+\n用户增长 3.7 倍\n实现营收突破 100 万美元\n获得行业媒体报道 16 篇',
+  challenge_intro: '在项目启动前，客户面临以下核心挑战：',
+  challenges: '市场竞争激烈，缺乏差异化定位\n用户增长缓慢，转化率低\n品牌形象老旧，无法吸引新用户\n缺乏系统化的增长策略与执行方案',
+  solution_intro: '我们从策略、设计、技术与运营四个维度，提供了全链路解决方案：',
+  solution_1_title: '策略洞察',
+  solution_1_desc: '通过市场调研与竞品分析，确定差异化定位与核心价值。',
+  solution_2_title: '内容设计',
+  solution_2_desc: '打造统一的视觉语言与用户体验，提升品牌质感。',
+  solution_3_title: '技术实现',
+  solution_3_desc: '搭建可复用的页面与增长资产，保障稳定交付。',
+  solution_4_title: '增长运营',
+  solution_4_desc: '通过数据驱动的增长策略，实现用户与收入规模增长。',
+  showcase_filters: '全部\n策略\n设计\n开发\n运营',
+  showcase_labels: '项目主视觉 / 设计展示\n项目氛围 / 方案展示\n项目叙事 / 方案展示\n项目视觉 / 方案展示\n项目增长 / 方案展示',
+  testimonial: '灯塔团队专业、高效且富有创造力。他们不仅帮助我们明确了品牌方向，还通过出色的执行力，带来了超出预期的增长效果。',
+  testimonial_name: '客户姓名占位符',
+  testimonial_role: '客户公司 / 职位',
+  tweet_title: '推文嵌入位置',
+  tweet_note: '支持 Twitter / X 推文嵌入',
+  tweet_url: '',
+  cta_title: '下一个成功案例，\n会是你的项目吗？',
+  cta_note: '让我们一起，点亮 Web3 的未来。',
+};
+
+function projectCaseDefaults(project = {}) {
+  return { ...DEFAULT_PROJECT_CASE_PAGE, client_name: project.name || DEFAULT_PROJECT_CASE_PAGE.client_name };
+}
+
+function normalizeProjectCasePage(page, project = {}) {
+  return { ...projectCaseDefaults(project), ...(page || {}) };
+}
+
 const ToastCtx = createContext(() => {});
 function ToastProvider({ children }) {
   const [msg, setMsg] = useState(null);
@@ -424,14 +465,30 @@ function ProjectsPage() {
   const [projects, setProjects] = useState([]);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
+  const [casePage, setCasePage] = useState(projectCaseDefaults());
   const [showPreview, setShowPreview] = useState(true);
   const iframeRef = useRef(null);
 
   const load = () => api('/projects/all').then(setProjects);
   useEffect(() => { load(); }, []);
 
-  const openNew = () => { setForm({ name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1, is_visible:1, tweets:0, slug:'' }); setEditing('new'); };
-  const openEdit = (p) => { setForm({...p}); setEditing(p.id); };
+  const openNew = () => {
+    const draft = { name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1, is_visible:1, tweets:0, slug:'' };
+    setForm(draft);
+    setCasePage(projectCaseDefaults(draft));
+    setEditing('new');
+  };
+  const openEdit = async (p) => {
+    setForm({...p});
+    setCasePage(projectCaseDefaults(p));
+    setEditing(p.id);
+    try {
+      const detail = await api(`/projects/id/${p.id}/case-page`);
+      setCasePage(normalizeProjectCasePage(detail.case_page, detail));
+    } catch (err) {
+      toast(`展示页内容加载失败：${err.message}`);
+    }
+  };
 
   function hasProjectDraftIdentity(project) {
     return Boolean(String(project?.name ?? '').trim() || String(project?.slug ?? '').trim());
@@ -483,7 +540,15 @@ function ProjectsPage() {
   useEffect(() => {
     const draft = buildDraftProjects(form, editing);
     if (draft) sendToIframe({ type: 'lh-preview', action: 'projects-draft', projects: draft });
-  }, [form, editing, projects]);
+    if (editing !== null && hasProjectDraftIdentity(form)) {
+      sendToIframe({
+        type: 'lh-preview',
+        action: 'project-case-draft',
+        project: { ...form, impressions: form.impressions ?? 0 },
+        page_data: normalizeProjectCasePage(casePage, form),
+      });
+    }
+  }, [form, editing, projects, casePage]);
 
   // Listen for iframe ready signal to replay current draft
   useEffect(() => {
@@ -491,10 +556,18 @@ function ProjectsPage() {
       if (!e.data || e.data.type !== 'lh-preview-ready') return;
       const draft = buildDraftProjects(form, editing);
       if (draft) sendToIframe({ type: 'lh-preview', action: 'projects-draft', projects: draft });
+      if (editing !== null && hasProjectDraftIdentity(form)) {
+        sendToIframe({
+          type: 'lh-preview',
+          action: 'project-case-draft',
+          project: { ...form, impressions: form.impressions ?? 0 },
+          page_data: normalizeProjectCasePage(casePage, form),
+        });
+      }
     }
     window.addEventListener('message', onReady);
     return () => window.removeEventListener('message', onReady);
-  }, [form, editing, projects]);
+  }, [form, editing, projects, casePage]);
 
   const cancelEdit = () => {
     setEditing(null);
@@ -509,10 +582,11 @@ function ProjectsPage() {
     }
     try {
       if (editing === 'new') {
-        await api('/projects', { method:'POST', body:JSON.stringify(form) });
+        await api('/projects', { method:'POST', body:JSON.stringify({ ...form, case_page: normalizeProjectCasePage(casePage, form) }) });
         toast('项目已添加');
       } else {
         await api(`/projects/${editing}`, { method:'PUT', body:JSON.stringify(form) });
+        await api(`/projects/${editing}/case-page`, { method:'PUT', body:JSON.stringify({ page_data: normalizeProjectCasePage(casePage, form) }) });
         toast('项目已更新');
       }
       setEditing(null); load();
@@ -530,6 +604,10 @@ function ProjectsPage() {
   };
 
   const projectTagMap = buildAdminProjectTagMap(projects);
+  const setCaseField = (key, value) => setCasePage(prev => ({ ...prev, [key]: value }));
+  const projectPreviewSrc = editing !== null && hasProjectDraftIdentity(form) && projectCasePath(form)
+    ? projectCasePath(form)
+    : '/Lighthouse%20Case%20Study.html';
 
   return <div className={`i18n-layout ${showPreview ? 'with-preview' : ''}`}>
     <div className="i18n-editor-col">
@@ -588,12 +666,56 @@ function ProjectsPage() {
           <div className="form-group"><label>进入基准</label><select value={form.is_baseline??1} onChange={e=>setForm({...form,is_baseline:+e.target.value})}><option value={1}>是</option><option value={0}>否</option></select></div>
           <div className="form-group"><label>前台展示</label><select value={form.is_visible??1} onChange={e=>setForm({...form,is_visible:+e.target.value})}><option value={1}>展示</option><option value={0}>隐藏</option></select></div>
         </div>
+        <div className="case-page-editor">
+          <h3>项目展示页内容</h3>
+          <p className="page-desc">这些字段只影响 /projects/{form.slug || 'slug'} 展示页，不影响首页统计。</p>
+          <div className="form-row">
+            <div className="form-group"><label>Hero 第一行橙色文案</label><input value={casePage.hero_line_1||''} onChange={e=>setCaseField('hero_line_1', e.target.value)} /></div>
+            <div className="form-group"><label>Hero 第二行橙色文案</label><input value={casePage.hero_line_2||''} onChange={e=>setCaseField('hero_line_2', e.target.value)} /></div>
+          </div>
+          <div className="form-group"><label>项目简介</label><textarea rows={3} value={casePage.summary||''} onChange={e=>setCaseField('summary', e.target.value)} /></div>
+          <div className="form-row">
+            <div className="form-group"><label>标签（每行一个）</label><textarea rows={3} value={casePage.tags||''} onChange={e=>setCaseField('tags', e.target.value)} /></div>
+            <div className="form-group"><label>项目周期</label><input value={casePage.period||''} onChange={e=>setCaseField('period', e.target.value)} /></div>
+            <div className="form-group"><label>服务范围</label><input value={casePage.scope||''} onChange={e=>setCaseField('scope', e.target.value)} /></div>
+            <div className="form-group"><label>项目团队</label><input value={casePage.team||''} onChange={e=>setCaseField('team', e.target.value)} /></div>
+          </div>
+          <div className="form-row">
+            <div className="form-group"><label>项目成果（每行一个）</label><textarea rows={5} value={casePage.outcomes||''} onChange={e=>setCaseField('outcomes', e.target.value)} /></div>
+            <div className="form-group"><label>项目挑战（每行一个）</label><textarea rows={5} value={casePage.challenges||''} onChange={e=>setCaseField('challenges', e.target.value)} /></div>
+          </div>
+          <div className="form-row">
+            <div className="form-group"><label>挑战说明</label><textarea rows={2} value={casePage.challenge_intro||''} onChange={e=>setCaseField('challenge_intro', e.target.value)} /></div>
+            <div className="form-group"><label>解决方案说明</label><textarea rows={2} value={casePage.solution_intro||''} onChange={e=>setCaseField('solution_intro', e.target.value)} /></div>
+          </div>
+          <div className="case-solution-grid">
+            {[1,2,3,4].map(i => <div className="case-solution-card" key={i}>
+              <label>方案模块 {i}</label>
+              <input value={casePage[`solution_${i}_title`]||''} onChange={e=>setCaseField(`solution_${i}_title`, e.target.value)} placeholder="标题" />
+              <textarea rows={3} value={casePage[`solution_${i}_desc`]||''} onChange={e=>setCaseField(`solution_${i}_desc`, e.target.value)} placeholder="说明" />
+            </div>)}
+          </div>
+          <div className="form-row">
+            <div className="form-group"><label>展示筛选项（每行一个）</label><textarea rows={4} value={casePage.showcase_filters||''} onChange={e=>setCaseField('showcase_filters', e.target.value)} /></div>
+            <div className="form-group"><label>展示图卡标题（5 行，对应 1 大图 + 4 小图）</label><textarea rows={4} value={casePage.showcase_labels||''} onChange={e=>setCaseField('showcase_labels', e.target.value)} /></div>
+          </div>
+          <div className="form-row">
+            <div className="form-group"><label>客户评价</label><textarea rows={4} value={casePage.testimonial||''} onChange={e=>setCaseField('testimonial', e.target.value)} /></div>
+            <div className="form-group"><label>客户姓名</label><input value={casePage.testimonial_name||''} onChange={e=>setCaseField('testimonial_name', e.target.value)} /></div>
+            <div className="form-group"><label>客户公司 / 职位</label><input value={casePage.testimonial_role||''} onChange={e=>setCaseField('testimonial_role', e.target.value)} /></div>
+          </div>
+          <div className="form-row">
+            <div className="form-group"><label>推文 URL</label><input value={casePage.tweet_url||''} onChange={e=>setCaseField('tweet_url', e.target.value)} placeholder="https://x.com/..." /></div>
+            <div className="form-group"><label>CTA 标题</label><textarea rows={2} value={casePage.cta_title||''} onChange={e=>setCaseField('cta_title', e.target.value)} /></div>
+            <div className="form-group"><label>CTA 说明</label><input value={casePage.cta_note||''} onChange={e=>setCaseField('cta_note', e.target.value)} /></div>
+          </div>
+        </div>
         <div className="btn-group"><button className="btn btn-primary" onClick={save}>保存</button><button className="btn btn-ghost" onClick={cancelEdit}>取消</button></div>
       </div>}
     </div>
     {showPreview && <div className="i18n-preview-col">
-      <div className="preview-label">实时预览 · 首页 (Hero / KPI / Winners / Stars / Matrix)</div>
-      <iframe ref={iframeRef} src="/Lighthouse%20Case%20Study.html" className="preview-iframe" />
+      <div className="preview-label">{editing !== null && hasProjectDraftIdentity(form) ? '实时预览 · 项目展示页' : '实时预览 · 首页 (Hero / KPI / Winners / Stars / Matrix)'}</div>
+      <iframe ref={iframeRef} src={projectPreviewSrc} className="preview-iframe" />
     </div>}
   </div>;
 }
