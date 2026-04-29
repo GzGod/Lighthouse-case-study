@@ -87,6 +87,9 @@ async function start() {
   app.get('/personal-ip', (req, res) => {
     res.sendFile(path.join(staticRoot, 'Personal IP.html'));
   });
+  app.get('/projects/:slug', (req, res) => {
+    res.sendFile(path.join(staticRoot, 'Project Case.html'));
+  });
   app.use((req, res, next) => {
     const pathname = decodeURIComponent(req.path);
     if (pathname === '/Lighthouse Case Study.html') return res.redirect(301, '/');

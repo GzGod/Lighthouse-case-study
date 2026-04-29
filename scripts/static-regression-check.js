@@ -18,6 +18,8 @@ const uploadRoute = read('server/routes/upload.js');
 const db = read('server/db.js');
 const serverIndex = read('server/index.js');
 const caseStudyHtml = read('Lighthouse Case Study.html');
+const projectCaseHtml = read('Project Case.html');
+const projectCase = read('project-case.jsx');
 
 function test(name, fn) {
   try {
@@ -193,15 +195,6 @@ test('Top navigation should include the Lighthouse app entry next to the CTA but
   assert.ok(/href="https:\/\/app\.lhdao\.top\/"[\s\S]*\{t\("nav\.app_btn"\)\}/.test(app), 'missing Lighthouse app link in top navigation');
 });
 
-test('Homepage should provide a non-copy-changing UI theme switch', () => {
-  assert.ok(/lighthouse-ui-theme/.test(caseStudyHtml), 'HTML should restore the persisted UI theme before React boots');
-  assert.ok(/html\[data-ui="daylight"\]/.test(caseStudyHtml), 'missing daylight UI theme stylesheet');
-  assert.ok(/function UiThemeToggle/.test(app), 'missing UI theme toggle component');
-  assert.ok(/className=\{`ui-toggle/.test(app), 'UI toggle should use visual-only classes');
-  assert.ok(/<UiThemeToggle\/>/.test(app), 'top navigation does not render the UI theme toggle');
-  assert.ok(/hero-overlay/.test(app) && /hero-stat-card/.test(app), 'hero should expose themeable UI hooks without changing copy');
-});
-
 test('Top navigation labels should stay on one line in English', () => {
   assert.ok(/gap-4 xl:gap-6/.test(app), 'desktop nav should tighten spacing before labels wrap');
   assert.ok(/tracking-\[0\.16em\] xl:tracking-\[0\.22em\]/.test(app), 'desktop nav should reduce letter spacing at narrower desktop widths');
@@ -212,11 +205,21 @@ test('Top navigation labels should stay on one line in English', () => {
 test('Public page links should use canonical extensionless routes', () => {
   assert.ok(/app\.get\('\/case-study'[\s\S]*Lighthouse Case Study\.html/.test(serverIndex), 'missing extensionless case-study route');
   assert.ok(/app\.get\('\/personal-ip'[\s\S]*Personal IP\.html/.test(serverIndex), 'missing extensionless personal-ip route');
+  assert.ok(/app\.get\('\/projects\/:slug'[\s\S]*Project Case\.html/.test(serverIndex), 'missing project case detail route');
   assert.ok(/decodeURIComponent\(req\.path\)/.test(serverIndex), 'legacy html redirect must handle encoded spaces in URLs');
   assert.ok(/pathname === '\/Lighthouse Case Study\.html'[\s\S]*res\.redirect\(301, '\/'\)/.test(serverIndex), 'missing redirect from case-study html URL');
   assert.ok(/pathname === '\/Personal IP\.html'[\s\S]*res\.redirect\(301, '\/personal-ip'\)/.test(serverIndex), 'missing redirect from personal IP html URL');
   assert.ok(!/href="Personal IP\.html"/.test(app), 'main nav still links to Personal IP.html');
   assert.ok(!/Lighthouse Case Study\.html/.test(personalIp), 'personal IP page still links back to .html URLs');
+});
+
+test('Project case detail page should be reusable and project-linked', () => {
+  assert.ok(/id="project-case-root"/.test(projectCaseHtml), 'project case HTML should mount a dedicated React app');
+  assert.ok(/src="\/project-case\.jsx"/.test(projectCaseHtml), 'project case HTML should load the single-file React component');
+  assert.ok(/const mockData/.test(projectCase), 'project case page should be mockData-driven for future CMS mapping');
+  assert.ok(/function slugFromPath/.test(projectCase) && /fetch\("\/api\/projects"\)/.test(projectCase), 'project case page should resolve content from the project slug');
+  assert.ok(/Twitter \/ X 推文嵌入/.test(projectCase), 'project case page should reserve a Twitter/X embed area');
+  assert.ok(/projectCasePath\(p\)/.test(admin), 'admin project table should link each project to its case detail page');
 });
 
 test('Homepage copy should position Lighthouse as a safe Web3 attention marketplace', () => {

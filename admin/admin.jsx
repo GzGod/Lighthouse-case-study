@@ -132,6 +132,11 @@ function buildAdminProjectTagMap(projects) {
   return tagMap;
 }
 
+function projectCasePath(project) {
+  const slug = String(project?.slug || '').trim();
+  return slug ? `/projects/${encodeURIComponent(slug)}` : '';
+}
+
 const ToastCtx = createContext(() => {});
 function ToastProvider({ children }) {
   const [msg, setMsg] = useState(null);
@@ -551,7 +556,11 @@ function ProjectsPage() {
               <td>{p.cpe?.toFixed(2)}</td>
               <td>{p.tweets ?? 0}</td>
               <td>{tagKeys.length ? <div className="admin-tag-list">{tagKeys.map(key => <span key={key} className="admin-tag-pill">{ADMIN_PROJECT_TAG_LABELS[key] || key}</span>)}</div> : '—'}</td>
-              <td><button className="btn btn-ghost btn-sm" onClick={()=>openEdit(p)}>编辑</button> <button className="btn btn-danger btn-sm" onClick={()=>del(p.id)}>删除</button></td>
+              <td>
+                <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(p)}>编辑</button>{' '}
+                {projectCasePath(p) && <a className="btn btn-ghost btn-sm" href={projectCasePath(p)} target="_blank" rel="noopener noreferrer">展示页</a>}{' '}
+                <button className="btn btn-danger btn-sm" onClick={()=>del(p.id)}>删除</button>
+              </td>
             </tr>;
           })}</tbody>
         </table>
