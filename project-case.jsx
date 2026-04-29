@@ -83,7 +83,7 @@ function useProject() {
 
 function GlassCard({ children, className = "" }) {
   return (
-    <div className={`case-glass rounded-[28px] border border-white/12 bg-[#071416]/58 shadow-[0_24px_80px_rgba(0,0,0,.28)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-orange-300/35 ${className}`}>
+    <div className={`case-glass rounded-[3px] border border-[var(--rule-strong)] bg-[rgba(13,15,18,.72)] shadow-[0_24px_80px_rgba(0,0,0,.28)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[rgba(255,122,69,.42)] hover:bg-[rgba(21,24,29,.82)] ${className}`}>
       {children}
     </div>
   );
@@ -91,7 +91,7 @@ function GlassCard({ children, className = "" }) {
 
 function CircleIcon({ children }) {
   return (
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-orange-300/35 bg-orange-400/10 text-orange-300">
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[rgba(255,122,69,.36)] bg-[rgba(255,122,69,.08)] text-[var(--ember-soft)]">
       {children}
     </span>
   );
@@ -99,14 +99,14 @@ function CircleIcon({ children }) {
 
 function PlaceholderArt({ large = false, label = "项目主视觉 / 方案展示" }) {
   return (
-    <div className={`relative overflow-hidden rounded-[18px] border border-white/10 bg-slate-900/40 ${large ? "min-h-[260px] md:min-h-[320px]" : "min-h-[150px]"}`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_20%,rgba(100,183,193,.26),transparent_28%),linear-gradient(145deg,rgba(216,104,66,.25),rgba(25,68,82,.28)_46%,rgba(7,14,18,.65))]" />
+    <div className={`relative overflow-hidden rounded-[2px] border border-[var(--rule-strong)] bg-[var(--ink-2)] ${large ? "min-h-[260px] md:min-h-[320px]" : "min-h-[150px]"}`}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_20%,rgba(111,183,193,.18),transparent_28%),linear-gradient(145deg,rgba(255,122,69,.18),rgba(30,50,58,.28)_46%,rgba(7,8,10,.78))]" />
       <div className="absolute inset-x-0 bottom-0 h-2/3 opacity-80">
         <div className="absolute bottom-0 h-[58%] w-full bg-[linear-gradient(155deg,transparent_0_12%,rgba(24,55,70,.82)_13%_35%,transparent_36%),linear-gradient(25deg,transparent_0_18%,rgba(58,90,103,.62)_19%_44%,transparent_45%),linear-gradient(165deg,transparent_0_28%,rgba(10,28,40,.88)_29%_72%,transparent_73%)]" />
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <div className="font-mono text-[12px] uppercase tracking-[.22em] text-white/85">PLACEHOLDER</div>
-        <div className="mt-2 text-sm text-white/70">{label}</div>
+        <div className="font-mono text-[12px] uppercase tracking-[.22em] text-[var(--bone)]">PLACEHOLDER</div>
+        <div className="mt-2 font-cn text-sm text-[var(--bone-dim)]">{label}</div>
       </div>
     </div>
   );
@@ -115,9 +115,9 @@ function PlaceholderArt({ large = false, label = "项目主视觉 / 方案展示
 function HeroVisual() {
   return (
     <GlassCard className="relative min-h-[360px] overflow-hidden p-0">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_32%,rgba(112,211,214,.34),transparent_34%),linear-gradient(180deg,rgba(80,164,172,.65),rgba(160,69,52,.45)_72%,rgba(7,10,12,.95))]" />
-      <div className="absolute inset-x-0 bottom-0 h-[42%] bg-[linear-gradient(170deg,transparent_0_8%,rgba(37,25,24,.86)_9%_50%,transparent_51%),linear-gradient(10deg,transparent_0_22%,rgba(15,18,23,.9)_23%_100%)]" />
-      <div className="absolute left-1/2 top-[17%] h-[230px] w-[230px] -translate-x-1/2 rounded-full border-[4px] border-white/68 shadow-[0_0_80px_rgba(255,255,255,.2)] md:h-[300px] md:w-[300px]" />
+      <div className="absolute inset-0 bg-[url('assets/hero-arch.png')] bg-cover bg-center opacity-85" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,8,10,.08),rgba(7,8,10,.22)_42%,rgba(7,8,10,.92)),radial-gradient(circle_at_55%_35%,rgba(111,183,193,.22),transparent_32%)]" />
+      <div className="absolute left-1/2 top-[17%] h-[230px] w-[230px] -translate-x-1/2 rounded-full border-[4px] border-[rgba(237,232,225,.72)] shadow-[0_0_80px_rgba(237,232,225,.16)] md:h-[300px] md:w-[300px]" />
       <div className="absolute left-1/2 bottom-[16%] h-7 w-2 -translate-x-1/2 rounded-full bg-black/85 shadow-[0_0_28px_rgba(0,0,0,.6)]" />
     </GlassCard>
   );
@@ -125,15 +125,19 @@ function HeroVisual() {
 
 function Nav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#071012]/72 backdrop-blur-2xl">
-      <div className="mx-auto flex h-[68px] max-w-[1200px] items-center justify-between px-5">
-        <a href="/" className="text-lg font-black tracking-tight text-white">Light House</a>
-        <nav className="hidden items-center gap-9 text-sm text-slate-300 md:flex">
+    <header className="sticky top-0 z-40 border-b border-[var(--rule)] bg-[rgba(7,8,10,.68)] backdrop-blur-xl">
+      <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-5">
+        <a href="/" className="flex items-center gap-3 text-[17px] font-semibold tracking-wide text-[var(--bone)]">
+          <span>灯塔</span>
+          <span className="h-4 w-px bg-[var(--rule-strong)]" />
+          <img src="assets/lighthouse-logo.svg" alt="Lighthouse" className="h-[18px] w-auto opacity-95" />
+        </a>
+        <nav className="hidden items-center gap-7 font-mono text-[11px] uppercase tracking-[.18em] text-[var(--bone-dim)] md:flex">
           {["灯塔案例", "项目服务", "洞察资讯", "关于我们"].map(item => <a key={item} href="#" className="transition hover:text-white">{item}</a>)}
         </nav>
         <div className="flex items-center gap-4">
-          <button className="font-mono text-sm text-slate-300"><span className="text-orange-300">ZH</span> / EN</button>
-          <a href="#cta" className="rounded-xl border border-orange-300/40 bg-orange-500/12 px-5 py-2 text-sm text-orange-200 transition hover:bg-orange-500/22">联系我们 →</a>
+          <button className="font-mono text-[11px] tracking-[.18em] text-[var(--bone-dim)]"><span className="text-[var(--ember)]">ZH</span> / EN</button>
+          <a href="#cta" className="rounded-[2px] border border-[rgba(255,122,69,.55)] bg-[rgba(255,122,69,.12)] px-4 py-2 font-mono text-[11px] uppercase tracking-[.18em] text-[var(--bone)] transition hover:brightness-110">联系我们 →</a>
         </div>
       </div>
     </header>
@@ -143,45 +147,61 @@ function Nav() {
 function ProjectCasePage() {
   const project = useProject();
   const stats = useMemo(() => [
-    { value: formatNumber(project.budget || 131400), label: "USDC · 合约交易额", tone: "text-orange-300" },
-    { value: formatNumber(project.impressions || 3746874), label: "用户触达 / 曝光量", tone: "text-white" },
-    { value: `${Number(project.er || 1.21).toFixed(2)}%`, label: "转化率提升", tone: "text-cyan-300" },
+    { value: formatNumber(project.budget || 131400), label: "USDC · 合约交易额", tone: "text-[var(--ember-soft)]" },
+    { value: formatNumber(project.impressions || 3746874), label: "用户触达 / 曝光量", tone: "text-[var(--bone)]" },
+    { value: `${Number(project.er || 1.21).toFixed(2)}%`, label: "转化率提升", tone: "text-[var(--teal)]" },
   ], [project]);
   const title = project.name || "项目标题占位符";
 
   return (
-    <div className="case-page min-h-screen overflow-hidden bg-[#071012] text-slate-100">
+    <div className="case-page min-h-screen overflow-hidden bg-[var(--ink)] text-[var(--bone)]">
       <style>{`
         .case-page {
           background:
-            radial-gradient(circle at 12% 18%, rgba(49,125,132,.38), transparent 30%),
-            radial-gradient(circle at 86% 86%, rgba(176,69,47,.34), transparent 34%),
-            linear-gradient(135deg, #071012 0%, #0d2a2d 46%, #2a1517 100%);
+            radial-gradient(ellipse 70% 40% at 76% 4%, rgba(111,183,193,.12), transparent 64%),
+            radial-gradient(ellipse 72% 42% at 24% 94%, rgba(255,122,69,.20), transparent 70%),
+            linear-gradient(180deg, var(--ink) 0%, #0b1012 48%, var(--ink) 100%);
         }
         .case-page::before {
-          content:""; position:fixed; inset:0; pointer-events:none; opacity:.38;
-          background-image:linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-          background-size:48px 48px;
+          content:""; position:fixed; inset:0; pointer-events:none; opacity:.8;
+          background-image:linear-gradient(rgba(237,232,225,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(237,232,225,.04) 1px, transparent 1px);
+          background-size:80px 80px;
           mask-image:linear-gradient(to bottom, #000 0%, transparent 90%);
         }
         .case-glass { animation: fadeUp .65s ease both; }
+        .case-page h2, .case-page h3 { font-family:"Helvetica Neue","Helvetica","Arial","Noto Serif SC",serif; color:var(--bone); }
+        .case-page .text-slate-100,
+        .case-page .text-slate-200,
+        .case-page .text-white { color:var(--bone); }
+        .case-page .text-slate-300,
+        .case-page .text-slate-400,
+        .case-page .text-slate-500 { color:var(--bone-dim); }
+        .case-page .text-orange-300,
+        .case-page .text-orange-400 { color:var(--ember-soft); }
+        .case-page .text-cyan-300 { color:var(--teal); }
+        .case-page .bg-orange-500 { background-color:var(--ember); }
+        .case-page .border-white\\/10,
+        .case-page .border-white\\/12,
+        .case-page .border-white\\/15,
+        .case-page .border-white\\/18,
+        .case-page .border-white\\/20 { border-color:var(--rule-strong); }
         @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
       `}</style>
       <Nav />
       <main className="relative z-10 mx-auto max-w-[1200px] px-5 pb-10 pt-8 md:pb-16">
-        <div className="font-mono text-xs text-slate-400">首页 / 灯塔案例 / {title}</div>
+        <div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--bone-dim)]">首页 / 灯塔案例 / {title}</div>
 
         <section className="mt-8 grid gap-4 lg:grid-cols-[1fr_.98fr]">
           <GlassCard className="p-7 md:p-9">
-            <div className="font-mono text-xs uppercase tracking-[.34em] text-slate-400">{mockData.eyebrow} · {mockData.volume}</div>
-            <h1 className="mt-6 text-[42px] font-black leading-[1.08] tracking-[-.03em] text-slate-100 md:text-[58px]">
+            <div className="font-mono text-[11px] uppercase tracking-[.32em] text-[var(--bone-dim)]">{mockData.eyebrow} · {mockData.volume}</div>
+            <h1 className="font-display mt-6 text-[42px] font-black leading-[1.02] tracking-[-.03em] text-[var(--bone)] md:text-[62px]">
               {title}<br />
-              <span className="text-orange-400">一句话概括项目核心价值</span><br />
-              <span className="text-orange-400">或成果亮点</span>
+              <span className="text-[var(--ember)]">一句话概括项目核心价值</span><br />
+              <span className="text-[var(--ember)]">或成果亮点</span>
             </h1>
-            <p className="mt-7 max-w-2xl text-[15px] leading-8 text-slate-300">{mockData.summary}</p>
+            <p className="font-cn mt-7 max-w-2xl text-[16px] leading-8 text-[var(--bone-dim)]">{mockData.summary}</p>
             <div className="mt-10 flex flex-wrap gap-3">
-              {mockData.tags.map(tag => <span key={tag} className="rounded-xl border border-white/12 bg-white/[.04] px-4 py-2 text-sm text-slate-300">{tag}</span>)}
+              {mockData.tags.map(tag => <span key={tag} className="rounded-[2px] border border-[var(--rule-strong)] bg-[rgba(237,232,225,.03)] px-4 py-2 font-mono text-[11px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{tag}</span>)}
             </div>
           </GlassCard>
           <HeroVisual />
@@ -240,7 +260,7 @@ function ProjectCasePage() {
             <p className="mt-4 text-sm leading-7 text-slate-400">我们从策略、设计、技术与运营四个维度，提供了全链路解决方案：</p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {mockData.solution.map((item, index) => (
-                <div key={item.title} className="rounded-2xl border border-white/10 bg-white/[.035] p-5 transition hover:border-orange-300/30">
+                <div key={item.title} className="rounded-[2px] border border-[var(--rule)] bg-[rgba(237,232,225,.025)] p-5 transition hover:border-[rgba(255,122,69,.34)] hover:bg-[rgba(237,232,225,.04)]">
                   <CircleIcon>{["✣", "◌", "⚙", "♢"][index]}</CircleIcon>
                   <h3 className="mt-5 font-semibold text-white">{item.title}</h3>
                   <p className="mt-3 text-xs leading-6 text-slate-400">{item.desc}</p>
@@ -254,7 +274,7 @@ function ProjectCasePage() {
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <h2 className="text-2xl font-bold">项目展示</h2>
             <div className="flex flex-wrap gap-2">
-              {mockData.showcaseFilters.map((item, index) => <button key={item} className={`rounded-full border px-5 py-2 text-sm transition ${index === 0 ? "border-orange-300 bg-orange-500 text-white" : "border-white/12 bg-white/[.04] text-slate-300 hover:border-orange-300/35"}`}>{item}</button>)}
+              {mockData.showcaseFilters.map((item, index) => <button key={item} className={`rounded-[2px] border px-5 py-2 font-mono text-[11px] uppercase tracking-[.14em] transition ${index === 0 ? "border-[rgba(255,122,69,.56)] bg-[rgba(255,122,69,.22)] text-[var(--bone)]" : "border-[var(--rule-strong)] bg-[rgba(237,232,225,.03)] text-[var(--bone-dim)] hover:border-[rgba(255,122,69,.35)]"}`}>{item}</button>)}
             </div>
           </div>
           <div className="mt-7 grid gap-3 lg:grid-cols-[1.1fr_1.6fr]">
@@ -279,7 +299,7 @@ function ProjectCasePage() {
           </GlassCard>
           <GlassCard className="relative overflow-hidden p-7">
             <h2 className="text-2xl font-bold">相关推文</h2>
-            <div className="relative mt-7 flex min-h-[150px] items-center justify-center rounded-3xl border border-dashed border-white/20 bg-white/[.025]">
+            <div className="relative mt-7 flex min-h-[150px] items-center justify-center rounded-[2px] border border-dashed border-[var(--rule-strong)] bg-[rgba(237,232,225,.025)]">
               <div className="absolute right-10 top-1/2 -translate-y-1/2 font-mono text-[150px] font-bold leading-none text-white/[.045]">X</div>
               <div className="relative text-center">
                 <div className="text-lg text-slate-300">推文嵌入位置</div>
@@ -289,13 +309,13 @@ function ProjectCasePage() {
           </GlassCard>
         </section>
 
-        <section id="cta" className="mt-5 overflow-hidden rounded-[30px] border border-white/18 bg-[linear-gradient(110deg,rgba(38,110,118,.78),rgba(27,38,45,.82)_52%,rgba(209,84,50,.8))] p-8 shadow-[0_24px_80px_rgba(0,0,0,.32)] md:p-10">
+        <section id="cta" className="mt-5 overflow-hidden rounded-[3px] border border-[var(--rule-strong)] bg-[linear-gradient(110deg,rgba(111,183,193,.20),rgba(13,15,18,.88)_52%,rgba(255,122,69,.22))] p-8 shadow-[0_24px_80px_rgba(0,0,0,.32)] md:p-10">
           <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-3xl font-black leading-tight md:text-4xl">下一个成功案例，<br />会是你的项目吗？</h2>
               <p className="mt-3 text-slate-300">让我们一起，点亮 Web3 的未来。</p>
             </div>
-            <a href="https://app.lhdao.top/" target="_blank" rel="noopener noreferrer" className="inline-flex rounded-2xl bg-orange-500 px-7 py-4 font-semibold text-white shadow-[0_14px_36px_rgba(255,122,69,.28)] transition hover:brightness-110">开始你的项目 →</a>
+            <a href="https://app.lhdao.top/" target="_blank" rel="noopener noreferrer" className="inline-flex rounded-[2px] border border-[rgba(255,122,69,.56)] bg-[rgba(255,122,69,.22)] px-7 py-4 font-mono text-[11px] uppercase tracking-[.18em] text-[var(--bone)] shadow-[0_14px_36px_rgba(255,122,69,.18)] transition hover:brightness-110">开始你的项目 →</a>
           </div>
         </section>
       </main>

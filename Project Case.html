@@ -6,15 +6,31 @@
 <title>Lighthouse Project Case Study</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <style>
-  html, body { min-height: 100%; background:#071012; color:#eef5f2; font-family:"Noto Sans SC", system-ui, sans-serif; }
+  :root{
+    --ink:#07080a;
+    --ink-2:#0d0f12;
+    --ink-3:#15181d;
+    --bone:#ede8e1;
+    --bone-dim:#a39e96;
+    --rule:rgba(237,232,225,0.10);
+    --rule-strong:rgba(237,232,225,0.22);
+    --ember:#ff7a45;
+    --ember-soft:#ff9566;
+    --teal:#6fb7c1;
+    --amber:#e8b87a;
+  }
+  html, body { min-height: 100%; background:var(--ink); color:var(--bone); font-family:"Helvetica Neue","Helvetica","Arial","Noto Sans SC",system-ui,sans-serif; }
+  .font-display{font-family:"Helvetica Neue","Helvetica","Arial","Noto Serif SC",serif;font-feature-settings:"ss01";}
   .font-mono { font-family:"JetBrains Mono", ui-monospace, monospace; }
-  ::selection { background:rgba(255,122,69,.42); color:#fff; }
+  .font-cn{font-family:"Kaiti SC","STKaiti","KaiTi","Noto Serif SC",serif;}
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
+  ::selection { background:rgba(255,122,69,.45); color:#fff; }
 </style>
 </head>
 <body>
