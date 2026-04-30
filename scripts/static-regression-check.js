@@ -152,6 +152,13 @@ test('StarCard React key should not use possibly empty s.name', () => {
   assert.ok(!/StarCard key=\{s\.name\}/.test(appPart2), 'found StarCard key={s.name} in app-part2.jsx');
 });
 
+test('Winners section should include external KOL CPM comparison placeholders', () => {
+  assert.ok(/const KOL_CPM_BENCHMARKS = \[/.test(appPart2), 'missing external KOL CPM benchmark placeholder data');
+  assert.ok(/win\.compare\.title_a/.test(appPart2), 'Winners section does not render the CPM comparison panel');
+  assert.ok(/win\.compare\.kol1\.name/.test(i18n), 'missing editable large-KOL comparison copy keys');
+  assert.ok(/win\.compare\.placeholder/.test(i18n), 'missing placeholder label for future real KOL CPM data');
+});
+
 test('Hero and footer stats should use baseline wording, not ambiguous total sample wording', () => {
   assert.ok(!/"hero\.foot":\s*"\{totalCount\}/.test(i18n), 'hero.foot still starts with totalCount');
   assert.ok(!/"footer\.stats":\s*"\{totalCount\}.*\{totalTweets\}/.test(i18n), 'footer.stats still mixes totalCount and totalTweets');

@@ -4,6 +4,11 @@ const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveSta
 // Star samples are selected from live data. Pick priority is separate from
 // display order so literal labels like "largest reach" get first claim.
 const STAR_SAMPLE_DISPLAY_ORDER = ["s1", "s2", "s3", "s4"];
+const KOL_CPM_BENCHMARKS = [
+  { key: "kol1", cpm: 120 },
+  { key: "kol2", cpm: 180 },
+  { key: "kol3", cpm: 260 },
+];
 
 function starProjectId(project) {
   return String(project?.slug || project?.name || '').trim();
@@ -198,6 +203,9 @@ function WinnersSection(){
   const { t } = useT2();
   const P = useProjects2();
   const base = React.useMemo(() => P.filter(p => p.is_baseline !== 0), [P]);
+  const ds = React.useMemo(() => deriveStats2(P), [P]);
+  const statsVars = React.useMemo(() => buildStatsVars2(P, ds), [P, ds]);
+  const tp = React.useCallback((key) => tpl2(t(key), statsVars), [t, statsVars]);
 
   const dims = React.useMemo(() => {
     if (!base.length) return [];
@@ -220,6 +228,35 @@ function WinnersSection(){
         bad: (worstCpe?.cpe||0).toFixed(2), badWho: worstCpe?.name||'—' },
     ];
   }, [base]);
+  const cpmBenchmarkRows = React.useMemo(() => {
+    const best = dims.find(d => d.key === "d1")?.rows?.[0] || null;
+    const lighthouseRows = [
+      best && {
+        kind: "lighthouse",
+        label: t("win.compare.best"),
+        name: best.name,
+        cpm: best.v,
+        note: t("win.compare.best_note"),
+      },
+      ds.avgCpm > 0 && {
+        kind: "lighthouse",
+        label: t("win.compare.avg"),
+        name: tp("win.compare.avg_name"),
+        cpm: +ds.avgCpm.toFixed(2),
+        note: t("win.compare.avg_note"),
+      },
+    ].filter(Boolean);
+    const kolRows = KOL_CPM_BENCHMARKS.map(item => ({
+      kind: "kol",
+      label: t(`win.compare.${item.key}.label`),
+      name: t(`win.compare.${item.key}.name`),
+      cpm: item.cpm,
+      note: t("win.compare.placeholder"),
+    }));
+    return [...lighthouseRows, ...kolRows];
+  }, [dims, ds.avgCpm, t, tp]);
+  const bestLighthouseCpm = cpmBenchmarkRows.find(r => r.kind === "lighthouse")?.cpm || 0;
+  const maxBenchmarkCpm = Math.max(1, ...cpmBenchmarkRows.map(r => Number(r.cpm) || 0));
   return (
     <section id="winners" className="relative py-28 md:py-36 overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1px]" style={{background:"var(--rule-strong)"}}/>
@@ -290,6 +327,52 @@ function WinnersSection(){
             );
           })}
         </div>
+        {cpmBenchmarkRows.length > 0 && (
+          <Reveal2 delay={4} className="mt-8 ring-soft overflow-hidden" style={{background:"linear-gradient(135deg, rgba(111,183,193,0.08), rgba(255,122,69,0.05) 48%, rgba(237,232,225,0.018))"}}>
+            <div className="grid lg:grid-cols-[0.9fr_1.6fr]">
+              <div className="p-6 md:p-8 border-b lg:border-b-0 lg:border-r border-[var(--rule)]">
+                <div className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{t("win.compare.eyebrow")}</div>
+                <div className="mt-3 font-display text-[30px] md:text-[38px] font-black leading-tight">
+                  {t("win.compare.title_a")}<span className="text-[var(--ember-soft)] ember-glow">{t("win.compare.title_b")}</span>
+                </div>
+                <p className="mt-4 font-cn text-[15px] leading-[1.75] text-[var(--bone-dim)]">{t("win.compare.desc")}</p>
+                <div className="mt-6 inline-flex items-center gap-2 rounded-full px-3 py-1 font-mono text-[10px] tracking-[0.18em] uppercase" style={{border:"1px solid var(--rule-strong)", color:"var(--teal)", background:"rgba(111,183,193,0.08)"}}>
+                  <span className="h-1.5 w-1.5 rounded-full" style={{background:"var(--teal)"}}/>
+                  {t("win.compare.status")}
+                </div>
+              </div>
+              <div className="p-6 md:p-8 flex flex-col gap-4">
+                {cpmBenchmarkRows.map((row, idx) => {
+                  const isLighthouse = row.kind === "lighthouse";
+                  const color = isLighthouse ? "var(--teal)" : "var(--ember-soft)";
+                  const width = Math.max(4, Math.min(100, (row.cpm / maxBenchmarkCpm) * 100));
+                  const multiple = bestLighthouseCpm > 0 ? row.cpm / bestLighthouseCpm : 0;
+                  return (
+                    <div key={`${row.kind}-${idx}`} className="group rounded-[18px] p-4 transition hover:-translate-y-0.5" style={{border:"1px solid var(--rule)", background:isLighthouse?"rgba(111,183,193,0.055)":"rgba(255,122,69,0.045)"}}>
+                      <div className="flex flex-wrap items-baseline justify-between gap-3">
+                        <div>
+                          <div className="font-mono text-[10px] tracking-[0.2em] uppercase" style={{color:isLighthouse?"var(--teal)":"var(--ember-soft)"}}>{row.label}</div>
+                          <div className="mt-1 font-cn text-[16px] text-[var(--bone)]">{row.name}</div>
+                        </div>
+                        <div className="flex items-baseline gap-3">
+                          <div className="font-display font-black tnum leading-none" style={{fontSize:"clamp(26px, 3vw, 38px)", color}}>{row.cpm.toFixed(2)}</div>
+                          <div className="font-mono text-[10px] tracking-[0.16em] uppercase text-[var(--bone-dim)]">CPM</div>
+                        </div>
+                      </div>
+                      <div className="mt-3 h-[5px] rounded-full overflow-hidden" style={{background:"rgba(237,232,225,0.08)"}}>
+                        <div className="h-full rounded-full transition-all duration-700" style={{width:`${width}%`, background:color, opacity:isLighthouse?0.85:0.7}}/>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--bone-dim)]">
+                        <span>{row.note}</span>
+                        <span>{multiple > 0 ? `${multiple.toFixed(1)}x ${t("win.compare.vs")}` : ""}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Reveal2>
+        )}
       </div>
     </section>
   );
