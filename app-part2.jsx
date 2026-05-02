@@ -4,11 +4,7 @@ const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveSta
 // Star samples are selected from live data. Pick priority is separate from
 // display order so literal labels like "largest reach" get first claim.
 const STAR_SAMPLE_DISPLAY_ORDER = ["s1", "s2", "s3", "s4"];
-const TOP_KOL_BENCHMARKS = [
-  { key: "kol1", cpm: 120, cpe: 18 },
-  { key: "kol2", cpm: 180, cpe: 28 },
-  { key: "kol3", cpm: 260, cpe: 42 },
-];
+const TOP_KOL_BENCHMARK = { cpm: 120, cpe: 18 };
 
 function starProjectId(project) {
   return String(project?.slug || project?.name || '').trim();
@@ -228,40 +224,56 @@ function WinnersSection(){
         bad: (worstCpe?.cpe||0).toFixed(2), badWho: worstCpe?.name||'—' },
     ];
   }, [base]);
-  const cpmBenchmarkRows = React.useMemo(() => {
-    const best = dims.find(d => d.key === "d1")?.rows?.[0] || null;
-    const lighthouseRows = [
-      best && {
+  const benchmarkCards = React.useMemo(() => {
+    const lighthouseCpm = +ds.avgCpm.toFixed(2);
+    const lighthouseCpe = +ds.avgCpe.toFixed(2);
+    const topKolCpm = TOP_KOL_BENCHMARK.cpm;
+    const topKolCpe = TOP_KOL_BENCHMARK.cpe;
+    const maxCpm = Math.max(1, lighthouseCpm, topKolCpm);
+    const maxCpe = Math.max(1, lighthouseCpe, topKolCpe);
+    return [
+      {
+        key: "lh_cpm",
         kind: "lighthouse",
-        label: t("win.compare.best"),
-        name: best.name,
-        cpm: best.v,
-        cpe: best.cpe,
-        note: t("win.compare.best_note"),
+        label: t("win.compare.lh_cpm"),
+        value: lighthouseCpm,
+        unit: t("win.compare.metric_cpm"),
+        note: tp("win.compare.lighthouse_note"),
+        width: (lighthouseCpm / maxCpm) * 100,
+        multiple: 1,
       },
-      ds.avgCpm > 0 && {
+      {
+        key: "lh_cpe",
         kind: "lighthouse",
-        label: t("win.compare.avg"),
-        name: tp("win.compare.avg_name"),
-        cpm: +ds.avgCpm.toFixed(2),
-        cpe: +ds.avgCpe.toFixed(2),
-        note: t("win.compare.avg_note"),
+        label: t("win.compare.lh_cpe"),
+        value: lighthouseCpe,
+        unit: t("win.compare.metric_cpe"),
+        note: tp("win.compare.lighthouse_note"),
+        width: (lighthouseCpe / maxCpe) * 100,
+        multiple: 1,
       },
-    ].filter(Boolean);
-    const kolRows = TOP_KOL_BENCHMARKS.map(item => ({
-      kind: "kol",
-      label: t(`win.compare.${item.key}.label`),
-      name: t(`win.compare.${item.key}.name`),
-      cpm: item.cpm,
-      cpe: item.cpe,
-      note: t("win.compare.placeholder"),
-    }));
-    return [...lighthouseRows, ...kolRows];
-  }, [dims, ds.avgCpe, ds.avgCpm, t, tp]);
-  const bestLighthouseCpm = cpmBenchmarkRows.find(r => r.kind === "lighthouse")?.cpm || 0;
-  const bestLighthouseCpe = cpmBenchmarkRows.find(r => r.kind === "lighthouse")?.cpe || 0;
-  const maxBenchmarkCpm = Math.max(1, ...cpmBenchmarkRows.map(r => Number(r.cpm) || 0));
-  const maxBenchmarkCpe = Math.max(1, ...cpmBenchmarkRows.map(r => Number(r.cpe) || 0));
+      {
+        key: "kol_cpm",
+        kind: "kol",
+        label: t("win.compare.kol_cpm"),
+        value: topKolCpm,
+        unit: t("win.compare.metric_cpm"),
+        note: t("win.compare.placeholder"),
+        width: (topKolCpm / maxCpm) * 100,
+        multiple: lighthouseCpm > 0 ? topKolCpm / lighthouseCpm : 0,
+      },
+      {
+        key: "kol_cpe",
+        kind: "kol",
+        label: t("win.compare.kol_cpe"),
+        value: topKolCpe,
+        unit: t("win.compare.metric_cpe"),
+        note: t("win.compare.placeholder"),
+        width: (topKolCpe / maxCpe) * 100,
+        multiple: lighthouseCpe > 0 ? topKolCpe / lighthouseCpe : 0,
+      },
+    ];
+  }, [ds.avgCpe, ds.avgCpm, t, tp]);
   return (
     <section id="winners" className="relative py-28 md:py-36 overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1px]" style={{background:"var(--rule-strong)"}}/>
@@ -332,7 +344,7 @@ function WinnersSection(){
             );
           })}
         </div>
-        {cpmBenchmarkRows.length > 0 && (
+        {benchmarkCards.length > 0 && (
           <Reveal2 delay={4} className="mt-8 ring-soft overflow-hidden" style={{background:"linear-gradient(135deg, rgba(111,183,193,0.08), rgba(255,122,69,0.05) 48%, rgba(237,232,225,0.018))"}}>
             <div className="grid lg:grid-cols-[0.9fr_1.6fr]">
               <div className="p-6 md:p-8 border-b lg:border-b-0 lg:border-r border-[var(--rule)]">
@@ -346,43 +358,29 @@ function WinnersSection(){
                   {t("win.compare.status")}
                 </div>
               </div>
-              <div className="p-6 md:p-8 flex flex-col gap-4">
-                {cpmBenchmarkRows.map((row, idx) => {
-                  const isLighthouse = row.kind === "lighthouse";
+              <div className="p-6 md:p-8 grid sm:grid-cols-2 gap-4">
+                {benchmarkCards.map((card) => {
+                  const isLighthouse = card.kind === "lighthouse";
                   const color = isLighthouse ? "var(--teal)" : "var(--ember-soft)";
-                  const cpmWidth = Math.max(4, Math.min(100, (row.cpm / maxBenchmarkCpm) * 100));
-                  const cpeWidth = Math.max(4, Math.min(100, (row.cpe / maxBenchmarkCpe) * 100));
-                  const cpmMultiple = bestLighthouseCpm > 0 ? row.cpm / bestLighthouseCpm : 0;
-                  const cpeMultiple = bestLighthouseCpe > 0 ? row.cpe / bestLighthouseCpe : 0;
+                  const width = Math.max(4, Math.min(100, card.width));
                   return (
-                    <div key={`${row.kind}-${idx}`} className="group rounded-[18px] p-4 transition hover:-translate-y-0.5" style={{border:"1px solid var(--rule)", background:isLighthouse?"rgba(111,183,193,0.055)":"rgba(255,122,69,0.045)"}}>
-                      <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div key={card.key} className="group rounded-[18px] p-5 min-h-[190px] flex flex-col justify-between transition hover:-translate-y-0.5" style={{border:"1px solid var(--rule)", background:isLighthouse?"rgba(111,183,193,0.055)":"rgba(255,122,69,0.045)"}}>
+                      <div className="flex items-start justify-between gap-4">
                         <div>
-                          <div className="font-mono text-[10px] tracking-[0.2em] uppercase" style={{color:isLighthouse?"var(--teal)":"var(--ember-soft)"}}>{row.label}</div>
-                          <div className="mt-1 font-cn text-[16px] text-[var(--bone)]">{row.name}</div>
+                          <div className="font-mono text-[10px] tracking-[0.2em] uppercase" style={{color}}>{card.label}</div>
+                          <div className="mt-2 font-cn text-[13px] leading-relaxed text-[var(--bone-dim)]">{card.note}</div>
                         </div>
-                        <div className="grid grid-cols-2 gap-5 text-right">
-                          <div>
-                            <div className="font-display font-black tnum leading-none" style={{fontSize:"clamp(24px, 2.8vw, 36px)", color}}>{row.cpm.toFixed(2)}</div>
-                            <div className="mt-1 font-mono text-[10px] tracking-[0.16em] uppercase text-[var(--bone-dim)]">{t("win.compare.metric_cpm")}</div>
-                          </div>
-                          <div>
-                            <div className="font-display font-black tnum leading-none" style={{fontSize:"clamp(24px, 2.8vw, 36px)", color:isLighthouse?"var(--bone)":"var(--ember-soft)"}}>{row.cpe.toFixed(2)}</div>
-                            <div className="mt-1 font-mono text-[10px] tracking-[0.16em] uppercase text-[var(--bone-dim)]">{t("win.compare.metric_cpe")}</div>
-                          </div>
-                        </div>
+                        <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--bone-dim)]">{card.unit}</div>
                       </div>
-                      <div className="mt-3 grid gap-2">
-                        <div className="h-[4px] rounded-full overflow-hidden" style={{background:"rgba(237,232,225,0.08)"}}>
-                          <div className="h-full rounded-full transition-all duration-700" style={{width:`${cpmWidth}%`, background:color, opacity:isLighthouse?0.85:0.7}}/>
-                        </div>
-                        <div className="h-[4px] rounded-full overflow-hidden" style={{background:"rgba(237,232,225,0.08)"}}>
-                          <div className="h-full rounded-full transition-all duration-700" style={{width:`${cpeWidth}%`, background:isLighthouse?"var(--bone-dim)":color, opacity:isLighthouse?0.55:0.5}}/>
+                      <div>
+                        <div className="font-display font-black tnum leading-none" style={{fontSize:"clamp(42px, 5vw, 68px)", color}}>{card.value.toFixed(2)}</div>
+                        <div className="mt-4 h-[5px] rounded-full overflow-hidden" style={{background:"rgba(237,232,225,0.08)"}}>
+                          <div className="h-full rounded-full transition-all duration-700" style={{width:`${width}%`, background:color, opacity:isLighthouse?0.85:0.7}}/>
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--bone-dim)]">
-                        <span>{row.note}</span>
-                        <span>{cpmMultiple > 0 && cpeMultiple > 0 ? `${t("win.compare.metric_cpm")} ${cpmMultiple.toFixed(1)}x · ${t("win.compare.metric_cpe")} ${cpeMultiple.toFixed(1)}x ${t("win.compare.vs")}` : ""}</span>
+                        <span>{isLighthouse ? t("win.compare.lighthouse_base") : t("win.compare.placeholder_short")}</span>
+                        <span>{card.multiple > 0 ? `${card.multiple.toFixed(1)}x ${t("win.compare.vs")}` : ""}</span>
                       </div>
                     </div>
                   );
