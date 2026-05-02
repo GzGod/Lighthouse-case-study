@@ -152,11 +152,13 @@ test('StarCard React key should not use possibly empty s.name', () => {
   assert.ok(!/StarCard key=\{s\.name\}/.test(appPart2), 'found StarCard key={s.name} in app-part2.jsx');
 });
 
-test('Winners section should include external KOL CPM comparison placeholders', () => {
-  assert.ok(/const KOL_CPM_BENCHMARKS = \[/.test(appPart2), 'missing external KOL CPM benchmark placeholder data');
-  assert.ok(/win\.compare\.title_a/.test(appPart2), 'Winners section does not render the CPM comparison panel');
-  assert.ok(/win\.compare\.kol1\.name/.test(i18n), 'missing editable large-KOL comparison copy keys');
-  assert.ok(/win\.compare\.placeholder/.test(i18n), 'missing placeholder label for future real KOL CPM data');
+test('Winners section should include top KOL CPM and CPE comparison placeholders', () => {
+  assert.ok(/const TOP_KOL_BENCHMARKS = \[/.test(appPart2), 'missing top KOL benchmark placeholder data');
+  assert.ok(/cpm:\s*120,\s*cpe:\s*18/.test(appPart2), 'top KOL placeholder data should carry both CPM and CPE');
+  assert.ok(/win\.compare\.metric_cpm/.test(appPart2) && /win\.compare\.metric_cpe/.test(appPart2), 'Winners comparison panel should render both CPM and CPE');
+  assert.ok(/win\.compare\.kol1\.name/.test(i18n), 'missing editable top-KOL comparison copy keys');
+  assert.ok(/头部 KOL 参照系/.test(i18n), 'comparison headline should use top KOL framing');
+  assert.ok(/win\.compare\.placeholder/.test(i18n), 'missing placeholder label for future real top KOL data');
 });
 
 test('Hero and footer stats should use baseline wording, not ambiguous total sample wording', () => {
