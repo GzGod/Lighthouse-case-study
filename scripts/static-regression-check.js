@@ -11,6 +11,7 @@ const personalIp = read('personal-ip.jsx');
 const admin = read('admin/admin.jsx');
 const i18n = read('i18n.jsx');
 const appPart3 = read('app-part3.jsx');
+const dashboardView = read('dashboard-view.jsx');
 const projectsRoute = read('server/routes/projects.js');
 const ipCasesRoute = read('server/routes/ip-cases.js');
 const i18nRoute = read('server/routes/i18n.js');
@@ -210,6 +211,21 @@ test('Top navigation labels should stay on one line in English', () => {
   assert.ok(/tracking-\[0\.16em\] xl:tracking-\[0\.22em\]/.test(app), 'desktop nav should reduce letter spacing at narrower desktop widths');
   assert.ok((app.match(/className="whitespace-nowrap hover:text/g) || []).length >= 7, 'nav links should use whitespace-nowrap to prevent vertical word wrapping');
   assert.ok(/hidden md:inline-block whitespace-nowrap[\s\S]*\{t\("nav\.cta_btn"\)\}/.test(app), 'CTA nav button should not wrap');
+});
+
+test('Homepage should include a switchable premium light dashboard UI without replacing the classic page', () => {
+  assert.ok(/src="dashboard-view\.jsx"[\s\S]*src="app-part3\.jsx"/.test(caseStudyHtml), 'dashboard view script must load before the app shell');
+  assert.ok(/function DashboardView/.test(dashboardView), 'missing DashboardView component');
+  assert.ok(/window\.App_Dashboard = \{ DashboardView \}/.test(dashboardView), 'dashboard view is not exposed for the app shell');
+  assert.ok(/const \{ DashboardView \} = window\.App_Dashboard \|\| \{\};/.test(appPart3), 'app shell does not import DashboardView');
+  assert.ok(/function ViewModeSwitch/.test(appPart3), 'missing homepage UI mode switch');
+  assert.ok(/localStorage\.getItem\("lh-home-view"\)/.test(appPart3), 'homepage UI mode should persist in localStorage');
+  assert.ok(/showDashboard \? <DashboardView/.test(appPart3), 'app shell should render dashboard mode conditionally');
+  assert.ok(/fixed inset-y-0 left-0/.test(dashboardView), 'dashboard view should include a fixed left sidebar');
+  assert.ok(/Search cases, campaigns, assets/.test(dashboardView), 'dashboard view should include a top search bar');
+  assert.ok(/Featured Case Library/.test(dashboardView), 'dashboard view should include content library sections');
+  assert.ok(/Tweet Embed/.test(dashboardView), 'dashboard view should reserve tweet embed space');
+  assert.ok(/Campaign Metrics/.test(dashboardView), 'dashboard view should reserve campaign metrics space');
 });
 
 test('Public page links should use canonical extensionless routes', () => {

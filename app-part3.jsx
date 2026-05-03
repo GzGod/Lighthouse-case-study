@@ -2,6 +2,7 @@
 const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3 } = window.App_Part1;
 const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet, buildStarTagMap } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
+const { DashboardView } = window.App_Dashboard || {};
 const R = window.Recharts;
 
 const MATRIX_TAGS = {
@@ -317,8 +318,51 @@ function Page(){
   );
 }
 
+function ViewModeSwitch({ mode, setMode }) {
+  const isDashboard = mode === "dashboard";
+  return (
+    <div className={`fixed bottom-5 right-5 z-[90] flex rounded-full border p-1 shadow-2xl backdrop-blur-xl transition ${isDashboard ? "border-slate-200 bg-white/80" : "border-white/20 bg-black/55"}`}>
+      <button
+        type="button"
+        onClick={() => setMode("classic")}
+        className={`rounded-full px-4 py-2 text-[12px] font-semibold transition ${!isDashboard ? "bg-white text-slate-950" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
+      >
+        经典主页
+      </button>
+      <button
+        type="button"
+        onClick={() => setMode("dashboard")}
+        className={`rounded-full px-4 py-2 text-[12px] font-semibold transition ${isDashboard ? "bg-slate-950 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"}`}
+      >
+        浅色看板
+      </button>
+    </div>
+  );
+}
+
 function App(){
-  return <LP3><Page/></LP3>;
+  const [mode, setMode] = React.useState(() => {
+    try {
+      return localStorage.getItem("lh-home-view") || "classic";
+    } catch (err) {
+      return "classic";
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem("lh-home-view", mode);
+    } catch (err) {}
+  }, [mode]);
+
+  const showDashboard = mode === "dashboard" && DashboardView;
+
+  return (
+    <LP3>
+      {showDashboard ? <DashboardView onSwitchClassic={() => setMode("classic")} /> : <Page/>}
+      <ViewModeSwitch mode={showDashboard ? "dashboard" : "classic"} setMode={setMode}/>
+    </LP3>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
