@@ -380,7 +380,7 @@ function WinnersSection(){
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--bone-dim)]">
                         <span>{isLighthouse ? t("win.compare.lighthouse_base") : t("win.compare.placeholder_short")}</span>
-                        <span>{card.multiple > 0 ? `${card.multiple.toFixed(1)}x ${t("win.compare.vs")}` : ""}</span>
+                        <span>{card.multiple > 0 ? tpl2(t("win.compare.multiple"), { ...statsVars, multiple: card.multiple.toFixed(1) }) : ""}</span>
                       </div>
                     </div>
                   );

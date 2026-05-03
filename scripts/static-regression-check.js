@@ -161,6 +161,9 @@ test('Winners section should include top KOL CPM and CPE comparison placeholders
   assert.ok(/win\.compare\.kol_cpm/.test(appPart2) && /win\.compare\.kol_cpe/.test(appPart2), 'Winners comparison panel should render top KOL CPM and CPE cards');
   assert.ok(/头部 KOL 参照系/.test(i18n), 'comparison headline should use top KOL framing');
   assert.ok(/win\.compare\.placeholder/.test(i18n), 'missing placeholder label for future real top KOL data');
+  assert.ok(/win\.compare\.multiple/.test(appPart2), 'benchmark card multiplier copy should render from editable i18n');
+  assert.ok(/"win\.compare\.multiple":/.test(i18n), 'missing editable benchmark multiplier copy');
+  assert.ok(!/\$\{card\.multiple\.toFixed\(1\)\}x \$\{t\("win\.compare\.vs"\)\}/.test(appPart2), 'benchmark multiplier still hardcodes x formatting');
 });
 
 test('Hero and footer stats should use baseline wording, not ambiguous total sample wording', () => {
