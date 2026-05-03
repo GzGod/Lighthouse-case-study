@@ -341,28 +341,11 @@ function ViewModeSwitch({ mode, setMode }) {
 }
 
 function App(){
-  const [mode, setMode] = React.useState(() => {
-    try {
-      return localStorage.getItem("lh-home-view") || "classic";
-    } catch (err) {
-      return "classic";
-    }
-  });
+  // Light dashboard code is intentionally kept loaded but hidden for now.
+  const lightDashboardEnabled = false;
+  const showDashboard = lightDashboardEnabled && DashboardView;
 
-  React.useEffect(() => {
-    try {
-      localStorage.setItem("lh-home-view", mode);
-    } catch (err) {}
-  }, [mode]);
-
-  const showDashboard = mode === "dashboard" && DashboardView;
-
-  return (
-    <LP3>
-      {showDashboard ? <DashboardView onSwitchClassic={() => setMode("classic")} /> : <Page/>}
-      <ViewModeSwitch mode={showDashboard ? "dashboard" : "classic"} setMode={setMode}/>
-    </LP3>
-  );
+  return <LP3>{showDashboard ? <DashboardView onSwitchClassic={() => {}} /> : <Page/>}</LP3>;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
