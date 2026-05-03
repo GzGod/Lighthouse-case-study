@@ -4,7 +4,7 @@ const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveSta
 // Star samples are selected from live data. Pick priority is separate from
 // display order so literal labels like "largest reach" get first claim.
 const STAR_SAMPLE_DISPLAY_ORDER = ["s1", "s2", "s3", "s4"];
-const TOP_KOL_BENCHMARK = { cpm: 120, cpe: 18 };
+const TOP_KOL_BENCHMARK = { cpm: 41.92, cpe: 7.26 };
 
 function starProjectId(project) {
   return String(project?.slug || project?.name || '').trim();
