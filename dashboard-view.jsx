@@ -2,7 +2,10 @@
 const {
   useProjects: useDashboardProjects,
   deriveStats: deriveDashboardStats,
+  buildStatsVars: buildDashboardStatsVars,
   fmt: fmtDashboard,
+  useT: useDashboardT,
+  tpl: tplDashboard,
 } = window.App_Part1;
 
 function cx(...parts) {
@@ -48,75 +51,63 @@ function Icon({ name, className = "" }) {
   );
 }
 
-const caseData = {
-  title: "Plasma Chinese Community Campaign",
-  subtitle: "Chinese X + Telegram + Offline Events + Merchandise",
-  status: "Completed",
-  period: "Sep - Nov",
-  client: "Plasma",
-  summary: "A structured Chinese-market campaign file that connects content translation, narrative packaging, Telegram growth, offline community activation, and merchandise distribution into one reusable case record.",
-  tags: ["Web3", "Chinese Market", "Community", "KOL", "Offline"],
-  metrics: [
-    { label: "Total Impressions", value: "739K+", helper: "Public X campaign reach", icon: "chart" },
-    { label: "Total Posts", value: "124", helper: "Creator and campaign posts", icon: "file" },
-    { label: "Telegram Members", value: "2,215", helper: "Community acquisition", icon: "users" },
-    { label: "Best Post", value: "200K+", helper: "Single-post impressions", icon: "spark" },
-  ],
-  overview: [
-    { label: "Background", text: "Plasma needed a local Chinese campaign surface that could explain product narratives, collect community attention, and keep Telegram growth tied to visible public moments." },
-    { label: "Objective", text: "Build a repeatable campaign system across X, Telegram, offline activities, and social proof, while preserving a clear record of deliverables and outcomes." },
-    { label: "Scope", text: "Content adaptation, Chinese narrative shaping, campaign announcement flow, community events, merchandise distribution, and post-campaign review." },
-  ],
-};
-
-const contentRows = [
-  { type: "Technical Analysis", description: "Turn product mechanics into readable Chinese-market context.", platform: "X / Article", status: "Published", impact: "High clarity", tone: "blue" },
-  { type: "Narrative Shaping", description: "Package the Plasma story into reusable campaign angles.", platform: "X", status: "Published", impact: "Story depth", tone: "green" },
-  { type: "English-to-Chinese Adaptation", description: "Localize launch copy without losing technical precision.", platform: "X / TG", status: "Complete", impact: "Fast reuse", tone: "slate" },
-  { type: "Campaign Announcements", description: "Coordinate naming, event, and reward moments.", platform: "X / TG", status: "Complete", impact: "Momentum", tone: "yellow" },
-  { type: "Industry Data", description: "Attach broader market references to campaign narratives.", platform: "X", status: "Drafted", impact: "Credibility", tone: "blue" },
-  { type: "Sentiment Management", description: "Track audience feedback and keep replies aligned.", platform: "Telegram", status: "Ongoing", impact: "Retention", tone: "green" },
-  { type: "Trend-jacking", description: "Route timely market topics into Plasma-facing conversation.", platform: "X", status: "Reviewed", impact: "Reach", tone: "red" },
-];
-
-const activityLog = [
-  { title: "Community launch", time: "Sep 04", tag: "Launch", detail: "Chinese Telegram room and first content sequence prepared.", icon: "users" },
-  { title: "Naming campaign", time: "Sep 18", tag: "UGC", detail: "Community naming prompt created shareable discussion hooks.", icon: "message" },
-  { title: "Telegram growth", time: "Oct 02", tag: "Growth", detail: "Member acquisition crossed the first stable retention checkpoint.", icon: "chart" },
-  { title: "Offline university event", time: "Oct 19", tag: "Offline", detail: "Beijing university event assets and recap moments collected.", icon: "calendar" },
-  { title: "Merchandise distribution", time: "Nov 03", tag: "Retention", detail: "Plasma lighter merchandise used as a visible community anchor.", icon: "spark" },
-  { title: "Campaign review", time: "Nov 18", tag: "Review", detail: "Performance notes and reusable campaign assets consolidated.", icon: "file" },
-];
-
-const performanceItems = [
-  { label: "Impression", value: "739K+", progress: 82 },
-  { label: "Engagement", value: "24.8K", progress: 66 },
-  { label: "Growth", value: "2,215", progress: 74 },
-  { label: "Activity", value: "124 posts", progress: 58 },
-];
-
-const moments = [
-  { name: "Chinese naming campaign", tag: "High Engagement", tone: "green" },
-  { name: "Story campaign", tag: "Viral", tone: "blue" },
-  { name: "Beijing university event", tag: "Offline", tone: "yellow" },
-  { name: "Plasma lighter merchandise", tag: "Retention", tone: "red" },
-];
-
-const takeaways = [
-  "Chinese-language context needs a repeatable content system, not one-off translation.",
-  "Telegram growth became stronger when paired with visible public campaign moments.",
-  "Offline events gave the campaign a physical anchor that could be reused in social proof.",
-  "Merchandise worked best as a retention signal rather than a standalone giveaway.",
-  "A clean asset log makes the campaign easier to review, reuse, and sell internally.",
-];
-
-const deliverables = [
-  { no: "001", name: "Plasma CN launch brief", type: "Narrative", platform: "X / Telegram", status: "Published", impact: "High clarity" },
-  { no: "002", name: "Chinese naming campaign", type: "Community", platform: "Telegram", status: "Complete", impact: "UGC" },
-  { no: "003", name: "University event recap", type: "Offline", platform: "X", status: "Published", impact: "Social proof" },
-  { no: "004", name: "Merchandise distribution log", type: "Retention", platform: "Telegram", status: "Archived", impact: "Retention" },
-  { no: "005", name: "Campaign performance notes", type: "Report", platform: "Internal", status: "Reviewed", impact: "Reusable" },
-];
+function buildWorkspaceContent(t, tp, stats, vars, projects) {
+  const baseProjects = projects.filter(p => p.is_baseline !== 0);
+  const topProjects = [...baseProjects].sort((a, b) => Number(b.imp || 0) - Number(a.imp || 0)).slice(0, 5);
+  return {
+    tags: ["Web3", t("about.cap1.t"), t("about.cap2.t"), t("about.cap3.t"), t("about.cap4.t")],
+    metrics: [
+      { label: t("kpi.k1"), value: fmtDashboard(stats.totalBudget), helper: tp("kpi.k1n"), icon: "chart" },
+      { label: t("kpi.k2"), value: fmtDashboard(stats.totalImp), helper: tp("kpi.k2n"), icon: "spark" },
+      { label: t("kpi.k3"), value: fmtDashboard(stats.totalEng), helper: t("kpi.k3n"), icon: "message" },
+      { label: t("kpi.k6"), value: `${stats.peakEr.toFixed(2)}%`, helper: tp("kpi.k6n"), icon: "target" },
+    ],
+    overview: [
+      { label: t("about.kicker"), text: t("about.p") },
+      { label: t("kpi.kicker"), text: tp("kpi.p") },
+      { label: t("matrix.kicker"), text: t("matrix.p") },
+    ],
+    contentRows: [
+      { type: t("about.cap1.t"), description: t("about.cap1.d"), platform: "X / KOL", status: "Active", impact: t("about.cap1.en"), tone: "blue" },
+      { type: t("about.cap2.t"), description: t("about.cap2.d"), platform: "X / Creator", status: "Active", impact: t("about.cap2.en"), tone: "green" },
+      { type: t("about.cap3.t"), description: t("about.cap3.d"), platform: "Market", status: "Active", impact: t("about.cap3.en"), tone: "yellow" },
+      { type: t("about.cap4.t"), description: t("about.cap4.d"), platform: "Creator", status: "Active", impact: t("about.cap4.en"), tone: "red" },
+      { type: t("win.d1.label"), description: t("win.d1.lead"), platform: "Benchmark", status: "Tracked", impact: t("win.d1.en"), tone: "blue" },
+      { type: t("win.d2.label"), description: t("win.d2.lead"), platform: "Benchmark", status: "Tracked", impact: t("win.d2.en"), tone: "green" },
+      { type: t("win.d3.label"), description: t("win.d3.lead"), platform: "Benchmark", status: "Tracked", impact: t("win.d3.en"), tone: "slate" },
+    ],
+    activityLog: [
+      { title: t("hero.kicker_tl"), time: "01", tag: "Hero", detail: tp("hero.sub"), icon: "spark" },
+      { title: t("about.h2_a"), time: "02", tag: "Attention", detail: t("about.p"), icon: "target" },
+      { title: t("kpi.h2_a"), time: "03", tag: "Metrics", detail: tp("kpi.p"), icon: "chart" },
+      { title: t("win.h2_a"), time: "04", tag: "Playbooks", detail: t("win.p"), icon: "library" },
+      { title: t("stars.h2_a"), time: "05", tag: "Samples", detail: t("stars.p"), icon: "folder" },
+      { title: tp("matrix.h2_a"), time: "06", tag: "Matrix", detail: t("matrix.p"), icon: "file" },
+    ],
+    performanceItems: [
+      { label: t("kpi.k1"), value: fmtDashboard(stats.totalBudget), progress: 72 },
+      { label: t("kpi.k2"), value: fmtDashboard(stats.totalImp), progress: 86 },
+      { label: t("kpi.k3"), value: fmtDashboard(stats.totalEng), progress: 64 },
+      { label: t("kpi.k4"), value: stats.avgCpm.toFixed(2), progress: 58 },
+    ],
+    moments: [
+      { name: t("stars.s1.tag"), tag: t("stars.s1.en"), tone: "green" },
+      { name: t("stars.s2.tag"), tag: t("stars.s2.en"), tone: "blue" },
+      { name: t("stars.s3.tag"), tag: t("stars.s3.en"), tone: "yellow" },
+      { name: t("stars.s4.tag"), tag: t("stars.s4.en"), tone: "red" },
+    ],
+    takeaways: ["w1", "w2", "w3", "w4", "w5"].map(key => t(`why.${key}.d`)),
+    deliverables: topProjects.map((project, idx) => ({
+      no: String(idx + 1).padStart(3, "0"),
+      name: project.name,
+      type: t("matrix.table.sub"),
+      platform: "X",
+      status: project.is_baseline === 0 ? t("tag.flagship") : t("matrix.legend_other"),
+      impact: `${fmtDashboard(project.imp || 0)} ${t("matrix.col.imp")}`,
+      href: projectHref(project),
+    })),
+  };
+}
 
 function toneClass(tone) {
   const map = {
@@ -229,7 +220,7 @@ function Sidebar({ onSwitchClassic }) {
   );
 }
 
-function Header({ onSwitchClassic }) {
+function Header({ onSwitchClassic, t }) {
   return (
     <header className="sticky top-0 z-20 border-b border-[#e8e8e8] bg-[#f6f6f6]/90 backdrop-blur-xl">
       <div className="flex h-[72px] items-center justify-between gap-4 px-4 md:px-7">
@@ -238,7 +229,7 @@ function Header({ onSwitchClassic }) {
             <button onClick={onSwitchClassic} className="mr-2 rounded-full border border-[#dddddd] bg-white px-3 py-1 text-[12px] text-[#555] lg:hidden">Classic</button>
             <span>Case Studies</span>
             <span>/</span>
-            <span className="truncate text-[#3a3a3a]">Plasma CN Campaign</span>
+            <span className="truncate text-[#3a3a3a]">{t("hero.kicker_tl")}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -264,23 +255,23 @@ function MetricCard({ item }) {
   );
 }
 
-function HeroSection() {
+function HeroSection({ t, tp, content }) {
   return (
     <div id="overview" className="rounded-[26px] border border-[#eaeaea] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.035)]">
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         <div className="p-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="green">{caseData.status}</Badge>
-            <Badge tone="blue">{caseData.period}</Badge>
-            <Badge tone="slate">Client: {caseData.client}</Badge>
+            <Badge tone="green">{t("hero.kicker_tl")}</Badge>
+            <Badge tone="blue">{t("matrix.table.compiled")}</Badge>
+            <Badge tone="slate">{t("hero.by_tr")}</Badge>
           </div>
           <h1 className="mt-7 max-w-[880px] text-[36px] font-semibold leading-[1.02] tracking-[-0.055em] text-[#1d1d1f] md:text-[54px]">
-            {caseData.title}
+            {t("hero.h1_a")} {t("hero.h1_b")}{t("hero.h1_c")}
           </h1>
-          <p className="mt-4 text-[17px] tracking-[-0.02em] text-[#626262]">{caseData.subtitle}</p>
-          <p className="mt-6 max-w-[820px] text-[14px] leading-7 text-[#6f6f6f]">{caseData.summary}</p>
+          <p className="mt-4 text-[17px] tracking-[-0.02em] text-[#626262]">{t("hero.eyebrow")}</p>
+          <p className="mt-6 max-w-[820px] text-[14px] leading-7 text-[#6f6f6f]">{tp("hero.sub")}</p>
           <div className="mt-7 flex flex-wrap gap-2">
-            {caseData.tags.map(tag => <Badge key={tag}>{tag}</Badge>)}
+            {content.tags.map(tag => <Badge key={tag}>{tag}</Badge>)}
           </div>
         </div>
         <SectionCard className="overflow-hidden">
@@ -289,24 +280,24 @@ function HeroSection() {
             <div className="absolute bottom-[-18%] left-[-15%] right-[-15%] h-[42%] rounded-[50%] bg-[#dfe6e4]" />
             <div className="absolute right-[14%] top-[18%] h-[145px] w-[145px] rounded-full border-[7px] border-white/90 shadow-[0_1px_8px_rgba(0,0,0,0.04)]" />
             <div className="absolute bottom-8 left-7 right-7 flex items-center justify-between border-t border-white/70 pt-4 text-[11px] text-[#777]">
-              <span>Case Visual</span>
-              <span>Plasma / CN</span>
+              <span>{t("brand.cn")}</span>
+              <span>{t("brand.en")}</span>
             </div>
           </div>
         </SectionCard>
       </div>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {caseData.metrics.map(item => <MetricCard key={item.label} item={item} />)}
+        {content.metrics.map(item => <MetricCard key={item.label} item={item} />)}
       </div>
     </div>
   );
 }
 
-function CampaignOverview() {
+function CampaignOverview({ content }) {
   return (
     <SectionCard title="Campaign Overview" icon="folder">
       <div className="space-y-5 p-5">
-        {caseData.overview.map(item => (
+        {content.overview.map(item => (
           <div key={item.label} className="rounded-[18px] border border-[#eeeeee] bg-[#fbfbfb] p-4">
             <div className="text-[12px] font-medium text-[#8a8a8a]">{item.label}</div>
             <p className="mt-2 text-[14px] leading-7 text-[#4d4d4d]">{item.text}</p>
@@ -317,11 +308,11 @@ function CampaignOverview() {
   );
 }
 
-function ContentSystem() {
+function ContentSystem({ content }) {
   return (
     <SectionCard title="Content System" icon="library">
       <div className="divide-y divide-[#ededed]">
-        {contentRows.map(row => (
+        {content.contentRows.map(row => (
           <div key={row.type} className="grid gap-4 px-5 py-4 md:grid-cols-[1fr_120px_100px_120px] md:items-center">
             <div>
               <div className="text-[14px] font-medium tracking-[-0.02em] text-[#1d1d1f]">{row.type}</div>
@@ -337,12 +328,12 @@ function ContentSystem() {
   );
 }
 
-function ActivityLog() {
+function ActivityLog({ content }) {
   return (
     <SectionCard title="Timeline / Execution Log" icon="calendar">
       <div className="p-5">
         <div className="space-y-3">
-          {activityLog.map(item => (
+          {content.activityLog.map(item => (
             <div key={item.title} className="flex gap-4 rounded-[18px] border border-[#eeeeee] bg-[#fbfbfb] p-4">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#555]">
                 <Icon name={item.icon} />
@@ -364,7 +355,7 @@ function ActivityLog() {
 }
 
 function TweetEmbedPlaceholder() {
-  const slots = ["Primary launch post", "Community thread", "Offline recap"];
+  const slots = ["Hero source thread", "Representative sample thread", "Market conversation thread"];
   return (
     <SectionCard title="Tweet Embed Section" icon="message">
       <div className="grid gap-4 p-5 md:grid-cols-3">
@@ -383,11 +374,11 @@ function TweetEmbedPlaceholder() {
   );
 }
 
-function PerformancePanel() {
+function PerformancePanel({ content }) {
   return (
     <SectionCard title="Performance Summary" icon="chart">
       <div className="space-y-5 p-5">
-        {performanceItems.map(item => (
+        {content.performanceItems.map(item => (
           <div key={item.label}>
             <div className="flex items-baseline justify-between gap-3">
               <div className="text-[13px] text-[#676767]">{item.label}</div>
@@ -403,8 +394,8 @@ function PerformancePanel() {
   );
 }
 
-function CommunityFunnel() {
-  const steps = ["X", "Telegram", "Offline", "UGC"];
+function CommunityFunnel({ t }) {
+  const steps = [t("about.cap1.t"), t("about.cap2.t"), t("about.cap3.t"), t("about.cap4.t")];
   return (
     <SectionCard title="Community Funnel" icon="target">
       <div className="p-5">
@@ -422,11 +413,11 @@ function CommunityFunnel() {
   );
 }
 
-function TopMoments() {
+function TopMoments({ content }) {
   return (
     <SectionCard title="Top Campaign Moments" icon="spark">
       <div className="divide-y divide-[#ededed]">
-        {moments.map(item => (
+        {content.moments.map(item => (
           <div key={item.name} className="flex items-center justify-between gap-4 px-5 py-4">
             <div className="min-w-0">
               <div className="truncate text-[13px] font-medium text-[#1d1d1f]">{item.name}</div>
@@ -439,11 +430,11 @@ function TopMoments() {
   );
 }
 
-function KeyTakeaways() {
+function KeyTakeaways({ content }) {
   return (
     <SectionCard title="Key Takeaways" icon="check">
       <div className="space-y-2 p-5">
-        {takeaways.map((item, idx) => (
+        {content.takeaways.map((item, idx) => (
           <div key={item} className="flex gap-3 rounded-[16px] border border-[#eeeeee] bg-[#fbfbfb] p-3">
             <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-[#777] ring-1 ring-[#e8e8e8]">{idx + 1}</span>
             <p className="text-[13px] leading-6 text-[#555]">{item}</p>
@@ -454,7 +445,7 @@ function KeyTakeaways() {
   );
 }
 
-function DeliverablesTable() {
+function DeliverablesTable({ content }) {
   return (
     <SectionCard
       title="Case Study Assets / Deliverables"
@@ -476,10 +467,10 @@ function DeliverablesTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#ededed] bg-white">
-            {deliverables.map(row => (
+            {content.deliverables.map(row => (
               <tr key={row.no} className="transition hover:bg-[#fafafa]">
                 <td className="px-5 py-4 text-[#8a8a8a]">{row.no}</td>
-                <td className="px-5 py-4 font-medium text-[#1d1d1f]">{row.name}</td>
+                <td className="px-5 py-4 font-medium text-[#1d1d1f]"><a href={row.href || "#"} className="hover:underline">{row.name}</a></td>
                 <td className="px-5 py-4 text-[#666]">{row.type}</td>
                 <td className="px-5 py-4 text-[#666]">{row.platform}</td>
                 <td className="px-5 py-4"><Badge tone={row.status === "Published" ? "green" : row.status === "Archived" ? "slate" : "blue"}>{row.status}</Badge></td>
@@ -495,8 +486,12 @@ function DeliverablesTable() {
 }
 
 function DashboardView({ onSwitchClassic }) {
+  const { t } = useDashboardT();
   const projects = useDashboardProjects();
   const stats = React.useMemo(() => deriveDashboardStats(projects), [projects]);
+  const vars = React.useMemo(() => buildDashboardStatsVars(projects, stats), [projects, stats]);
+  const tp = React.useCallback((key) => tplDashboard(t(key), vars), [t, vars]);
+  const content = React.useMemo(() => buildWorkspaceContent(t, tp, stats, vars, projects), [t, tp, stats, vars, projects]);
   const featured = projects[0] || {};
   const bestReach = React.useMemo(() => {
     return [...projects].sort((a, b) => Number(b.imp || 0) - Number(a.imp || 0))[0] || featured;
@@ -506,45 +501,45 @@ function DashboardView({ onSwitchClassic }) {
     <div className="min-h-screen bg-[#f6f6f6] text-[#1d1d1f]" style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text',Inter,'Helvetica Neue',Arial,'Noto Sans SC',sans-serif" }}>
       <Sidebar onSwitchClassic={onSwitchClassic} />
       <main className="lg:pl-[260px]">
-        <Header onSwitchClassic={onSwitchClassic} />
+        <Header onSwitchClassic={onSwitchClassic} t={t} />
         <div className="mx-auto max-w-[1480px] space-y-5 px-4 py-5 md:px-7 md:py-7">
-          <HeroSection />
+          <HeroSection t={t} tp={tp} content={content} />
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
             <div className="space-y-5">
-              <CampaignOverview />
-              <ContentSystem />
-              <ActivityLog />
+              <CampaignOverview content={content} />
+              <ContentSystem content={content} />
+              <ActivityLog content={content} />
               <TweetEmbedPlaceholder />
             </div>
             <aside className="space-y-5">
-              <PerformancePanel />
-              <CommunityFunnel />
-              <TopMoments />
+              <PerformancePanel content={content} />
+              <CommunityFunnel t={t} />
+              <TopMoments content={content} />
               <SectionCard title="Live Benchmark Context" icon="chart">
                 <div className="p-5">
                   <div className="rounded-[18px] border border-[#eeeeee] bg-[#fbfbfb] p-4">
-                    <div className="text-[12px] text-[#8a8a8a]">Current lighthouse pool</div>
+                    <div className="text-[12px] text-[#8a8a8a]">{tp("matrix.table.title")}</div>
                     <div className="mt-3 grid grid-cols-2 gap-3">
                       <div>
                         <div className="text-[24px] font-semibold tracking-[-0.05em]">{fmtDashboard(stats.totalImp)}</div>
-                        <div className="text-[11px] text-[#8a8a8a]">Impressions</div>
+                        <div className="text-[11px] text-[#8a8a8a]">{t("matrix.col.imp")}</div>
                       </div>
                       <div>
                         <div className="text-[24px] font-semibold tracking-[-0.05em]">{stats.avgCpm.toFixed(2)}</div>
-                        <div className="text-[11px] text-[#8a8a8a]">Weighted CPM</div>
+                        <div className="text-[11px] text-[#8a8a8a]">{t("kpi.k4")}</div>
                       </div>
                     </div>
                   </div>
                   <a href={projectHref(bestReach)} className="mt-3 flex items-center justify-between rounded-[18px] border border-[#eeeeee] bg-white p-4 text-[13px] transition hover:bg-[#fafafa]">
-                    <span className="min-w-0 truncate">Best reach sample: {bestReach?.name || "N/A"}</span>
+                    <span className="min-w-0 truncate">{t("stars.s2.tag")}: {bestReach?.name || "N/A"}</span>
                     <Icon name="arrow" className="text-[#777]" />
                   </a>
                 </div>
               </SectionCard>
-              <KeyTakeaways />
+              <KeyTakeaways content={content} />
             </aside>
           </div>
-          <DeliverablesTable />
+          <DeliverablesTable content={content} />
         </div>
       </main>
     </div>
