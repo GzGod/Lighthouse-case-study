@@ -2,7 +2,6 @@
 const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3 } = window.App_Part1;
 const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet, buildStarTagMap } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
-const { DashboardView } = window.App_Dashboard || {};
 const R = window.Recharts;
 
 const MATRIX_TAGS = {
@@ -318,8 +317,8 @@ function Page(){
   );
 }
 
-function ViewModeSwitch({ mode, setMode }) {
-  const isDashboard = mode === "dashboard";
+/* Removed light workspace mode switch.
+  const isDashboard = false;
   return (
     <div className={`fixed bottom-5 right-5 z-[90] flex rounded-full border p-1 shadow-2xl backdrop-blur-xl transition ${isDashboard ? "border-slate-200 bg-white/80" : "border-white/20 bg-black/55"}`}>
       <button
@@ -342,24 +341,11 @@ function ViewModeSwitch({ mode, setMode }) {
   );
 }
 
+*/
 function App(){
-  const [mode, setModeState] = React.useState(() => {
-    try {
-      return localStorage.getItem("lh-home-view") === "dashboard" ? "dashboard" : "classic";
-    } catch (_) {
-      return "classic";
-    }
-  });
-  const setMode = React.useCallback((next) => {
-    setModeState(next);
-    try { localStorage.setItem("lh-home-view", next); } catch (_) {}
-  }, []);
-  const showDashboard = mode === "dashboard" && DashboardView;
-
   return (
     <LP3>
-      {showDashboard ? <DashboardView onSwitchClassic={() => setMode("classic")} /> : <Page/>}
-      {DashboardView && <ViewModeSwitch mode={mode} setMode={setMode} />}
+      <Page/>
     </LP3>
   );
 }

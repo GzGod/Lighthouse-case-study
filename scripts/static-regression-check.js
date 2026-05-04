@@ -11,7 +11,6 @@ const personalIp = read('personal-ip.jsx');
 const admin = read('admin/admin.jsx');
 const i18n = read('i18n.jsx');
 const appPart3 = read('app-part3.jsx');
-const dashboardView = read('dashboard-view.jsx');
 const projectsRoute = read('server/routes/projects.js');
 const ipCasesRoute = read('server/routes/ip-cases.js');
 const i18nRoute = read('server/routes/i18n.js');
@@ -216,6 +215,13 @@ test('Top navigation labels should stay on one line in English', () => {
   assert.ok(/hidden md:inline-block whitespace-nowrap[\s\S]*\{t\("nav\.cta_btn"\)\}/.test(app), 'CTA nav button should not wrap');
 });
 
+test('Homepage should not expose the removed light workspace dashboard', () => {
+  assert.ok(!/dashboard-view\.jsx/.test(caseStudyHtml), 'dashboard view script should not be loaded');
+  assert.ok(!/window\.App_Dashboard|DashboardView/.test(appPart3), 'app shell should not import or render the removed dashboard');
+  assert.ok(!/localStorage\.getItem\("lh-home-view"\)|mode === "dashboard"|<ViewModeSwitch/.test(appPart3), 'dashboard mode switch should be removed from the public homepage');
+});
+
+/*
 test('Homepage should expose the light workspace dashboard through the public mode switch', () => {
   assert.ok(/src="dashboard-view\.jsx"[\s\S]*src="app-part3\.jsx"/.test(caseStudyHtml), 'dashboard view script must load before the app shell');
   assert.ok(/function DashboardView/.test(dashboardView), 'missing DashboardView component');
@@ -237,6 +243,7 @@ test('Homepage should expose the light workspace dashboard through the public mo
   assert.ok(/Case Study Assets \/ Deliverables/.test(dashboardView), 'dashboard should include a deliverables table');
 });
 
+*/
 test('Public page links should use canonical extensionless routes', () => {
   assert.ok(/app\.get\('\/case-study'[\s\S]*Lighthouse Case Study\.html/.test(serverIndex), 'missing extensionless case-study route');
   assert.ok(/app\.get\('\/personal-ip'[\s\S]*Personal IP\.html/.test(serverIndex), 'missing extensionless personal-ip route');
