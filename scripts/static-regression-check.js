@@ -226,8 +226,9 @@ test('Homepage should expose the light workspace dashboard through the public mo
   assert.ok(/mode === "dashboard" && DashboardView/.test(appPart3), 'dashboard rendering should be controlled by the public mode switch');
   assert.ok(/<ViewModeSwitch/.test(appPart3), 'dashboard switch control should be visible');
   assert.ok(/w-\[260px\]/.test(dashboardView), 'dashboard view should include a 260px fixed left sidebar');
-  assert.ok(/hero\.h1_a/.test(dashboardView) && /hero\.sub/.test(dashboardView), 'dashboard should reuse the Lighthouse homepage hero copy');
-  assert.ok(/buildWorkspaceContent/.test(dashboardView) && /about\.cap1\.t/.test(dashboardView), 'dashboard should derive workspace content from homepage i18n keys');
+  assert.ok(/const WORKSPACE_COPY/.test(dashboardView), 'dashboard should keep its workspace copy local');
+  assert.ok(/把 Web3 注意力需求，整理成可复用的工作台/.test(dashboardView), 'dashboard should use workspace-specific hero copy');
+  assert.ok(!/hero\.h1_a|hero\.sub|about\.cap1\.t|kpi\.k1/.test(dashboardView), 'dashboard workspace copy should not depend on classic homepage i18n keys');
   assert.ok(!/Plasma Chinese Community Campaign/.test(dashboardView), 'dashboard should not use the old Plasma mock case');
   assert.ok(/Content System/.test(dashboardView), 'dashboard should include a content-system list view');
   assert.ok(/Timeline \/ Execution Log/.test(dashboardView), 'dashboard should include an activity log');

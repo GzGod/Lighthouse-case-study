@@ -5,7 +5,6 @@ const {
   buildStatsVars: buildDashboardStatsVars,
   fmt: fmtDashboard,
   useT: useDashboardT,
-  tpl: tplDashboard,
 } = window.App_Part1;
 
 function cx(...parts) {
@@ -15,6 +14,126 @@ function cx(...parts) {
 function projectHref(project) {
   const slug = String(project?.slug || "").trim();
   return slug ? `/projects/${encodeURIComponent(slug)}` : "#";
+}
+
+const WORKSPACE_COPY = {
+  zh: {
+    breadcrumb: "灯塔注意力工作台",
+    heroEyebrow: "CASE STUDY WORKSPACE · LIGHTHOUSE 2026",
+    heroStatus: "实时样本库",
+    heroPeriod: "Q4 2025 - Q2 2026",
+    heroOwner: "灯塔实验室整理",
+    heroTitle: "把 Web3 注意力需求，整理成可复用的工作台。",
+    heroLead: "这里不是另一版首页，而是一套给团队复盘、报价和协作使用的案例视图。",
+    heroBody: "它继续读取灯塔同一套项目样本和统计数据，但用更偏 workspace 的方式组织信息：谁获得了曝光、哪类内容更有效、哪些素材可以复用，以及下一次投流或议题需求应该从哪里开始。",
+    visualBrand: "灯塔",
+    visualCaption: "Attention workspace",
+    tags: ["注意力市场", "KOL 玩法", "报价参考", "案例资产", "可复用素材"],
+    overview: [
+      { label: "工作台定位", text: "把项目宣发、KOL 助推、个人 IP 增长和议题讨论统一放进一个可浏览、可复盘、可继续执行的案例库。" },
+      { label: "使用场景", text: "适合团队在报价前查看历史样本，在执行中对齐内容结构，在复盘时沉淀下一次可以复用的投放逻辑。" },
+      { label: "数据口径", text: "核心指标继续来自灯塔主页同一套基准样本，隐藏项目不会进入展示和统计，保证两套 UI 的数据口径一致。" },
+    ],
+    contentRows: [
+      { type: "投流曝光规划", description: "用历史 CPM、曝光和预算表现，帮助判断一次注意力需求需要多大投放池。", platform: "X / KOL", status: "Operational", impact: "预算逻辑", tone: "blue" },
+      { type: "KOL 助推组合", description: "把不同 KOL、创作者和社区节点组合成可执行的传播结构，而不是只看单个账号。", platform: "X / Creator", status: "Operational", impact: "分发结构", tone: "green" },
+      { type: "议题讨论组织", description: "围绕观点、活动、资产或市场方向组织讨论，让注意力不只停留在一次曝光。", platform: "Market", status: "Tracked", impact: "讨论深度", tone: "yellow" },
+      { type: "创作者支持", description: "把对 KOL、分析师、Founder 或社区主理人的支持转化成一次可见的助推。", platform: "Creator", status: "Tracked", impact: "个人 IP", tone: "red" },
+      { type: "价格基准沉淀", description: "记录不同样本的 CPM、CPE、互动率和曝光质量，形成下一轮报价参考。", platform: "Benchmark", status: "Tracked", impact: "价格参考", tone: "blue" },
+      { type: "代表样本归档", description: "自动识别低 CPM、高曝光、高互动和高性价比样本，减少人工挑选偏差。", platform: "Benchmark", status: "Live", impact: "样本标签", tone: "green" },
+      { type: "交付资产复用", description: "把项目、推文、视觉素材和结论沉淀成可被后台继续编辑和复用的资产。", platform: "Library", status: "Live", impact: "复用效率", tone: "slate" },
+    ],
+    activityLog: [
+      { title: "样本池整理", time: "01", tag: "Data", detail: "汇总可展示项目、基准口径、预算、曝光和互动表现。", icon: "spark" },
+      { title: "需求场景拆分", time: "02", tag: "Attention", detail: "把项目曝光、KOL 助推、议题讨论和创作者支持拆成不同工作流。", icon: "target" },
+      { title: "价格参照生成", time: "03", tag: "Metrics", detail: "根据可见基准项目自动更新 CPM、CPE、互动率和代表标签。", icon: "chart" },
+      { title: "代表样本同步", time: "04", tag: "Samples", detail: "让表格标签、四个代表样本和首页叙事保持同一套选择逻辑。", icon: "library" },
+      { title: "内容证据预留", time: "05", tag: "Tweets", detail: "为后续接入 X/Twitter 推文证据、项目素材和后台编辑保留位置。", icon: "message" },
+      { title: "团队复盘输出", time: "06", tag: "Review", detail: "把案例从展示页变成团队能继续使用的判断材料。", icon: "file" },
+    ],
+    moments: [
+      { name: "低预算曝光样本", tag: "Cost signal", tone: "green" },
+      { name: "单场曝光最高", tag: "Reach signal", tone: "blue" },
+      { name: "讨论深度最强", tag: "Conversation", tone: "yellow" },
+      { name: "综合性价比", tag: "Value", tone: "red" },
+    ],
+    takeaways: [
+      "主页负责讲清灯塔是什么，Workspace 负责让团队把案例变成可执行资产。",
+      "所有数字都来自同一套项目数据，文案可以单独迭代，不会影响经典主页。",
+      "隐藏项目不会进入前台展示或统计，但后台仍能继续管理和恢复。",
+      "代表标签和样本选择需要保持同步，避免一个项目占据太多叙事位置。",
+      "后续接 CMS 时，这一页可以承接项目素材、推文证据和复盘结论。",
+    ],
+    funnelSteps: ["需求进入", "KOL / 内容组合", "市场讨论", "复盘复用"],
+    tweetSlots: ["代表样本推文", "传播证据推文", "市场讨论推文"],
+    benchmarkTitle: "实时基准上下文",
+    benchmarkReachLabel: "最高曝光样本",
+    tableType: "Attention sample",
+    statusBaseline: "Baseline",
+    statusFlagship: "Flagship",
+    impactSuffix: "impressions",
+  },
+  en: {
+    breadcrumb: "Lighthouse attention workspace",
+    heroEyebrow: "CASE STUDY WORKSPACE · LIGHTHOUSE 2026",
+    heroStatus: "Live sample library",
+    heroPeriod: "Q4 2025 - Q2 2026",
+    heroOwner: "Compiled by Lighthouse Lab",
+    heroTitle: "A reusable workspace for Web3 attention demand.",
+    heroLead: "This is not another homepage. It is a case workspace for planning, pricing, review, and team handoff.",
+    heroBody: "It reads the same Lighthouse project pool and metrics, but reorganizes the material as an operating surface: what earned reach, which content patterns worked, what assets can be reused, and where the next attention demand should begin.",
+    visualBrand: "Lighthouse",
+    visualCaption: "Attention workspace",
+    tags: ["Attention market", "KOL playbooks", "Pricing signals", "Case assets", "Reusable materials"],
+    overview: [
+      { label: "Workspace purpose", text: "Organize paid reach, KOL boosts, personal IP growth, and market conversation into a browsable, reviewable case library." },
+      { label: "Operating use", text: "Use historical samples before pricing, align content structure during execution, and turn reviews into repeatable playbooks." },
+      { label: "Data discipline", text: "The metrics still come from the same Lighthouse baseline pool. Hidden projects stay out of public views and statistics." },
+    ],
+    contentRows: [
+      { type: "Paid reach planning", description: "Use CPM, reach, and budget history to estimate the right scale for a new attention demand.", platform: "X / KOL", status: "Operational", impact: "Budget logic", tone: "blue" },
+      { type: "KOL boost mix", description: "Combine KOLs, creators, and community nodes into an executable distribution structure.", platform: "X / Creator", status: "Operational", impact: "Distribution", tone: "green" },
+      { type: "Market conversation", description: "Organize discussion around a view, event, asset, or market direction instead of stopping at one exposure spike.", platform: "Market", status: "Tracked", impact: "Depth", tone: "yellow" },
+      { type: "Creator support", description: "Turn support for a KOL, analyst, founder, or community lead into a visible boost.", platform: "Creator", status: "Tracked", impact: "Personal IP", tone: "red" },
+      { type: "Pricing benchmark", description: "Record CPM, CPE, engagement rate, and reach quality to support the next quote.", platform: "Benchmark", status: "Tracked", impact: "Pricing", tone: "blue" },
+      { type: "Representative samples", description: "Automatically identify low-CPM, high-reach, high-engagement, and best-value samples.", platform: "Benchmark", status: "Live", impact: "Labels", tone: "green" },
+      { type: "Reusable assets", description: "Turn projects, posts, visuals, and conclusions into editable assets for future work.", platform: "Library", status: "Live", impact: "Reuse", tone: "slate" },
+    ],
+    activityLog: [
+      { title: "Sample pool assembled", time: "01", tag: "Data", detail: "Visible projects, baseline scope, budgets, impressions, and engagements are collected into one view.", icon: "spark" },
+      { title: "Demand paths separated", time: "02", tag: "Attention", detail: "Project reach, KOL boosts, market conversation, and creator support become distinct workflows.", icon: "target" },
+      { title: "Pricing context generated", time: "03", tag: "Metrics", detail: "CPM, CPE, engagement rate, and representative labels update from visible baseline data.", icon: "chart" },
+      { title: "Representative samples synced", time: "04", tag: "Samples", detail: "Table labels, sample cards, and homepage narrative share the same selection logic.", icon: "library" },
+      { title: "Evidence slots reserved", time: "05", tag: "Tweets", detail: "X/Twitter evidence, project assets, and editable review notes have dedicated placeholders.", icon: "message" },
+      { title: "Review output prepared", time: "06", tag: "Review", detail: "The case library becomes working material rather than a static presentation.", icon: "file" },
+    ],
+    moments: [
+      { name: "Low-budget reach sample", tag: "Cost signal", tone: "green" },
+      { name: "Highest single-campaign reach", tag: "Reach signal", tone: "blue" },
+      { name: "Deepest conversation", tag: "Conversation", tone: "yellow" },
+      { name: "Best value sample", tag: "Value", tone: "red" },
+    ],
+    takeaways: [
+      "The classic homepage explains Lighthouse; the Workspace turns cases into operating assets.",
+      "Metrics share the same project data, while this copy can evolve independently.",
+      "Hidden projects stay out of public rendering and statistics but remain manageable in admin.",
+      "Representative labels and sample selection should stay synchronized.",
+      "The workspace can later hold CMS-managed assets, tweet evidence, and review notes.",
+    ],
+    funnelSteps: ["Demand intake", "KOL / content mix", "Market conversation", "Review and reuse"],
+    tweetSlots: ["Representative sample tweet", "Distribution evidence tweet", "Market conversation tweet"],
+    benchmarkTitle: "Live benchmark context",
+    benchmarkReachLabel: "Top reach sample",
+    tableType: "Attention sample",
+    statusBaseline: "Baseline",
+    statusFlagship: "Flagship",
+    impactSuffix: "impressions",
+  },
+};
+
+function workspaceCopy(lang) {
+  const resolved = lang === "en" ? "en" : "zh";
+  return { ...WORKSPACE_COPY[resolved], lang: resolved };
 }
 
 function Icon({ name, className = "" }) {
@@ -51,59 +170,39 @@ function Icon({ name, className = "" }) {
   );
 }
 
-function buildWorkspaceContent(t, tp, stats, vars, projects) {
+function buildWorkspaceContent(copy, stats, vars, projects) {
   const baseProjects = projects.filter(p => p.is_baseline !== 0);
   const topProjects = [...baseProjects].sort((a, b) => Number(b.imp || 0) - Number(a.imp || 0)).slice(0, 5);
+  const baselineCount = vars.baselineCount || baseProjects.length || projects.length || 0;
+  const baselineTweets = vars.baselineTweets || stats.totalTweets || 0;
   return {
-    tags: ["Web3", t("about.cap1.t"), t("about.cap2.t"), t("about.cap3.t"), t("about.cap4.t")],
+    tags: copy.tags,
     metrics: [
-      { label: t("kpi.k1"), value: fmtDashboard(stats.totalBudget), helper: tp("kpi.k1n"), icon: "chart" },
-      { label: t("kpi.k2"), value: fmtDashboard(stats.totalImp), helper: tp("kpi.k2n"), icon: "spark" },
-      { label: t("kpi.k3"), value: fmtDashboard(stats.totalEng), helper: t("kpi.k3n"), icon: "message" },
-      { label: t("kpi.k6"), value: `${stats.peakEr.toFixed(2)}%`, helper: tp("kpi.k6n"), icon: "target" },
+      { label: copy.lang === "en" ? "Settled budget" : "已结算预算", value: fmtDashboard(stats.totalBudget), helper: copy.lang === "en" ? `${baselineCount} visible baseline samples` : `${baselineCount} 个可见基准样本`, icon: "chart" },
+      { label: copy.lang === "en" ? "Comparable reach" : "可对照曝光", value: fmtDashboard(stats.totalImp), helper: copy.lang === "en" ? `${baselineTweets} tracked posts` : `${baselineTweets} 条推文沉淀`, icon: "spark" },
+      { label: copy.lang === "en" ? "Engagement volume" : "互动沉淀", value: fmtDashboard(stats.totalEng), helper: copy.lang === "en" ? "Evidence for conversation quality" : "用于判断讨论质量", icon: "message" },
+      { label: copy.lang === "en" ? "Peak engagement rate" : "峰值互动率", value: `${stats.peakEr.toFixed(2)}%`, helper: copy.lang === "en" ? "Best visible sample in the pool" : "当前可见样本最高值", icon: "target" },
     ],
-    overview: [
-      { label: t("about.kicker"), text: t("about.p") },
-      { label: t("kpi.kicker"), text: tp("kpi.p") },
-      { label: t("matrix.kicker"), text: t("matrix.p") },
-    ],
-    contentRows: [
-      { type: t("about.cap1.t"), description: t("about.cap1.d"), platform: "X / KOL", status: "Active", impact: t("about.cap1.en"), tone: "blue" },
-      { type: t("about.cap2.t"), description: t("about.cap2.d"), platform: "X / Creator", status: "Active", impact: t("about.cap2.en"), tone: "green" },
-      { type: t("about.cap3.t"), description: t("about.cap3.d"), platform: "Market", status: "Active", impact: t("about.cap3.en"), tone: "yellow" },
-      { type: t("about.cap4.t"), description: t("about.cap4.d"), platform: "Creator", status: "Active", impact: t("about.cap4.en"), tone: "red" },
-      { type: t("win.d1.label"), description: t("win.d1.lead"), platform: "Benchmark", status: "Tracked", impact: t("win.d1.en"), tone: "blue" },
-      { type: t("win.d2.label"), description: t("win.d2.lead"), platform: "Benchmark", status: "Tracked", impact: t("win.d2.en"), tone: "green" },
-      { type: t("win.d3.label"), description: t("win.d3.lead"), platform: "Benchmark", status: "Tracked", impact: t("win.d3.en"), tone: "slate" },
-    ],
-    activityLog: [
-      { title: t("hero.kicker_tl"), time: "01", tag: "Hero", detail: tp("hero.sub"), icon: "spark" },
-      { title: t("about.h2_a"), time: "02", tag: "Attention", detail: t("about.p"), icon: "target" },
-      { title: t("kpi.h2_a"), time: "03", tag: "Metrics", detail: tp("kpi.p"), icon: "chart" },
-      { title: t("win.h2_a"), time: "04", tag: "Playbooks", detail: t("win.p"), icon: "library" },
-      { title: t("stars.h2_a"), time: "05", tag: "Samples", detail: t("stars.p"), icon: "folder" },
-      { title: tp("matrix.h2_a"), time: "06", tag: "Matrix", detail: t("matrix.p"), icon: "file" },
-    ],
+    overview: copy.overview,
+    contentRows: copy.contentRows,
+    activityLog: copy.activityLog,
     performanceItems: [
-      { label: t("kpi.k1"), value: fmtDashboard(stats.totalBudget), progress: 72 },
-      { label: t("kpi.k2"), value: fmtDashboard(stats.totalImp), progress: 86 },
-      { label: t("kpi.k3"), value: fmtDashboard(stats.totalEng), progress: 64 },
-      { label: t("kpi.k4"), value: stats.avgCpm.toFixed(2), progress: 58 },
+      { label: copy.lang === "en" ? "Budget pool" : "预算池", value: fmtDashboard(stats.totalBudget), progress: 72 },
+      { label: copy.lang === "en" ? "Impressions" : "曝光", value: fmtDashboard(stats.totalImp), progress: 86 },
+      { label: copy.lang === "en" ? "Engagements" : "互动", value: fmtDashboard(stats.totalEng), progress: 64 },
+      { label: copy.lang === "en" ? "Average CPM" : "平均 CPM", value: stats.avgCpm.toFixed(2), progress: 58 },
     ],
-    moments: [
-      { name: t("stars.s1.tag"), tag: t("stars.s1.en"), tone: "green" },
-      { name: t("stars.s2.tag"), tag: t("stars.s2.en"), tone: "blue" },
-      { name: t("stars.s3.tag"), tag: t("stars.s3.en"), tone: "yellow" },
-      { name: t("stars.s4.tag"), tag: t("stars.s4.en"), tone: "red" },
-    ],
-    takeaways: ["w1", "w2", "w3", "w4", "w5"].map(key => t(`why.${key}.d`)),
+    moments: copy.moments,
+    takeaways: copy.takeaways,
+    funnelSteps: copy.funnelSteps,
+    tweetSlots: copy.tweetSlots,
     deliverables: topProjects.map((project, idx) => ({
       no: String(idx + 1).padStart(3, "0"),
       name: project.name,
-      type: t("matrix.table.sub"),
+      type: copy.tableType,
       platform: "X",
-      status: project.is_baseline === 0 ? t("tag.flagship") : t("matrix.legend_other"),
-      impact: `${fmtDashboard(project.imp || 0)} ${t("matrix.col.imp")}`,
+      status: project.is_baseline === 0 ? copy.statusFlagship : copy.statusBaseline,
+      impact: `${fmtDashboard(project.imp || 0)} ${copy.impactSuffix}`,
       href: projectHref(project),
     })),
   };
@@ -220,7 +319,7 @@ function Sidebar({ onSwitchClassic }) {
   );
 }
 
-function Header({ onSwitchClassic, t }) {
+function Header({ onSwitchClassic, copy }) {
   return (
     <header className="sticky top-0 z-20 border-b border-[#e8e8e8] bg-[#f6f6f6]/90 backdrop-blur-xl">
       <div className="flex h-[72px] items-center justify-between gap-4 px-4 md:px-7">
@@ -229,7 +328,7 @@ function Header({ onSwitchClassic, t }) {
             <button onClick={onSwitchClassic} className="mr-2 rounded-full border border-[#dddddd] bg-white px-3 py-1 text-[12px] text-[#555] lg:hidden">Classic</button>
             <span>Case Studies</span>
             <span>/</span>
-            <span className="truncate text-[#3a3a3a]">{t("hero.kicker_tl")}</span>
+            <span className="truncate text-[#3a3a3a]">{copy.breadcrumb}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -255,21 +354,21 @@ function MetricCard({ item }) {
   );
 }
 
-function HeroSection({ t, tp, content }) {
+function HeroSection({ copy, content }) {
   return (
     <div id="overview" className="rounded-[26px] border border-[#eaeaea] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.035)]">
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         <div className="p-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="green">{t("hero.kicker_tl")}</Badge>
-            <Badge tone="blue">{t("matrix.table.compiled")}</Badge>
-            <Badge tone="slate">{t("hero.by_tr")}</Badge>
+            <Badge tone="green">{copy.heroEyebrow}</Badge>
+            <Badge tone="blue">{copy.heroStatus}</Badge>
+            <Badge tone="slate">{copy.heroOwner}</Badge>
           </div>
           <h1 className="mt-7 max-w-[880px] text-[36px] font-semibold leading-[1.02] tracking-[-0.055em] text-[#1d1d1f] md:text-[54px]">
-            {t("hero.h1_a")} {t("hero.h1_b")}{t("hero.h1_c")}
+            {copy.heroTitle}
           </h1>
-          <p className="mt-4 text-[17px] tracking-[-0.02em] text-[#626262]">{t("hero.eyebrow")}</p>
-          <p className="mt-6 max-w-[820px] text-[14px] leading-7 text-[#6f6f6f]">{tp("hero.sub")}</p>
+          <p className="mt-4 text-[17px] tracking-[-0.02em] text-[#626262]">{copy.heroLead}</p>
+          <p className="mt-6 max-w-[820px] text-[14px] leading-7 text-[#6f6f6f]">{copy.heroBody}</p>
           <div className="mt-7 flex flex-wrap gap-2">
             {content.tags.map(tag => <Badge key={tag}>{tag}</Badge>)}
           </div>
@@ -280,8 +379,8 @@ function HeroSection({ t, tp, content }) {
             <div className="absolute bottom-[-18%] left-[-15%] right-[-15%] h-[42%] rounded-[50%] bg-[#dfe6e4]" />
             <div className="absolute right-[14%] top-[18%] h-[145px] w-[145px] rounded-full border-[7px] border-white/90 shadow-[0_1px_8px_rgba(0,0,0,0.04)]" />
             <div className="absolute bottom-8 left-7 right-7 flex items-center justify-between border-t border-white/70 pt-4 text-[11px] text-[#777]">
-              <span>{t("brand.cn")}</span>
-              <span>{t("brand.en")}</span>
+              <span>{copy.visualBrand}</span>
+              <span>{copy.visualCaption}</span>
             </div>
           </div>
         </SectionCard>
@@ -354,8 +453,8 @@ function ActivityLog({ content }) {
   );
 }
 
-function TweetEmbedPlaceholder() {
-  const slots = ["Hero source thread", "Representative sample thread", "Market conversation thread"];
+function TweetEmbedPlaceholder({ content }) {
+  const slots = content.tweetSlots;
   return (
     <SectionCard title="Tweet Embed Section" icon="message">
       <div className="grid gap-4 p-5 md:grid-cols-3">
@@ -394,8 +493,8 @@ function PerformancePanel({ content }) {
   );
 }
 
-function CommunityFunnel({ t }) {
-  const steps = [t("about.cap1.t"), t("about.cap2.t"), t("about.cap3.t"), t("about.cap4.t")];
+function CommunityFunnel({ content }) {
+  const steps = content.funnelSteps;
   return (
     <SectionCard title="Community Funnel" icon="target">
       <div className="p-5">
@@ -486,12 +585,12 @@ function DeliverablesTable({ content }) {
 }
 
 function DashboardView({ onSwitchClassic }) {
-  const { t } = useDashboardT();
+  const { lang } = useDashboardT();
   const projects = useDashboardProjects();
   const stats = React.useMemo(() => deriveDashboardStats(projects), [projects]);
   const vars = React.useMemo(() => buildDashboardStatsVars(projects, stats), [projects, stats]);
-  const tp = React.useCallback((key) => tplDashboard(t(key), vars), [t, vars]);
-  const content = React.useMemo(() => buildWorkspaceContent(t, tp, stats, vars, projects), [t, tp, stats, vars, projects]);
+  const copy = React.useMemo(() => workspaceCopy(lang), [lang]);
+  const content = React.useMemo(() => buildWorkspaceContent(copy, stats, vars, projects), [copy, stats, vars, projects]);
   const featured = projects[0] || {};
   const bestReach = React.useMemo(() => {
     return [...projects].sort((a, b) => Number(b.imp || 0) - Number(a.imp || 0))[0] || featured;
@@ -501,37 +600,37 @@ function DashboardView({ onSwitchClassic }) {
     <div className="min-h-screen bg-[#f6f6f6] text-[#1d1d1f]" style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text',Inter,'Helvetica Neue',Arial,'Noto Sans SC',sans-serif" }}>
       <Sidebar onSwitchClassic={onSwitchClassic} />
       <main className="lg:pl-[260px]">
-        <Header onSwitchClassic={onSwitchClassic} t={t} />
+        <Header onSwitchClassic={onSwitchClassic} copy={copy} />
         <div className="mx-auto max-w-[1480px] space-y-5 px-4 py-5 md:px-7 md:py-7">
-          <HeroSection t={t} tp={tp} content={content} />
+          <HeroSection copy={copy} content={content} />
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
             <div className="space-y-5">
               <CampaignOverview content={content} />
               <ContentSystem content={content} />
               <ActivityLog content={content} />
-              <TweetEmbedPlaceholder />
+              <TweetEmbedPlaceholder content={content} />
             </div>
             <aside className="space-y-5">
               <PerformancePanel content={content} />
-              <CommunityFunnel t={t} />
+              <CommunityFunnel content={content} />
               <TopMoments content={content} />
-              <SectionCard title="Live Benchmark Context" icon="chart">
+              <SectionCard title={copy.benchmarkTitle} icon="chart">
                 <div className="p-5">
                   <div className="rounded-[18px] border border-[#eeeeee] bg-[#fbfbfb] p-4">
-                    <div className="text-[12px] text-[#8a8a8a]">{tp("matrix.table.title")}</div>
+                    <div className="text-[12px] text-[#8a8a8a]">{copy.benchmarkTitle}</div>
                     <div className="mt-3 grid grid-cols-2 gap-3">
                       <div>
                         <div className="text-[24px] font-semibold tracking-[-0.05em]">{fmtDashboard(stats.totalImp)}</div>
-                        <div className="text-[11px] text-[#8a8a8a]">{t("matrix.col.imp")}</div>
+                        <div className="text-[11px] text-[#8a8a8a]">{copy.lang === "en" ? "Impressions" : "曝光"}</div>
                       </div>
                       <div>
                         <div className="text-[24px] font-semibold tracking-[-0.05em]">{stats.avgCpm.toFixed(2)}</div>
-                        <div className="text-[11px] text-[#8a8a8a]">{t("kpi.k4")}</div>
+                        <div className="text-[11px] text-[#8a8a8a]">CPM</div>
                       </div>
                     </div>
                   </div>
                   <a href={projectHref(bestReach)} className="mt-3 flex items-center justify-between rounded-[18px] border border-[#eeeeee] bg-white p-4 text-[13px] transition hover:bg-[#fafafa]">
-                    <span className="min-w-0 truncate">{t("stars.s2.tag")}: {bestReach?.name || "N/A"}</span>
+                    <span className="min-w-0 truncate">{copy.benchmarkReachLabel}: {bestReach?.name || "N/A"}</span>
                     <Icon name="arrow" className="text-[#777]" />
                   </a>
                 </div>
