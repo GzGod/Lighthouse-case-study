@@ -216,21 +216,22 @@ test('Top navigation labels should stay on one line in English', () => {
   assert.ok(/hidden md:inline-block whitespace-nowrap[\s\S]*\{t\("nav\.cta_btn"\)\}/.test(app), 'CTA nav button should not wrap');
 });
 
-test('Homepage should keep the light dashboard code available while its public entry is disabled', () => {
+test('Homepage should expose the light workspace dashboard through the public mode switch', () => {
   assert.ok(/src="dashboard-view\.jsx"[\s\S]*src="app-part3\.jsx"/.test(caseStudyHtml), 'dashboard view script must load before the app shell');
   assert.ok(/function DashboardView/.test(dashboardView), 'missing DashboardView component');
   assert.ok(/window\.App_Dashboard = \{ DashboardView \}/.test(dashboardView), 'dashboard view is not exposed for the app shell');
   assert.ok(/const \{ DashboardView \} = window\.App_Dashboard \|\| \{\};/.test(appPart3), 'app shell does not import DashboardView');
-  assert.ok(/function ViewModeSwitch/.test(appPart3), 'dashboard mode switch code should be retained for later reuse');
-  assert.ok(/const lightDashboardEnabled = false;/.test(appPart3), 'light dashboard public entry should be disabled for now');
-  assert.ok(/const showDashboard = lightDashboardEnabled && DashboardView;/.test(appPart3), 'dashboard rendering should be gated behind the disabled flag');
-  assert.ok(!/localStorage\.getItem\("lh-home-view"\)/.test(appPart3), 'disabled dashboard should not restore a saved dashboard mode');
-  assert.ok(!/<ViewModeSwitch/.test(appPart3), 'disabled dashboard should not show the public switch control');
-  assert.ok(/fixed inset-y-0 left-0/.test(dashboardView), 'dashboard view should include a fixed left sidebar');
-  assert.ok(/Search cases, campaigns, assets/.test(dashboardView), 'dashboard view should include a top search bar');
-  assert.ok(/Featured Case Library/.test(dashboardView), 'dashboard view should include content library sections');
-  assert.ok(/Tweet Embed/.test(dashboardView), 'dashboard view should reserve tweet embed space');
-  assert.ok(/Campaign Metrics/.test(dashboardView), 'dashboard view should reserve campaign metrics space');
+  assert.ok(/function ViewModeSwitch/.test(appPart3), 'dashboard mode switch code should exist');
+  assert.ok(/localStorage\.getItem\("lh-home-view"\)/.test(appPart3), 'dashboard mode should restore the saved view preference');
+  assert.ok(/mode === "dashboard" && DashboardView/.test(appPart3), 'dashboard rendering should be controlled by the public mode switch');
+  assert.ok(/<ViewModeSwitch/.test(appPart3), 'dashboard switch control should be visible');
+  assert.ok(/w-\[260px\]/.test(dashboardView), 'dashboard view should include a 260px fixed left sidebar');
+  assert.ok(/Plasma Chinese Community Campaign/.test(dashboardView), 'dashboard should use the Plasma case-study workspace content');
+  assert.ok(/Content System/.test(dashboardView), 'dashboard should include a content-system list view');
+  assert.ok(/Timeline \/ Execution Log/.test(dashboardView), 'dashboard should include an activity log');
+  assert.ok(/Tweet Embed Placeholder/.test(dashboardView), 'dashboard should reserve tweet embed slots');
+  assert.ok(/Performance Summary/.test(dashboardView), 'dashboard should include a right-side summary panel');
+  assert.ok(/Case Study Assets \/ Deliverables/.test(dashboardView), 'dashboard should include a deliverables table');
 });
 
 test('Public page links should use canonical extensionless routes', () => {

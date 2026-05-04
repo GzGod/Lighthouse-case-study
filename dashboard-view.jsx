@@ -1,15 +1,9 @@
-/* Lighthouse light case-library interface: classic content, reduced product flow */
+/* Lighthouse workspace case-study dashboard */
 const {
   useProjects: useDashboardProjects,
   deriveStats: deriveDashboardStats,
-  buildStatsVars: buildDashboardStatsVars,
   fmt: fmtDashboard,
-  useT: useDashboardT,
-  tpl: tplDashboard,
 } = window.App_Part1;
-
-const TOP_KOL_REFERENCE = { cpm: 41.92, cpe: 7.26 };
-const STAR_ORDER = ["s1", "s2", "s3", "s4"];
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -20,610 +14,537 @@ function projectHref(project) {
   return slug ? `/projects/${encodeURIComponent(slug)}` : "#";
 }
 
-function metric(project, key) {
-  const imp = Number(project?.imp || 0);
-  const er = Number(project?.er || 0);
-  const budget = Number(project?.budget || 0);
-  if (key === "eng") return imp > 0 && er > 0 ? Math.round(imp * er / 100) : null;
-  if (key === "cpe") {
-    const direct = Number(project?.cpe);
-    if (Number.isFinite(direct) && direct > 0) return direct;
-    const eng = metric(project, "eng");
-    return budget > 0 && eng > 0 ? budget / eng : null;
-  }
-  const value = Number(project?.[key]);
-  return Number.isFinite(value) && value > 0 ? value : null;
-}
-
-function compareMetric(a, b, key, dir = "desc") {
-  const av = metric(a, key);
-  const bv = metric(b, key);
-  if (av === null && bv === null) return 0;
-  if (av === null) return 1;
-  if (bv === null) return -1;
-  return dir === "asc" ? av - bv : bv - av;
-}
-
-function pickStar(base, used, slotKey) {
-  const candidates = base.filter(project => {
-    const id = String(project?.slug || project?.name || "").trim();
-    return id && !used.has(id);
-  });
-  const sorted = [...candidates].sort((a, b) => {
-    if (slotKey === "s2") return compareMetric(a, b, "imp", "desc") || compareMetric(a, b, "cpm", "asc");
-    if (slotKey === "s3") return compareMetric(a, b, "er", "desc") || compareMetric(a, b, "eng", "desc");
-    if (slotKey === "s4") return compareMetric(a, b, "budget", "asc") || compareMetric(a, b, "cpm", "asc") || compareMetric(a, b, "imp", "desc");
-    return compareMetric(a, b, "cpe", "asc") || compareMetric(a, b, "cpm", "asc") || compareMetric(a, b, "er", "desc");
-  });
-  return sorted[0] || null;
-}
-
-function selectStars(projects) {
-  const base = (projects || []).filter(p => p.is_baseline !== 0);
-  const used = new Set();
-  const selected = {};
-  const claim = (slotKey) => {
-    const project = pickStar(base, used, slotKey);
-    if (!project) return;
-    selected[slotKey] = project;
-    used.add(String(project.slug || project.name || "").trim());
+function Icon({ name, className = "" }) {
+  const paths = {
+    layout: [
+      <rect key="a" x="3" y="3" width="7" height="7" rx="1.5" />,
+      <rect key="b" x="14" y="3" width="7" height="7" rx="1.5" />,
+      <rect key="c" x="3" y="14" width="7" height="7" rx="1.5" />,
+      <rect key="d" x="14" y="14" width="7" height="7" rx="1.5" />,
+    ],
+    folder: [<path key="a" d="M3 7.5h7l2 2h9v8.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5Z" />],
+    chart: [<path key="a" d="M4 19V5" />, <path key="b" d="M4 19h16" />, <path key="c" d="m7 15 3.5-4 3 2.5L19 7" />],
+    users: [<path key="a" d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />, <circle key="b" cx="9.5" cy="7" r="4" />, <path key="c" d="M22 21v-2a4 4 0 0 0-3-3.87" />, <path key="d" d="M16 3.13a4 4 0 0 1 0 7.75" />],
+    library: [<path key="a" d="M4 19.5V5a2 2 0 0 1 2-2h11v18H6a2 2 0 0 1-2-1.5Z" />, <path key="b" d="M8 7h5" />, <path key="c" d="M8 11h5" />],
+    settings: [<path key="a" d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />, <path key="b" d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.97a1.7 1.7 0 0 0-.34-1.88l-.06-.06A2 2 0 1 1 7.03 4.2l.06.06A1.7 1.7 0 0 0 8.97 4.6 1.7 1.7 0 0 0 10 3.04V3a2 2 0 1 1 4 0v.09c0 .67.4 1.28 1.03 1.52.63.25 1.34.12 1.88-.34l.06-.06A2 2 0 1 1 19.8 7.03l-.06.06a1.7 1.7 0 0 0-.34 1.88c.25.63.86 1.03 1.56 1.03H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15Z" />],
+    search: [<circle key="a" cx="11" cy="11" r="7" />, <path key="b" d="m20 20-3.5-3.5" />],
+    bell: [<path key="a" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />, <path key="b" d="M13.7 21a2 2 0 0 1-3.4 0" />],
+    plus: [<path key="a" d="M12 5v14" />, <path key="b" d="M5 12h14" />],
+    share: [<path key="a" d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />, <path key="b" d="M12 15V3" />, <path key="c" d="m7 8 5-5 5 5" />],
+    download: [<path key="a" d="M12 3v12" />, <path key="b" d="m7 10 5 5 5-5" />, <path key="c" d="M5 21h14" />],
+    check: [<path key="a" d="m5 12 4 4L19 6" />],
+    arrow: [<path key="a" d="M5 12h14" />, <path key="b" d="m13 6 6 6-6 6" />],
+    calendar: [<path key="a" d="M8 2v4" />, <path key="b" d="M16 2v4" />, <rect key="c" x="3" y="4" width="18" height="18" rx="2" />, <path key="d" d="M3 10h18" />],
+    target: [<circle key="a" cx="12" cy="12" r="8" />, <circle key="b" cx="12" cy="12" r="3" />],
+    message: [<path key="a" d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" />],
+    file: [<path key="a" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />, <path key="b" d="M14 2v6h6" />],
+    spark: [<path key="a" d="m12 2 1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5L12 2Z" />],
+    more: [<circle key="a" cx="12" cy="12" r="1" />, <circle key="b" cx="19" cy="12" r="1" />, <circle key="c" cx="5" cy="12" r="1" />],
   };
-  claim("s2");
-  claim("s3");
-  claim("s4");
-  claim("s1");
-  return STAR_ORDER.map(slotKey => selected[slotKey] ? { slotKey, project: selected[slotKey] } : null).filter(Boolean);
-}
-
-function tagForProject(project, stars, t) {
-  const id = String(project?.slug || project?.name || "").trim();
-  const found = stars.find(s => String(s.project?.slug || s.project?.name || "").trim() === id);
-  if (found?.slotKey === "s1") return t("tag.value_king");
-  if (found?.slotKey === "s2") return t("tag.reach_king");
-  if (found?.slotKey === "s3") return t("tag.eng_king");
-  if (found?.slotKey === "s4") return t("tag.cpm_king");
-  if (project?.is_baseline === 0) return t("tag.flagship");
-  return "";
-}
-
-function ProductButton({ children, href = "#", variant = "primary", onClick }) {
   return (
-    <a
-      href={href}
-      onClick={onClick}
-      className={cx(
-        "inline-flex h-11 items-center justify-center rounded-full px-5 text-[13px] font-medium tracking-[-0.01em] transition duration-200",
-        variant === "primary"
-          ? "bg-slate-950 text-white hover:bg-slate-800"
-          : "border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-950"
-      )}
-    >
-      {children}
-    </a>
+    <svg className={cx("h-4 w-4", className)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths[name] || paths.layout}
+    </svg>
   );
 }
 
-function Panel({ children, className = "", ...props }) {
+const caseData = {
+  title: "Plasma Chinese Community Campaign",
+  subtitle: "Chinese X + Telegram + Offline Events + Merchandise",
+  status: "Completed",
+  period: "Sep - Nov",
+  client: "Plasma",
+  summary: "A structured Chinese-market campaign file that connects content translation, narrative packaging, Telegram growth, offline community activation, and merchandise distribution into one reusable case record.",
+  tags: ["Web3", "Chinese Market", "Community", "KOL", "Offline"],
+  metrics: [
+    { label: "Total Impressions", value: "739K+", helper: "Public X campaign reach", icon: "chart" },
+    { label: "Total Posts", value: "124", helper: "Creator and campaign posts", icon: "file" },
+    { label: "Telegram Members", value: "2,215", helper: "Community acquisition", icon: "users" },
+    { label: "Best Post", value: "200K+", helper: "Single-post impressions", icon: "spark" },
+  ],
+  overview: [
+    { label: "Background", text: "Plasma needed a local Chinese campaign surface that could explain product narratives, collect community attention, and keep Telegram growth tied to visible public moments." },
+    { label: "Objective", text: "Build a repeatable campaign system across X, Telegram, offline activities, and social proof, while preserving a clear record of deliverables and outcomes." },
+    { label: "Scope", text: "Content adaptation, Chinese narrative shaping, campaign announcement flow, community events, merchandise distribution, and post-campaign review." },
+  ],
+};
+
+const contentRows = [
+  { type: "Technical Analysis", description: "Turn product mechanics into readable Chinese-market context.", platform: "X / Article", status: "Published", impact: "High clarity", tone: "blue" },
+  { type: "Narrative Shaping", description: "Package the Plasma story into reusable campaign angles.", platform: "X", status: "Published", impact: "Story depth", tone: "green" },
+  { type: "English-to-Chinese Adaptation", description: "Localize launch copy without losing technical precision.", platform: "X / TG", status: "Complete", impact: "Fast reuse", tone: "slate" },
+  { type: "Campaign Announcements", description: "Coordinate naming, event, and reward moments.", platform: "X / TG", status: "Complete", impact: "Momentum", tone: "yellow" },
+  { type: "Industry Data", description: "Attach broader market references to campaign narratives.", platform: "X", status: "Drafted", impact: "Credibility", tone: "blue" },
+  { type: "Sentiment Management", description: "Track audience feedback and keep replies aligned.", platform: "Telegram", status: "Ongoing", impact: "Retention", tone: "green" },
+  { type: "Trend-jacking", description: "Route timely market topics into Plasma-facing conversation.", platform: "X", status: "Reviewed", impact: "Reach", tone: "red" },
+];
+
+const activityLog = [
+  { title: "Community launch", time: "Sep 04", tag: "Launch", detail: "Chinese Telegram room and first content sequence prepared.", icon: "users" },
+  { title: "Naming campaign", time: "Sep 18", tag: "UGC", detail: "Community naming prompt created shareable discussion hooks.", icon: "message" },
+  { title: "Telegram growth", time: "Oct 02", tag: "Growth", detail: "Member acquisition crossed the first stable retention checkpoint.", icon: "chart" },
+  { title: "Offline university event", time: "Oct 19", tag: "Offline", detail: "Beijing university event assets and recap moments collected.", icon: "calendar" },
+  { title: "Merchandise distribution", time: "Nov 03", tag: "Retention", detail: "Plasma lighter merchandise used as a visible community anchor.", icon: "spark" },
+  { title: "Campaign review", time: "Nov 18", tag: "Review", detail: "Performance notes and reusable campaign assets consolidated.", icon: "file" },
+];
+
+const performanceItems = [
+  { label: "Impression", value: "739K+", progress: 82 },
+  { label: "Engagement", value: "24.8K", progress: 66 },
+  { label: "Growth", value: "2,215", progress: 74 },
+  { label: "Activity", value: "124 posts", progress: 58 },
+];
+
+const moments = [
+  { name: "Chinese naming campaign", tag: "High Engagement", tone: "green" },
+  { name: "Story campaign", tag: "Viral", tone: "blue" },
+  { name: "Beijing university event", tag: "Offline", tone: "yellow" },
+  { name: "Plasma lighter merchandise", tag: "Retention", tone: "red" },
+];
+
+const takeaways = [
+  "Chinese-language context needs a repeatable content system, not one-off translation.",
+  "Telegram growth became stronger when paired with visible public campaign moments.",
+  "Offline events gave the campaign a physical anchor that could be reused in social proof.",
+  "Merchandise worked best as a retention signal rather than a standalone giveaway.",
+  "A clean asset log makes the campaign easier to review, reuse, and sell internally.",
+];
+
+const deliverables = [
+  { no: "001", name: "Plasma CN launch brief", type: "Narrative", platform: "X / Telegram", status: "Published", impact: "High clarity" },
+  { no: "002", name: "Chinese naming campaign", type: "Community", platform: "Telegram", status: "Complete", impact: "UGC" },
+  { no: "003", name: "University event recap", type: "Offline", platform: "X", status: "Published", impact: "Social proof" },
+  { no: "004", name: "Merchandise distribution log", type: "Retention", platform: "Telegram", status: "Archived", impact: "Retention" },
+  { no: "005", name: "Campaign performance notes", type: "Report", platform: "Internal", status: "Reviewed", impact: "Reusable" },
+];
+
+function toneClass(tone) {
+  const map = {
+    green: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    blue: "border-sky-200 bg-sky-50 text-sky-700",
+    yellow: "border-amber-200 bg-amber-50 text-amber-700",
+    red: "border-rose-200 bg-rose-50 text-rose-700",
+    slate: "border-slate-200 bg-slate-100 text-slate-600",
+  };
+  return map[tone] || map.slate;
+}
+
+function SoftButton({ children, variant = "secondary", icon, className = "" }) {
   return (
-    <section {...props} className={cx("rounded-[34px] border border-slate-200/80 bg-white", className)}>
+    <button
+      type="button"
+      className={cx(
+        "inline-flex h-10 items-center justify-center gap-2 rounded-[14px] px-4 text-[13px] font-medium tracking-[-0.01em] transition",
+        variant === "primary"
+          ? "bg-[#1f1f1f] text-white shadow-[0_10px_24px_rgba(0,0,0,0.12)] hover:bg-black"
+          : "border border-[#dedede] bg-white text-[#2d2d2d] shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-[#cfcfcf] hover:bg-[#fafafa]",
+        className
+      )}
+    >
+      {icon && <Icon name={icon} />}
+      {children}
+    </button>
+  );
+}
+
+function Badge({ children, tone = "slate" }) {
+  return (
+    <span className={cx("inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium", toneClass(tone))}>
+      {children}
+    </span>
+  );
+}
+
+function SectionCard({ children, className = "", title, action, icon }) {
+  return (
+    <section className={cx("rounded-[22px] border border-[#eaeaea] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.035)]", className)}>
+      {(title || action) && (
+        <div className="flex items-center justify-between gap-4 border-b border-[#ededed] px-5 py-4">
+          <div className="flex min-w-0 items-center gap-2.5">
+            {icon && <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#e8e8e8] bg-[#f8f8f8] text-[#606060]"><Icon name={icon} /></span>}
+            <h2 className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">{title}</h2>
+          </div>
+          {action}
+        </div>
+      )}
       {children}
     </section>
   );
 }
 
-function LeftRail({ onSwitchClassic }) {
+function Sidebar({ onSwitchClassic }) {
   const nav = [
-    ["Overview", "#top"],
-    ["Attention", "#about"],
-    ["Evidence", "#kpi"],
-    ["Playbooks", "#winners"],
-    ["Samples", "#stars"],
-    ["Matrix", "#matrix"],
-    ["Why", "#why"],
+    ["Overview", "layout"],
+    ["Case Studies", "folder"],
+    ["Campaigns", "target"],
+    ["Analytics", "chart"],
+    ["Clients", "users"],
+    ["Content Library", "library"],
+    ["Settings", "settings"],
   ];
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[216px] border-r border-slate-200 bg-[#fbfbfa] px-7 py-8 lg:block">
-      <div className="flex items-center gap-3">
-        <img src="assets/lighthouse-logo.svg" alt="" className="h-6 w-auto" />
-        <div className="text-[15px] font-semibold tracking-[-0.03em] text-slate-950">Light House</div>
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-[#e7e7e7] bg-[#fbfbfb] p-5 lg:flex lg:flex-col">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-[#1f1f1f] text-white shadow-sm">
+            <Icon name="spark" className="h-4 w-4" />
+          </span>
+          <div>
+            <div className="text-[15px] font-semibold tracking-[-0.03em] text-[#1d1d1f]">Light House</div>
+            <div className="text-[11px] text-[#8a8a8a]">Case workspace</div>
+          </div>
+        </div>
       </div>
-      <nav className="mt-14 space-y-4">
-        {nav.map(([label, href], idx) => (
-          <a key={label} href={href} className={cx("block text-[13px] tracking-[-0.01em] transition", idx === 0 ? "font-medium text-slate-950" : "text-slate-400 hover:text-slate-700")}>
-            {label}
-          </a>
-        ))}
+      <nav className="mt-9 space-y-1">
+        {nav.map(([label, icon]) => {
+          const active = label === "Case Studies";
+          return (
+            <a
+              key={label}
+              href={label === "Overview" ? "#overview" : "#"}
+              className={cx(
+                "flex h-10 items-center gap-3 rounded-[14px] px-3 text-[13px] transition",
+                active ? "bg-white font-medium text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-[#ececec]" : "text-[#686868] hover:bg-white/70 hover:text-[#1d1d1f]"
+              )}
+            >
+              <Icon name={icon} className={cx("h-4 w-4", active ? "text-[#1d1d1f]" : "text-[#9a9a9a]")} />
+              {label}
+            </a>
+          );
+        })}
       </nav>
-      <button onClick={onSwitchClassic} className="absolute bottom-8 left-7 text-left text-[12px] leading-5 text-slate-400 transition hover:text-slate-700">
-        Return to<br/>classic homepage
-      </button>
+      <div className="mt-auto space-y-3">
+        <button onClick={onSwitchClassic} className="w-full rounded-[16px] border border-[#e6e6e6] bg-white px-4 py-3 text-left text-[12px] leading-5 text-[#686868] transition hover:border-[#d8d8d8] hover:text-[#1d1d1f]">
+          Return to classic homepage
+        </button>
+        <div className="flex items-center gap-3 rounded-[20px] border border-[#e8e8e8] bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.035)]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ededed] text-[13px] font-semibold text-[#3a3a3a]">LH</div>
+          <div className="min-w-0">
+            <div className="truncate text-[13px] font-medium text-[#1d1d1f]">Lighthouse Lab</div>
+            <div className="truncate text-[12px] text-[#8a8a8a]">Workspace owner</div>
+          </div>
+        </div>
+      </div>
     </aside>
   );
 }
 
-function TopBar({ onSwitchClassic }) {
+function Header({ onSwitchClassic }) {
   return (
-    <header className="mb-10 flex items-center gap-4">
-      <button onClick={onSwitchClassic} className="rounded-full bg-slate-950 px-4 py-2.5 text-[12px] font-medium text-white lg:hidden">Classic</button>
-      <label className="flex h-12 max-w-[560px] flex-1 items-center gap-3 rounded-full border border-slate-200 bg-white px-5">
-        <span className="text-[12px] font-medium text-slate-400">Search</span>
-        <input className="w-full bg-transparent text-[14px] outline-none placeholder:text-slate-400" placeholder="Search cases, campaigns, assets..." />
-      </label>
-      <a href="#matrix" className="hidden text-[13px] text-slate-400 transition hover:text-slate-800 md:block">Data</a>
-      <a href="#cta" className="hidden text-[13px] text-slate-400 transition hover:text-slate-800 md:block">Contact</a>
-      <div className="h-9 w-9 rounded-full border border-slate-200 bg-white" />
+    <header className="sticky top-0 z-20 border-b border-[#e8e8e8] bg-[#f6f6f6]/90 backdrop-blur-xl">
+      <div className="flex h-[72px] items-center justify-between gap-4 px-4 md:px-7">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[12px] text-[#8a8a8a]">
+            <button onClick={onSwitchClassic} className="mr-2 rounded-full border border-[#dddddd] bg-white px-3 py-1 text-[12px] text-[#555] lg:hidden">Classic</button>
+            <span>Case Studies</span>
+            <span>/</span>
+            <span className="truncate text-[#3a3a3a]">Plasma CN Campaign</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <SoftButton icon="download" className="hidden sm:inline-flex">Export Report</SoftButton>
+          <SoftButton icon="share" className="hidden md:inline-flex">Share</SoftButton>
+          <SoftButton variant="primary" icon="plus">New Case Study</SoftButton>
+        </div>
+      </div>
     </header>
   );
 }
 
-function CaseVisual({ project }) {
+function MetricCard({ item }) {
   return (
-    <div className="relative h-full min-h-[460px] overflow-hidden bg-[#f5f5f3]">
-      <div className="absolute inset-0 bg-[linear-gradient(145deg,#f7f7f5,#ecefed)]" />
-      <div className="absolute left-[10%] right-[10%] top-[18%] h-px bg-slate-300/70" />
-      <div className="absolute bottom-[-22%] left-[-10%] right-[-10%] h-[58%] rounded-[50%] bg-slate-300/25" />
-      <div className="absolute right-[12%] top-[14%] h-[260px] w-[260px] rounded-full border-[9px] border-white shadow-[0_1px_0_rgba(15,23,42,0.08)]" />
-      <div className="absolute bottom-[25%] left-[18%] h-2 w-2 rounded-full bg-slate-900" />
-      {project?.logo && <img src={project.logo} alt="" className="absolute left-8 top-8 h-12 w-12 rounded-2xl border border-white bg-white object-cover shadow-sm" />}
-      <div className="absolute bottom-8 left-8 right-8 flex items-end justify-between border-t border-slate-300/70 pt-5 text-[12px] text-slate-500">
-        <span>Media Preview</span>
-        <span>{project?.name || "Featured case"}</span>
+    <div className="rounded-[20px] border border-[#eaeaea] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.035)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-[12px] font-medium text-[#737373]">{item.label}</div>
+        <span className="flex h-8 w-8 items-center justify-center rounded-[12px] border border-[#e8e8e8] bg-[#f8f8f8] text-[#555]"><Icon name={item.icon} /></span>
+      </div>
+      <div className="mt-5 text-[34px] font-semibold leading-none tracking-[-0.055em] text-[#1d1d1f]">{item.value}</div>
+      <div className="mt-3 text-[12px] leading-5 text-[#8a8a8a]">{item.helper}</div>
+    </div>
+  );
+}
+
+function HeroSection() {
+  return (
+    <div id="overview" className="rounded-[26px] border border-[#eaeaea] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.035)]">
+      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+        <div className="p-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="green">{caseData.status}</Badge>
+            <Badge tone="blue">{caseData.period}</Badge>
+            <Badge tone="slate">Client: {caseData.client}</Badge>
+          </div>
+          <h1 className="mt-7 max-w-[880px] text-[36px] font-semibold leading-[1.02] tracking-[-0.055em] text-[#1d1d1f] md:text-[54px]">
+            {caseData.title}
+          </h1>
+          <p className="mt-4 text-[17px] tracking-[-0.02em] text-[#626262]">{caseData.subtitle}</p>
+          <p className="mt-6 max-w-[820px] text-[14px] leading-7 text-[#6f6f6f]">{caseData.summary}</p>
+          <div className="mt-7 flex flex-wrap gap-2">
+            {caseData.tags.map(tag => <Badge key={tag}>{tag}</Badge>)}
+          </div>
+        </div>
+        <SectionCard className="overflow-hidden">
+          <div className="relative min-h-[250px] bg-[#f3f4f4]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_65%_25%,rgba(255,255,255,0.95),rgba(255,255,255,0)_32%),linear-gradient(145deg,#f9f9f8,#e7ecea)]" />
+            <div className="absolute bottom-[-18%] left-[-15%] right-[-15%] h-[42%] rounded-[50%] bg-[#dfe6e4]" />
+            <div className="absolute right-[14%] top-[18%] h-[145px] w-[145px] rounded-full border-[7px] border-white/90 shadow-[0_1px_8px_rgba(0,0,0,0.04)]" />
+            <div className="absolute bottom-8 left-7 right-7 flex items-center justify-between border-t border-white/70 pt-4 text-[11px] text-[#777]">
+              <span>Case Visual</span>
+              <span>Plasma / CN</span>
+            </div>
+          </div>
+        </SectionCard>
+      </div>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {caseData.metrics.map(item => <MetricCard key={item.label} item={item} />)}
       </div>
     </div>
   );
 }
 
-function EvidenceFacts({ stats, vars }) {
-  const facts = [
-    { label: "Budget", value: fmtDashboard(stats.totalBudget), unit: "USDC" },
-    { label: "Reach", value: fmtDashboard(stats.totalImp), unit: "impressions" },
-    { label: "CPM", value: stats.avgCpm.toFixed(2), unit: "USDC avg" },
-    { label: "Sample", value: vars.baselineCount, unit: "baseline cases" },
-  ];
+function CampaignOverview() {
   return (
-    <div id="dashboard-metrics" className="grid border-t border-slate-200 md:grid-cols-4 md:divide-x md:divide-slate-200">
-      {facts.map((fact) => (
-        <div key={fact.label} className="py-5 md:px-7 first:md:pl-0">
-          <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{fact.label}</div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <div className="text-[26px] font-semibold tracking-[-0.055em] text-slate-950">{fact.value}</div>
-            <div className="text-[11px] text-slate-400">{fact.unit}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function PrimaryStage({ t, tp, vars, stats, featured }) {
-  return (
-    <Panel id="top" className="overflow-hidden">
-      <div className="grid xl:grid-cols-[0.98fr_1.02fr]">
-        <div className="flex min-h-[560px] flex-col justify-between px-7 py-8 md:px-12 md:py-12">
-          <div>
-            <div className="text-[12px] font-medium uppercase tracking-[0.18em] text-slate-400">Case Study / Selected</div>
-            <h1 className="mt-12 max-w-[680px] text-[52px] font-semibold leading-[0.96] tracking-[-0.065em] text-slate-950 md:text-[80px]">
-              {t("hero.h1_a")} <span className="text-slate-500">{t("hero.h1_b")}</span>
-            </h1>
-            <p className="mt-8 max-w-[600px] text-[16px] leading-[1.8] tracking-[-0.01em] text-slate-500">{tp("hero.sub")}</p>
-          </div>
-          <div className="mt-12">
-            <div className="flex flex-wrap items-center gap-3">
-              <ProductButton href={projectHref(featured)}>Open featured case</ProductButton>
-              <ProductButton href="#about" variant="secondary">Review the system</ProductButton>
-            </div>
-            <p className="mt-5 text-[12px] text-slate-400">{vars.baselineCount} reviewed cases. Metrics stay in service of the story.</p>
-          </div>
-        </div>
-        <CaseVisual project={featured} />
-      </div>
-      <div className="px-7 md:px-12">
-        <EvidenceFacts stats={stats} vars={vars} />
-      </div>
-    </Panel>
-  );
-}
-
-function SectionIntro({ id, eyebrow, title, accent, body }) {
-  return (
-    <section id={id} className="mt-24">
-      <div className="grid gap-8 md:grid-cols-[220px_1fr]">
-        <div className="text-[12px] font-medium uppercase tracking-[0.18em] text-slate-400">{eyebrow}</div>
-        <div>
-          <h2 className="max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.055em] text-slate-950 md:text-[64px]">
-            {title}{accent && <span className="text-slate-500">{accent}</span>}
-          </h2>
-          {body && <p className="mt-6 max-w-[720px] text-[16px] leading-[1.8] text-slate-500">{body}</p>}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function AboutSectionLight({ t, tp }) {
-  const caps = ["cap1", "cap2", "cap3", "cap4"];
-  return (
-    <>
-      <SectionIntro id="about" eyebrow={t("about.kicker")} title={t("about.h2_a")} accent={`${t("about.h2_b")}${t("about.h2_c")}`} body={t("about.p")} />
-      <div className="mt-10 grid gap-px overflow-hidden rounded-[30px] border border-slate-200 bg-slate-200 md:grid-cols-4">
-        {caps.map((cap) => (
-          <div key={cap} className="bg-white p-6">
-            <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">{t(`about.${cap}.en`)}</div>
-            <div className="mt-5 text-[22px] font-semibold tracking-[-0.04em] text-slate-950">{t(`about.${cap}.t`)}</div>
-            <p className="mt-4 text-[14px] leading-7 text-slate-500">{t(`about.${cap}.d`)}</p>
+    <SectionCard title="Campaign Overview" icon="folder">
+      <div className="space-y-5 p-5">
+        {caseData.overview.map(item => (
+          <div key={item.label} className="rounded-[18px] border border-[#eeeeee] bg-[#fbfbfb] p-4">
+            <div className="text-[12px] font-medium text-[#8a8a8a]">{item.label}</div>
+            <p className="mt-2 text-[14px] leading-7 text-[#4d4d4d]">{item.text}</p>
           </div>
         ))}
       </div>
-      <div className="mt-6 grid gap-3 text-[13px] text-slate-500 md:grid-cols-3">
-        {["about.f1", "about.f2", "about.f3"].map(key => <div key={key} className="rounded-full border border-slate-200 bg-white px-5 py-3">{tp(key)}</div>)}
-      </div>
-    </>
+    </SectionCard>
   );
 }
 
-function KpiSectionLight({ t, tp, stats }) {
-  const kpis = [
-    [t("kpi.k1"), fmtDashboard(stats.totalBudget), t("kpi.k1u"), tp("kpi.k1n")],
-    [t("kpi.k2"), fmtDashboard(stats.totalImp), t("kpi.k2u"), tp("kpi.k2n")],
-    [t("kpi.k3"), fmtDashboard(stats.totalEng), t("kpi.k3u"), t("kpi.k3n")],
-    [t("kpi.k4"), stats.avgCpm.toFixed(2), t("kpi.k4u"), t("kpi.k4n")],
-    [t("kpi.k5"), stats.lowestCpm.toFixed(2), t("kpi.k5u"), tp("kpi.k5n")],
-    [t("kpi.k6"), `${stats.peakEr.toFixed(2)}%`, t("kpi.k6u"), tp("kpi.k6n")],
-  ];
+function ContentSystem() {
   return (
-    <>
-      <SectionIntro id="kpi" eyebrow={t("kpi.kicker")} title={t("kpi.h2_a")} accent={t("kpi.h2_b")} body={tp("kpi.p")} />
-      <div className="mt-10 grid gap-px overflow-hidden rounded-[30px] border border-slate-200 bg-slate-200 md:grid-cols-3">
-        {kpis.map(([label, value, unit, note]) => (
-          <div key={label} className="bg-white p-7">
-            <div className="flex items-center justify-between gap-4">
-              <div className="text-[12px] font-medium text-slate-500">{label}</div>
-              <div className="text-[10px] uppercase tracking-[0.14em] text-slate-400">{unit}</div>
+    <SectionCard title="Content System" icon="library">
+      <div className="divide-y divide-[#ededed]">
+        {contentRows.map(row => (
+          <div key={row.type} className="grid gap-4 px-5 py-4 md:grid-cols-[1fr_120px_100px_120px] md:items-center">
+            <div>
+              <div className="text-[14px] font-medium tracking-[-0.02em] text-[#1d1d1f]">{row.type}</div>
+              <div className="mt-1 text-[12px] leading-5 text-[#858585]">{row.description}</div>
             </div>
-            <div className="mt-8 text-[42px] font-semibold tracking-[-0.06em] text-slate-950">{value}</div>
-            <p className="mt-4 text-[13px] leading-6 text-slate-500">{note}</p>
+            <div className="text-[12px] text-[#686868]">{row.platform}</div>
+            <Badge tone={row.status === "Ongoing" ? "yellow" : row.status === "Drafted" ? "blue" : "green"}>{row.status}</Badge>
+            <Badge tone={row.tone}>{row.impact}</Badge>
           </div>
         ))}
       </div>
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <Panel className="p-6">
-          <div className="text-[12px] text-slate-400">{t("kpi.sub1.k")}</div>
-          <div className="mt-4 text-[34px] font-semibold tracking-[-0.05em]">{stats.lowestCpe.toFixed(2)}</div>
-          <p className="mt-2 text-[13px] text-slate-500">{tp("kpi.sub1.who")}</p>
-        </Panel>
-        <Panel className="p-6">
-          <div className="text-[12px] text-slate-400">{t("kpi.sub2.k")}</div>
-          <div className="mt-4 text-[34px] font-semibold tracking-[-0.05em]">{fmtDashboard(stats.maxImp)}</div>
-          <p className="mt-2 text-[13px] text-slate-500">{tp("kpi.sub2.who")}</p>
-        </Panel>
-      </div>
-    </>
+    </SectionCard>
   );
 }
 
-function WinnersSectionLight({ t, tp, projects, stats }) {
-  const base = projects.filter(p => p.is_baseline !== 0);
-  const byCpm = [...base].sort((a,b) => (a.cpm || Infinity) - (b.cpm || Infinity)).slice(0,3);
-  const byEr = [...base].sort((a,b) => (b.er || 0) - (a.er || 0)).slice(0,3);
-  const byCpe = [...base].sort((a,b) => (a.cpe || Infinity) - (b.cpe || Infinity)).slice(0,3);
-  const lanes = [
-    ["d1", byCpm, "cpm", ""],
-    ["d2", byEr, "er", "%"],
-    ["d3", byCpe, "cpe", ""],
-  ];
-  const comparisons = [
-    [t("win.compare.lh_cpm"), stats.avgCpm.toFixed(2), t("win.compare.metric_cpm"), tp("win.compare.lighthouse_note")],
-    [t("win.compare.lh_cpe"), stats.avgCpe.toFixed(2), t("win.compare.metric_cpe"), tp("win.compare.lighthouse_note")],
-    [t("win.compare.kol_cpm"), TOP_KOL_REFERENCE.cpm.toFixed(2), t("win.compare.metric_cpm"), t("win.compare.placeholder")],
-    [t("win.compare.kol_cpe"), TOP_KOL_REFERENCE.cpe.toFixed(2), t("win.compare.metric_cpe"), t("win.compare.placeholder")],
-  ];
+function ActivityLog() {
   return (
-    <>
-      <SectionIntro id="winners" eyebrow={t("win.kicker")} title={t("win.h2_a")} accent={t("win.h2_b")} body={t("win.p")} />
-      <div className="mt-10 grid gap-5 lg:grid-cols-3">
-        {lanes.map(([key, rows, metricKey, suffix]) => (
-          <Panel key={key} className="p-7">
-            <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">{t(`win.${key}.en`)}</div>
-            <div className="mt-4 text-[26px] font-semibold tracking-[-0.045em] text-slate-950">{t(`win.${key}.label`)}</div>
-            <p className="mt-4 min-h-[72px] text-[14px] leading-7 text-slate-500">{t(`win.${key}.lead`)}</p>
-            <div className="mt-7 space-y-5">
-              {rows.map((project, idx) => (
-                <a key={project.slug || project.name} href={projectHref(project)} className="block border-t border-slate-200 pt-4">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <div className="text-[14px] font-medium text-slate-700">#{idx + 1} {project.name}</div>
-                    <div className="text-[26px] font-semibold tracking-[-0.04em] text-slate-950">{Number(project[metricKey] || 0).toFixed(2)}{suffix}</div>
-                  </div>
-                  <div className="mt-2 text-[12px] text-slate-400">{fmtDashboard(project.budget || 0)} USDC / {fmtDashboard(project.imp || 0)} imp</div>
-                </a>
-              ))}
-            </div>
-            <p className="mt-8 border-t border-slate-200 pt-5 text-[14px] leading-7 text-slate-500">{t(`win.${key}.take`)}</p>
-          </Panel>
-        ))}
-      </div>
-      <Panel className="mt-6 p-7">
-        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.4fr]">
-          <div>
-            <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">{t("win.compare.eyebrow")}</div>
-            <h3 className="mt-4 text-[34px] font-semibold leading-tight tracking-[-0.055em]">{t("win.compare.title_a")}<span className="text-slate-500">{t("win.compare.title_b")}</span></h3>
-            <p className="mt-4 text-[14px] leading-7 text-slate-500">{t("win.compare.desc")}</p>
-          </div>
-          <div className="grid gap-px overflow-hidden rounded-[24px] border border-slate-200 bg-slate-200 sm:grid-cols-2">
-            {comparisons.map(([label, value, unit, note]) => (
-              <div key={label} className="bg-white p-5">
-                <div className="flex justify-between gap-3 text-[11px] uppercase tracking-[0.14em] text-slate-400"><span>{label}</span><span>{unit}</span></div>
-                <div className="mt-6 text-[38px] font-semibold tracking-[-0.055em]">{value}</div>
-                <p className="mt-3 text-[12px] leading-5 text-slate-500">{note}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Panel>
-    </>
-  );
-}
-
-function StarsSectionLight({ t, projects }) {
-  const stars = selectStars(projects);
-  return (
-    <>
-      <section id="dashboard-gallery" className="mt-24">
-        <div className="mb-6 flex items-end justify-between gap-6">
-          <div>
-            <h2 className="text-[25px] font-semibold tracking-[-0.04em] text-slate-950">Featured Case Library</h2>
-            <p className="mt-2 max-w-[560px] text-[14px] leading-6 text-slate-500">Curated project cases remain close to the sample story, instead of becoming a separate dashboard grid.</p>
-          </div>
-          <a href="#matrix" className="hidden text-[13px] font-medium text-slate-400 transition hover:text-slate-800 sm:block">See All</a>
-        </div>
-        <div className="grid gap-7 lg:grid-cols-3">
-          {projects.slice(0, 3).map((project, index) => (
-            <a key={project.slug || project.name} href={projectHref(project)} className="group block border-t border-slate-200 pt-5 transition">
-              <div className="flex gap-5">
-                <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-[20px] border border-slate-200 bg-slate-100">
-                  <div className="absolute inset-0 bg-[linear-gradient(145deg,#f8f8f7,#e9eceb)]" />
-                  {project.logo && <img src={project.logo} alt="" className="absolute left-4 top-4 h-9 w-9 rounded-xl border border-white bg-white object-cover" />}
+    <SectionCard title="Timeline / Execution Log" icon="calendar">
+      <div className="p-5">
+        <div className="space-y-3">
+          {activityLog.map(item => (
+            <div key={item.title} className="flex gap-4 rounded-[18px] border border-[#eeeeee] bg-[#fbfbfb] p-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#555]">
+                <Icon name={item.icon} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[14px] font-medium text-[#1d1d1f]">{item.title}</div>
+                  <div className="text-[12px] text-[#969696]">{item.time}</div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">Case {String(index + 1).padStart(2, "0")}</div>
-                  <div className="mt-2 truncate text-[20px] font-semibold tracking-[-0.04em] text-slate-950">{project.name}</div>
-                  <div className="mt-4 flex gap-5 text-[12px] text-slate-400">
-                    <span>{fmtDashboard(project.imp || 0)} reach</span>
-                    <span>{Number(project.cpm || 0).toFixed(2)} CPM</span>
-                  </div>
-                </div>
+                <p className="mt-1 text-[12px] leading-5 text-[#777]">{item.detail}</p>
+                <div className="mt-3"><Badge tone="slate">{item.tag}</Badge></div>
               </div>
-            </a>
+            </div>
           ))}
         </div>
-      </section>
-      <SectionIntro id="stars" eyebrow={t("stars.kicker")} title={`${t("stars.h2_a")} `} accent={t("stars.h2_b")} body={t("stars.p")} />
-      <div className="mt-10 grid gap-5 md:grid-cols-2">
-        {stars.map(({ slotKey, project }, idx) => {
-          const vars = {
-            starName: project.name,
-            starBudget: fmtDashboard(project.budget || 0),
-            starImp: fmtDashboard(project.imp || 0),
-            starCpm: Number(project.cpm || 0).toFixed(2),
-            starEr: Number(project.er || 0).toFixed(2),
-            starCpe: Number(project.cpe || 0).toFixed(2),
-          };
-          const highlight = slotKey === "s2" ? [t("stars.stat.imp"), fmtDashboard(project.imp || 0), t("stars.u.imp")]
-            : slotKey === "s3" ? [t("stars.stat.er"), Number(project.er || 0).toFixed(2), t("stars.u.pct")]
-            : slotKey === "s4" ? [t("stars.stat.cpm"), Number(project.cpm || 0).toFixed(2), t("stars.u.usdc")]
-            : [t("stars.stat.cpe"), Number(project.cpe || 0).toFixed(2), t("stars.u.usdc")];
-          return (
-            <Panel key={slotKey} className="overflow-hidden">
-              <div className="flex gap-5 p-6">
-                <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-[22px] border border-slate-200 bg-slate-100">
-                  <div className="absolute inset-0 bg-[linear-gradient(145deg,#f8f8f7,#e9eceb)]" />
-                  {project.logo && <img src={project.logo} alt="" className="absolute left-4 top-4 h-10 w-10 rounded-xl border border-white bg-white object-cover" />}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">{t("stars.sample")} {String(idx + 1).padStart(2, "0")}/04</div>
-                  <a href={projectHref(project)} className="mt-2 block truncate text-[26px] font-semibold tracking-[-0.05em] text-slate-950">{project.name}</a>
-                  <div className="mt-3 text-[14px] font-medium text-slate-600">{t(`stars.${slotKey}.tag`)}</div>
-                </div>
-              </div>
-              <div className="border-t border-slate-200 p-6">
-                <p className="text-[15px] leading-8 text-slate-600">{tplDashboard(t(`stars.${slotKey}.story`), vars)}</p>
-                <div className="mt-6 grid grid-cols-3 gap-px overflow-hidden rounded-[18px] border border-slate-200 bg-slate-200">
-                  {[
-                    [t("stars.stat.budget"), fmtDashboard(project.budget || 0), t("stars.u.usdc")],
-                    [t("stars.stat.imp"), fmtDashboard(project.imp || 0), t("stars.u.imp")],
-                    highlight,
-                  ].map(([label, value, unit]) => (
-                    <div key={label} className="bg-white p-4">
-                      <div className="text-[11px] text-slate-400">{label}</div>
-                      <div className="mt-2 text-[20px] font-semibold tracking-[-0.04em]">{value}</div>
-                      <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-slate-400">{unit}</div>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-5 text-[13px] leading-6 text-slate-500">{tplDashboard(t(`stars.${slotKey}.take`), vars)}</p>
-              </div>
-            </Panel>
-          );
-        })}
       </div>
-    </>
+    </SectionCard>
   );
 }
 
-function MatrixSectionLight({ t, tp, projects, stats }) {
-  const stars = selectStars(projects);
-  const rows = [...projects].sort((a,b) => (a.cpm || 0) - (b.cpm || 0));
+function TweetEmbedPlaceholder() {
+  const slots = ["Primary launch post", "Community thread", "Offline recap"];
   return (
-    <>
-      <SectionIntro id="matrix" eyebrow={t("matrix.kicker")} title={tp("matrix.h2_a")} accent={t("matrix.h2_b")} body={t("matrix.p")} />
-      <Panel className="mt-10 overflow-hidden">
-        <div className="grid gap-px bg-slate-200 lg:grid-cols-[0.95fr_1.4fr]">
-          <div className="bg-white p-7">
-            <div className="text-[12px] font-medium uppercase tracking-[0.16em] text-slate-400">Campaign Metrics</div>
-            <div className="mt-3 text-[13px] leading-6 text-slate-500">{tp("matrix.scatter_note")}</div>
-            <div className="mt-8 space-y-5">
-              {[
-                [t("matrix.ref_cpm"), stats.avgCpm.toFixed(2)],
-                [t("matrix.ref_er"), `${stats.avgEr.toFixed(2)}%`],
-                [t("matrix.foot1"), ""],
-                [t("matrix.foot2"), ""],
-                [t("matrix.foot3"), ""],
-              ].map(([label, value]) => (
-                <div key={label} className="border-t border-slate-200 pt-4">
-                  <div className="text-[13px] text-slate-500">{label}</div>
-                  {value && <div className="mt-2 text-[32px] font-semibold tracking-[-0.05em]">{value}</div>}
-                </div>
-              ))}
+    <SectionCard title="Tweet Embed Section" icon="message">
+      <div className="grid gap-4 p-5 md:grid-cols-3">
+        {slots.map(slot => (
+          <div key={slot} className="relative flex min-h-[170px] items-center justify-center overflow-hidden rounded-[20px] border border-dashed border-[#d7d7d7] bg-[#fafafa] p-5 text-center">
+            <div className="absolute -right-1 top-0 text-[96px] font-black leading-none text-black/[0.035]">X</div>
+            <div className="relative">
+              <div className="text-[13px] font-medium text-[#3d3d3d]">Tweet Embed Placeholder</div>
+              <div className="mt-1 text-[12px] text-[#8a8a8a]">{slot}</div>
+              <div className="mt-3 text-[11px] text-[#aaa]">Supports Twitter / X embed</div>
             </div>
-          </div>
-          <div className="bg-white p-7">
-            <div className="flex items-end justify-between gap-5">
-              <div>
-                <div className="text-[12px] font-medium uppercase tracking-[0.16em] text-slate-400">{tp("matrix.table.title")}</div>
-                <h3 className="mt-2 text-[26px] font-semibold tracking-[-0.045em]">{t("matrix.table.sub")}</h3>
-              </div>
-              <div className="hidden text-[11px] uppercase tracking-[0.16em] text-slate-400 md:block">{t("matrix.table.compiled")}</div>
-            </div>
-            <div className="mt-7 overflow-x-auto">
-              <table className="w-full min-w-[780px] text-left text-[13px]">
-                <thead className="border-b border-slate-200 text-[11px] uppercase tracking-[0.14em] text-slate-400">
-                  <tr>
-                    <th className="py-3 pr-4">{t("matrix.col.num")}</th>
-                    <th className="py-3 pr-4">{t("matrix.col.name")}</th>
-                    <th className="py-3 pr-4 text-right">{t("matrix.col.budget")}</th>
-                    <th className="py-3 pr-4 text-right">{t("matrix.col.imp")}</th>
-                    <th className="py-3 pr-4 text-right">{t("matrix.col.cpm")}</th>
-                    <th className="py-3 pr-4 text-right">{t("matrix.col.er")}</th>
-                    <th className="py-3 pr-4 text-right">{t("matrix.col.cpe")}</th>
-                    <th className="py-3 text-right">{t("matrix.col.tag")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {rows.map((project, idx) => (
-                    <tr key={project.slug || project.name} className={project.is_baseline === 0 ? "text-slate-400" : ""}>
-                      <td className="py-4 pr-4 text-slate-400">{String(idx + 1).padStart(2, "0")}</td>
-                      <td className="py-4 pr-4">
-                        <a href={projectHref(project)} className="flex items-center gap-3 font-medium text-slate-950">
-                          {project.logo && <img src={project.logo} alt="" className="h-8 w-8 rounded-lg object-cover" />}
-                          {project.name}
-                        </a>
-                      </td>
-                      <td className="py-4 pr-4 text-right tabular-nums">{fmtDashboard(project.budget || 0)}</td>
-                      <td className="py-4 pr-4 text-right tabular-nums">{fmtDashboard(project.imp || 0)}</td>
-                      <td className="py-4 pr-4 text-right tabular-nums">{Number(project.cpm || 0).toFixed(2)}</td>
-                      <td className="py-4 pr-4 text-right tabular-nums">{Number(project.er || 0).toFixed(2)}%</td>
-                      <td className="py-4 pr-4 text-right tabular-nums">{Number(project.cpe || 0).toFixed(2)}</td>
-                      <td className="py-4 text-right text-slate-500">{tagForProject(project, stars, t) || "-"}</td>
-                    </tr>
-                  ))}
-                  <tr className="bg-slate-50 font-medium">
-                    <td className="py-4 pr-4">Σ</td>
-                    <td className="py-4 pr-4">{t("matrix.sum.label")}</td>
-                    <td className="py-4 pr-4 text-right">{fmtDashboard(stats.totalBudget)}</td>
-                    <td className="py-4 pr-4 text-right">{fmtDashboard(stats.totalImp)}</td>
-                    <td className="py-4 pr-4 text-right">{stats.avgCpm.toFixed(2)}</td>
-                    <td className="py-4 pr-4 text-right">{stats.avgEr.toFixed(2)}%</td>
-                    <td className="py-4 pr-4 text-right">{stats.avgCpe.toFixed(2)}</td>
-                    <td className="py-4 text-right">{t("matrix.sum.tag")}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </Panel>
-    </>
-  );
-}
-
-function WhySectionLight({ t, tp }) {
-  const items = ["w1","w2","w3","w4","w5","w6"];
-  return (
-    <>
-      <SectionIntro id="why" eyebrow={t("why.kicker")} title={t("why.h2_a")} accent={t("why.h2_b")} />
-      <div className="mt-10 grid gap-px overflow-hidden rounded-[30px] border border-slate-200 bg-slate-200 md:grid-cols-3">
-        {items.map((item, idx) => (
-          <div key={item} className="min-h-[230px] bg-white p-7">
-            <div className="flex justify-between text-[11px] uppercase tracking-[0.16em] text-slate-400"><span>{String(idx + 1).padStart(2, "0")}</span><span>{t("why.principle")}</span></div>
-            <h3 className="mt-10 text-[24px] font-semibold tracking-[-0.045em]">{t(`why.${item}.t`)}</h3>
-            <p className="mt-4 text-[14px] leading-7 text-slate-500">{tp(`why.${item}.d`)}</p>
           </div>
         ))}
       </div>
-    </>
+    </SectionCard>
   );
 }
 
-function TweetEmbedLight() {
+function PerformancePanel() {
   return (
-    <Panel className="mt-16 overflow-hidden p-7">
-      <div className="grid gap-7 lg:grid-cols-[0.9fr_1.2fr] lg:items-center">
-        <div>
-          <div className="text-[12px] font-medium uppercase tracking-[0.18em] text-slate-400">Tweet Embed</div>
-          <h2 className="mt-4 text-[34px] font-semibold tracking-[-0.055em] text-slate-950">Public conversation evidence</h2>
-          <p className="mt-4 max-w-[520px] text-[14px] leading-7 text-slate-500">A reserved surface for Twitter / X embeds, launch posts, or representative discussion threads attached to the case library.</p>
-        </div>
-        <div className="relative flex min-h-[190px] items-center justify-center overflow-hidden rounded-[26px] border border-dashed border-slate-300 bg-slate-50 text-center">
-          <div className="absolute right-6 top-0 text-[150px] font-black leading-none text-slate-950/[0.025]">X</div>
-          <div className="relative">
-            <div className="text-[13px] font-medium text-slate-600">Tweet embed placeholder</div>
-            <div className="mt-1 text-[12px] text-slate-400">Supports Twitter / X blockquote or iframe</div>
+    <SectionCard title="Performance Summary" icon="chart">
+      <div className="space-y-5 p-5">
+        {performanceItems.map(item => (
+          <div key={item.label}>
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="text-[13px] text-[#676767]">{item.label}</div>
+              <div className="text-[18px] font-semibold tracking-[-0.04em] text-[#1d1d1f]">{item.value}</div>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eeeeee]">
+              <div className="h-full rounded-full bg-[#2f2f2f]" style={{ width: `${item.progress}%` }} />
+            </div>
           </div>
-        </div>
+        ))}
       </div>
-    </Panel>
+    </SectionCard>
   );
 }
 
-function CtaSectionLight({ t, vars }) {
+function CommunityFunnel() {
+  const steps = ["X", "Telegram", "Offline", "UGC"];
   return (
-    <Panel id="cta" className="mt-20 overflow-hidden bg-slate-950 text-white">
-      <div className="grid gap-8 p-8 md:p-12 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
-        <div>
-          <div className="text-[12px] font-medium uppercase tracking-[0.18em] text-white/40">{t("cta.kicker")}</div>
-          <h2 className="mt-8 max-w-[820px] text-[46px] font-semibold leading-[1.02] tracking-[-0.06em] md:text-[72px]">
-            {t("cta.h2_a")}<br/><span className="text-white/55">{t("cta.h2_b")}</span>
-          </h2>
-          <p className="mt-7 max-w-[620px] text-[16px] leading-8 text-white/55">{t("cta.p")}</p>
-        </div>
-        <div className="lg:text-right">
-          <div className="mb-8 grid grid-cols-3 gap-4 text-left">
-            <div><div className="text-[26px] font-semibold">{vars.totalBudgetLabel}</div><div className="text-[11px] uppercase tracking-[0.14em] text-white/35">{t("cta.s1.k")}</div></div>
-            <div><div className="text-[26px] font-semibold">{vars.totalImpLabel}</div><div className="text-[11px] uppercase tracking-[0.14em] text-white/35">{t("cta.s2.k")}</div></div>
-            <div><div className="text-[26px] font-semibold">{t("cta.s3.v")}</div><div className="text-[11px] uppercase tracking-[0.14em] text-white/35">{t("cta.s3.k")}</div></div>
-          </div>
-          <div className="flex flex-wrap gap-3 lg:justify-end">
-            <a href="https://x.com/Lighthouse_2026" className="rounded-full bg-white px-5 py-3 text-[13px] font-medium text-slate-950">{t("cta.btn1")}</a>
-            <a href="mailto:Lighthouse@mangolabs.org" className="rounded-full border border-white/20 px-5 py-3 text-[13px] font-medium text-white/70">{t("cta.btn2")}</a>
-          </div>
+    <SectionCard title="Community Funnel" icon="target">
+      <div className="p-5">
+        <div className="grid gap-3">
+          {steps.map((step, idx) => (
+            <div key={step} className="flex items-center gap-3 rounded-[18px] border border-[#eeeeee] bg-[#fbfbfb] p-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[12px] font-semibold text-[#1d1d1f] ring-1 ring-[#e8e8e8]">{idx + 1}</span>
+              <div className="flex-1 text-[13px] font-medium text-[#333]">{step}</div>
+              {idx < steps.length - 1 && <Icon name="arrow" className="text-[#9a9a9a]" />}
+            </div>
+          ))}
         </div>
       </div>
-    </Panel>
+    </SectionCard>
+  );
+}
+
+function TopMoments() {
+  return (
+    <SectionCard title="Top Campaign Moments" icon="spark">
+      <div className="divide-y divide-[#ededed]">
+        {moments.map(item => (
+          <div key={item.name} className="flex items-center justify-between gap-4 px-5 py-4">
+            <div className="min-w-0">
+              <div className="truncate text-[13px] font-medium text-[#1d1d1f]">{item.name}</div>
+            </div>
+            <Badge tone={item.tone}>{item.tag}</Badge>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
+
+function KeyTakeaways() {
+  return (
+    <SectionCard title="Key Takeaways" icon="check">
+      <div className="space-y-2 p-5">
+        {takeaways.map((item, idx) => (
+          <div key={item} className="flex gap-3 rounded-[16px] border border-[#eeeeee] bg-[#fbfbfb] p-3">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-[#777] ring-1 ring-[#e8e8e8]">{idx + 1}</span>
+            <p className="text-[13px] leading-6 text-[#555]">{item}</p>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
+
+function DeliverablesTable() {
+  return (
+    <SectionCard
+      title="Case Study Assets / Deliverables"
+      icon="file"
+      action={<button className="text-[12px] font-medium text-[#777] hover:text-[#1d1d1f]">View all</button>}
+      className="overflow-hidden"
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[860px] text-left text-[13px]">
+          <thead className="bg-[#f4f4f4] text-[11px] uppercase tracking-[0.08em] text-[#7a7a7a]">
+            <tr>
+              <th className="px-5 py-3 font-medium">No.</th>
+              <th className="px-5 py-3 font-medium">Asset Name</th>
+              <th className="px-5 py-3 font-medium">Type</th>
+              <th className="px-5 py-3 font-medium">Platform</th>
+              <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 font-medium">Impact</th>
+              <th className="px-5 py-3 text-right font-medium">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#ededed] bg-white">
+            {deliverables.map(row => (
+              <tr key={row.no} className="transition hover:bg-[#fafafa]">
+                <td className="px-5 py-4 text-[#8a8a8a]">{row.no}</td>
+                <td className="px-5 py-4 font-medium text-[#1d1d1f]">{row.name}</td>
+                <td className="px-5 py-4 text-[#666]">{row.type}</td>
+                <td className="px-5 py-4 text-[#666]">{row.platform}</td>
+                <td className="px-5 py-4"><Badge tone={row.status === "Published" ? "green" : row.status === "Archived" ? "slate" : "blue"}>{row.status}</Badge></td>
+                <td className="px-5 py-4 text-[#666]">{row.impact}</td>
+                <td className="px-5 py-4 text-right"><button className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-[#f0f0f0]"><Icon name="more" className="text-[#777]" /></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </SectionCard>
   );
 }
 
 function DashboardView({ onSwitchClassic }) {
-  const { t } = useDashboardT();
   const projects = useDashboardProjects();
   const stats = React.useMemo(() => deriveDashboardStats(projects), [projects]);
-  const vars = React.useMemo(() => buildDashboardStatsVars(projects, stats), [projects, stats]);
-  const tp = (key) => tplDashboard(t(key), vars);
   const featured = projects[0] || {};
+  const bestReach = React.useMemo(() => {
+    return [...projects].sort((a, b) => Number(b.imp || 0) - Number(a.imp || 0))[0] || featured;
+  }, [projects, featured]);
 
   return (
-    <div className="min-h-screen bg-[#f7f7f5] text-slate-950" style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text',Inter,'Helvetica Neue',Arial,'Noto Sans SC',sans-serif"}}>
-      <LeftRail onSwitchClassic={onSwitchClassic} />
-      <main className="lg:pl-[216px]">
-        <div className="mx-auto max-w-[1320px] px-5 py-5 md:px-9 md:py-8 xl:px-12">
-          <TopBar onSwitchClassic={onSwitchClassic} />
-          <PrimaryStage t={t} tp={tp} vars={vars} stats={stats} featured={featured} />
-          <AboutSectionLight t={t} tp={tp} />
-          <KpiSectionLight t={t} tp={tp} stats={stats} />
-          <WinnersSectionLight t={t} tp={tp} projects={projects} stats={stats} />
-          <StarsSectionLight t={t} projects={projects} />
-          <MatrixSectionLight t={t} tp={tp} projects={projects} stats={stats} />
-          <WhySectionLight t={t} tp={tp} />
-          <TweetEmbedLight />
-          <CtaSectionLight t={t} vars={vars} />
+    <div className="min-h-screen bg-[#f6f6f6] text-[#1d1d1f]" style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text',Inter,'Helvetica Neue',Arial,'Noto Sans SC',sans-serif" }}>
+      <Sidebar onSwitchClassic={onSwitchClassic} />
+      <main className="lg:pl-[260px]">
+        <Header onSwitchClassic={onSwitchClassic} />
+        <div className="mx-auto max-w-[1480px] space-y-5 px-4 py-5 md:px-7 md:py-7">
+          <HeroSection />
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+            <div className="space-y-5">
+              <CampaignOverview />
+              <ContentSystem />
+              <ActivityLog />
+              <TweetEmbedPlaceholder />
+            </div>
+            <aside className="space-y-5">
+              <PerformancePanel />
+              <CommunityFunnel />
+              <TopMoments />
+              <SectionCard title="Live Benchmark Context" icon="chart">
+                <div className="p-5">
+                  <div className="rounded-[18px] border border-[#eeeeee] bg-[#fbfbfb] p-4">
+                    <div className="text-[12px] text-[#8a8a8a]">Current lighthouse pool</div>
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-[24px] font-semibold tracking-[-0.05em]">{fmtDashboard(stats.totalImp)}</div>
+                        <div className="text-[11px] text-[#8a8a8a]">Impressions</div>
+                      </div>
+                      <div>
+                        <div className="text-[24px] font-semibold tracking-[-0.05em]">{stats.avgCpm.toFixed(2)}</div>
+                        <div className="text-[11px] text-[#8a8a8a]">Weighted CPM</div>
+                      </div>
+                    </div>
+                  </div>
+                  <a href={projectHref(bestReach)} className="mt-3 flex items-center justify-between rounded-[18px] border border-[#eeeeee] bg-white p-4 text-[13px] transition hover:bg-[#fafafa]">
+                    <span className="min-w-0 truncate">Best reach sample: {bestReach?.name || "N/A"}</span>
+                    <Icon name="arrow" className="text-[#777]" />
+                  </a>
+                </div>
+              </SectionCard>
+              <KeyTakeaways />
+            </aside>
+          </div>
+          <DeliverablesTable />
         </div>
       </main>
     </div>
