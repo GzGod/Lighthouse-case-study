@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { pool, initDB, seedProjects, seedI18n, seedIPCases, refreshAttentionMarketI18n } = require('./db');
+const { seedProjectCasePages } = require('./project-case-defaults');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
@@ -14,6 +15,7 @@ async function start() {
   // Initialize database tables
   await initDB();
   await seedProjects();
+  await seedProjectCasePages(pool);
   await seedIPCases();
 
   // Keep every default DICT key editable without overwriting CMS edits.

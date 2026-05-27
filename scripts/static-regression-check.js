@@ -12,6 +12,7 @@ const admin = read('admin/admin.jsx');
 const i18n = read('i18n.jsx');
 const appPart3 = read('app-part3.jsx');
 const projectsRoute = read('server/routes/projects.js');
+const projectCaseDefaults = read('server/project-case-defaults.js');
 const ipCasesRoute = read('server/routes/ip-cases.js');
 const i18nRoute = read('server/routes/i18n.js');
 const uploadRoute = read('server/routes/upload.js');
@@ -280,6 +281,28 @@ test('Project case pages should be editable in the admin and linked from homepag
   assert.ok(/projectPreviewSrc/.test(admin), 'admin preview should switch to the project case page while editing a project');
   assert.ok(/href=\{s\.href\}/.test(appPart2), 'Star sample cards should link to project case pages');
   assert.ok(/projectCaseHref\(r\)/.test(appPart3), 'Matrix table project rows should link to project case pages');
+});
+
+test('Project case defaults should fill every visible homepage project with CMS-safe copy', () => {
+  const slugs = [
+    'hashkey-exchange', 'portals', 'zkverify', 'sonicsvm', 'puffpaw', 'allora', 'maiga', 'yei-finance',
+    'kamino', 'fight-id', 'sentient', 'ff', 'lit-protocol', 'heyelsa', 'zetachain', 'surf'
+  ];
+  assert.ok(/PROJECT_CASE_PAGES/.test(projectCaseDefaults), 'missing exported project case defaults');
+  assert.ok(/async function seedProjectCasePages/.test(projectCaseDefaults), 'missing safe project case seeding function');
+  for (const slug of slugs) assert.ok(projectCaseDefaults.includes(slug), `missing default case page for ${slug}`);
+  for (const field of ['hero_line_1', 'summary', 'outcomes', 'challenges', 'solution_1_title', 'testimonial', 'cta_title']) {
+    assert.ok(projectCaseDefaults.includes(field), `case defaults do not populate ${field}`);
+  }
+  assert.ok(/project_case_pages/.test(projectCaseDefaults), 'defaults should be persisted into project_case_pages');
+  assert.ok(/EXCLUDED\.page_data \|\| project_case_pages\.page_data/.test(projectCaseDefaults), 'case page seed should fill missing fields without overwriting CMS edits');
+  assert.ok(/seedProjectCasePages\(pool\)/.test(serverIndex), 'server startup should seed project case defaults');
+  for (const token of ['\u9879\u76ee\u6807\u9898\u5360\u4f4d\u7b26', '\u5ba2\u6237\u540d\u79f0\u5360\u4f4d\u7b26', '\u5360\u4f4d\u7b26']) {
+    assert.ok(!projectCase.includes(token), `project case fallback still contains placeholder copy: ${token}`);
+  }
+  for (const token of ['\u951f', '\u940e', '\u95bb', '\u9365\u72b1\u7dbd', '\u6924\u572d\u6d30']) {
+    assert.ok(!projectCase.includes(token), `project case fallback still contains mojibake copy: ${token}`);
+  }
 });
 
 test('Homepage copy should position Lighthouse as a safe Web3 attention marketplace', () => {
