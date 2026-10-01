@@ -48,6 +48,12 @@ function normalizeProjectPayload(input, { partial = false } = {}) {
     }
   }
 
+  for (const field of ['data_source', 'data_as_of', 'provenance_note']) {
+    if (!partial || input[field] !== undefined) {
+      payload[field] = input[field] === null ? null : String(input[field] ?? '').trim();
+    }
+  }
+
   for (const [field, defaultValue] of Object.entries(NUMERIC_DEFAULTS)) {
     if (!partial || input[field] !== undefined) {
       const parsed = parseFiniteNumber(field, input[field] === undefined ? defaultValue : input[field]);
@@ -138,8 +144,8 @@ module.exports = function(pool) {
     try {
       const { rows: mx } = await pool.query('SELECT COALESCE(MAX(sort_order),0) as m FROM projects');
       const { rows } = await pool.query(
-        'INSERT INTO projects (name,logo,budget,impressions,cpm,er,cpe,tag,is_baseline,is_visible,sort_order,tweets,slug) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id',
-        [payload.name, payload.logo, payload.budget, payload.impressions, payload.cpm, payload.er, payload.cpe, payload.tag, payload.is_baseline, payload.is_visible, mx[0].m + 1, payload.tweets, payload.slug]
+        'INSERT INTO projects (name,logo,budget,impressions,cpm,er,cpe,tag,is_baseline,is_visible,sort_order,tweets,slug,data_source,data_as_of,provenance_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id',
+        [payload.name, payload.logo, payload.budget, payload.impressions, payload.cpm, payload.er, payload.cpe, payload.tag, payload.is_baseline, payload.is_visible, mx[0].m + 1, payload.tweets, payload.slug, payload.data_source ?? 'editorial', payload.data_as_of || null, payload.provenance_note ?? '']
       );
       if (normalizedCasePage) {
         await pool.query(

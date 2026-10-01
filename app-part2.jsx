@@ -1,5 +1,5 @@
 /* Lighthouse — part 2: KPI · Winners · Stars · ImageDivider */
-const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveStats: deriveStats2, buildStatsVars: buildStatsVars2, fmt: fmt2, useT: useT2, tpl: tpl2 } = window.App_Part1;
+const { Reveal: Reveal2, CountUp: CountUp2, useProjects: useProjects2, deriveStats: deriveStats2, buildStatsVars: buildStatsVars2, fmt: fmt2, useT: useT2, tpl: tpl2, useCaseStudySummary: useCaseStudySummary2 } = window.App_Part1;
 
 // Star samples are selected from live data. Pick priority is separate from
 // display order so literal labels like "largest reach" get first claim.
@@ -110,20 +110,32 @@ function buildStarTagMap(projects, tagKeys = {}) {
 function KpiSection(){
   const { t } = useT2();
   const P = useProjects2();
+  const publicSummary = useCaseStudySummary2();
   const ds = React.useMemo(() => deriveStats2(P), [P]);
   const v = React.useMemo(() => buildStatsVars2(P, ds), [P, ds]);
   const tp = (k) => tpl2(t(k), v);
+  const publicMetrics = publicSummary?.metrics || {};
+  const publicProjects = publicSummary?.projects || [];
+  const publicLowestCpm = publicProjects.filter(p => p.cpm > 0).reduce((min, p) => Math.min(min, p.cpm), Infinity);
+  const publicLowestCpe = publicProjects.filter(p => p.cpe > 0).reduce((min, p) => Math.min(min, p.cpe), Infinity);
+  const publicPeakEr = publicProjects.reduce((max, p) => Math.max(max, p.er || 0), 0);
+  const publicMaxImp = publicProjects.reduce((max, p) => Math.max(max, p.impressions || 0), 0);
+  const publicMode = Boolean(publicSummary);
+  const kpiDescription = publicMode
+    ? `公开数据快照覆盖 ${publicSummary.meta?.counts?.cases || 0} 条案例，其中 ${publicSummary.meta?.counts?.campaignCases || 0} 条 campaign、${publicSummary.meta?.counts?.legacyCases || 0} 条 legacy。预算、曝光和互动分别保留来源口径，方便比较传播规模与付费效率。`
+    : tp("kpi.p");
   const kpis = [
-    {k:t("kpi.k1"), v:ds.totalBudget, d:0, suf:"", unit:t("kpi.k1u"), note:tp("kpi.k1n"), tone:"ember"},
-    {k:t("kpi.k2"), v:ds.totalImp, d:0, suf:"", unit:t("kpi.k2u"), note:tp("kpi.k2n"), tone:"bone"},
-    {k:t("kpi.k3"), v:ds.totalEng, d:0, suf:"", unit:t("kpi.k3u"), note:t("kpi.k3n"), tone:"bone"},
-    {k:t("kpi.k4"), v:ds.avgCpm, d:2, suf:"", unit:t("kpi.k4u"), note:t("kpi.k4n"), tone:"ember"},
-    {k:t("kpi.k5"), v:ds.lowestCpm, d:2, suf:"", unit:t("kpi.k5u"), note:tp("kpi.k5n"), tone:"teal"},
-    {k:t("kpi.k6"), v:ds.peakEr, d:2, suf:"%", unit:t("kpi.k6u"), note:tp("kpi.k6n"), tone:"teal"},
+    {k:publicMode ? "公开 campaign 预算" : t("kpi.k1"), v:publicMode ? publicMetrics.budget : ds.totalBudget, d:publicMode ? 2 : 0, suf:"", unit:publicMode ? "USDC" : t("kpi.k1u"), note:publicMode ? `${publicSummary.meta?.counts?.campaignCases || 0} 条 campaign 案例` : tp("kpi.k1n"), tone:"ember"},
+    {k:publicMode ? "公开案例曝光" : t("kpi.k2"), v:publicMode ? publicMetrics.impressions : ds.totalImp, d:0, suf:"", unit:publicMode ? "IMPRESSIONS" : t("kpi.k2u"), note:tp("kpi.k2n"), tone:"bone"},
+    {k:publicMode ? "公开案例互动" : t("kpi.k3"), v:publicMode ? publicMetrics.engagements : ds.totalEng, d:0, suf:"", unit:publicMode ? "ENGAGEMENTS" : t("kpi.k3u"), note:publicMode ? "likes · replies · reposts · quotes" : t("kpi.k3n"), tone:"bone"},
+    {k:publicMode ? "campaign 加权 CPM" : t("kpi.k4"), v:publicMode ? (publicMetrics.bySource?.campaign?.cpm || publicMetrics.cpm) : ds.avgCpm, d:2, suf:"", unit:"USDC", note:publicMode ? "campaign 预算 / campaign 曝光" : t("kpi.k4n"), tone:"ember"},
+    {k:publicMode ? "最低项目 CPM" : t("kpi.k5"), v:publicMode ? (Number.isFinite(publicLowestCpm) ? publicLowestCpm : 0) : ds.lowestCpm, d:2, suf:"", unit:"USDC", note:publicMode ? "仅统计有预算与曝光的项目" : tp("kpi.k5n"), tone:"teal"},
+    {k:publicMode ? "最高项目互动率" : t("kpi.k6"), v:publicMode ? publicPeakEr : ds.peakEr, d:2, suf:"%", unit:publicMode ? "ENGAGEMENT RATE" : t("kpi.k6u"), note:publicMode ? "项目聚合值，不是单条帖子峰值" : tp("kpi.k6n"), tone:"teal"},
   ];
+  if (publicMode) kpis[1].note = `${publicSummary.meta?.counts?.cases || 0} 条公开案例`;
   const subs = [
-    {k:t("kpi.sub1.k"), v:ds.lowestCpe.toFixed(2), unit:t("kpi.sub1.u"), who:tp("kpi.sub1.who")},
-    {k:t("kpi.sub2.k"), v:fmt2(ds.maxImp), unit:t("kpi.sub2.u"), who:tp("kpi.sub2.who")},
+    {k:publicMode ? "最低项目 CPE" : t("kpi.sub1.k"), v:(publicMode ? (Number.isFinite(publicLowestCpe) ? publicLowestCpe : 0) : ds.lowestCpe).toFixed(2), unit:publicMode ? "USDC / 互动" : t("kpi.sub1.u"), who:publicMode ? "仅统计有预算与互动的项目" : tp("kpi.sub1.who")},
+    {k:publicMode ? "最高项目曝光" : t("kpi.sub2.k"), v:fmt2(publicMode ? publicMaxImp : ds.maxImp), unit:publicMode ? "IMPRESSIONS" : t("kpi.sub2.u"), who:publicMode ? "项目聚合后的最高值" : tp("kpi.sub2.who")},
   ];
   return (
     <section id="kpi" className="relative py-28 md:py-36 overflow-hidden">
@@ -136,7 +148,7 @@ function KpiSection(){
             <h2 className="font-display font-black leading-[1.02]" style={{fontSize:"clamp(32px, 5vw, 68px)", letterSpacing:"-0.015em"}}>
               {t("kpi.h2_a")}<span className="text-[var(--ember)] ember-glow">{t("kpi.h2_b")}</span>
             </h2>
-            <p className="mt-6 max-w-2xl font-cn text-[17px] leading-[1.75] text-[var(--bone-dim)]">{tp("kpi.p")}</p>
+            <p className="mt-6 max-w-2xl font-cn text-[17px] leading-[1.75] text-[var(--bone-dim)]">{kpiDescription}</p>
           </div>
         </Reveal2>
         <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px rule-t rule-b rule-l" style={{borderRight:"1px solid var(--rule)", background:"var(--rule)"}}>

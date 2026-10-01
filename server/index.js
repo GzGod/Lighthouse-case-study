@@ -4,9 +4,11 @@ const path = require('path');
 const fs = require('fs');
 const { pool, initDB, seedProjects, seedI18n, seedIPCases, refreshAttentionMarketI18n } = require('./db');
 const { seedProjectCasePages } = require('./project-case-defaults');
+const { syncCaseStudy } = require('./case-study-sync');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
+app.locals.cmsPool = pool;
 
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
@@ -76,6 +78,7 @@ async function start() {
   app.use('/api/i18n', require('./routes/i18n')(pool));
   app.use('/api/projects', require('./routes/projects')(pool));
   app.use('/api/ip-cases', require('./routes/ip-cases')(pool));
+  app.use('/api/case-study', require('./routes/case-study'));
   app.use('/api/upload', require('./routes/upload')(pool));
 
   // Serve static files
@@ -88,6 +91,12 @@ async function start() {
   });
   app.get('/personal-ip', (req, res) => {
     res.sendFile(path.join(staticRoot, 'Personal IP.html'));
+  });
+  app.get('/cases', (req, res) => {
+    res.sendFile(path.join(staticRoot, 'Case Library.html'));
+  });
+  app.get('/cases/:slug', (req, res) => {
+    res.sendFile(path.join(staticRoot, 'Project Case.html'));
   });
   app.get('/projects/:slug', (req, res) => {
     res.sendFile(path.join(staticRoot, 'Project Case.html'));
@@ -110,6 +119,11 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`Lighthouse CMS running at http://localhost:${PORT}`);
     console.log(`Admin panel: http://localhost:${PORT}/admin`);
+    if (process.env.LIGHTHOUSE_SOURCE_DATABASE_URL || process.env.SOURCE_DATABASE_URL) {
+      syncCaseStudy(pool)
+        .then(payload => console.log(`Initial public case snapshot synced: ${payload.meta.counts.cases} cases`))
+        .catch(error => console.error(`Initial public case snapshot skipped: ${error.message}`));
+    }
   });
 }
 

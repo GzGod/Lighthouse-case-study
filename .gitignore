@@ -3,3 +3,6 @@ server/data.db
 .claude/
 uploads/
 *.log
+.env
+.env.*
+!.env.example

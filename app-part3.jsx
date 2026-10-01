@@ -31,6 +31,34 @@ function buildMatrixTagMap(projects) {
   return buildStarTagMap(projects, MATRIX_TAGS);
 }
 
+function PublicDataSection() {
+  const [summary, setSummary] = React.useState(null);
+  const [state, setState] = React.useState('loading');
+  React.useEffect(() => {
+    fetch('/api/case-study/summary').then(res => res.ok ? res.json() : Promise.reject(new Error('not-ready'))).then(data => { setSummary(data); setState('ready'); }).catch(() => setState('empty'));
+  }, []);
+  const metrics = summary?.metrics || {};
+  const counts = summary?.meta?.counts || {};
+  const format = value => Number(value || 0).toLocaleString('en-US');
+  return (
+    <section id="data" className="relative overflow-hidden py-24 md:py-32">
+      <div className="absolute inset-0 radial-teal opacity-70"/><div className="absolute top-0 left-0 right-0 h-px" style={{background:"var(--rule-strong)"}}/>
+      <div className="relative mx-auto max-w-[1360px] px-6 md:px-10">
+        <Reveal3 className="grid items-end gap-8 md:grid-cols-12">
+          <div className="kicker md:col-span-2">§ 05 · PUBLIC DATA</div>
+          <div className="md:col-span-10"><h2 className="font-display text-4xl font-black leading-[1.02] md:text-6xl">把案例放回<span className="text-[var(--teal)] teal-glow">同一套口径。</span></h2><p className="mt-5 max-w-2xl font-cn text-[16px] leading-8 text-[var(--bone-dim)]">不靠单个漂亮数字讲故事。公开案例库把 campaign 和 legacy 样本分开，保留预算、曝光与互动的上下文，同时隐藏作者身份。</p></div>
+        </Reveal3>
+        {state === 'ready' ? <>
+          <div className="mt-12 grid gap-px border-y border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-4">
+            {[['公开案例', format(counts.cases), 'campaign + legacy'], ['累计曝光', format(metrics.impressions), '全部公开案例'], ['总互动', format(metrics.engagements), 'likes · replies · reposts · quotes'], ['campaign CPM', Number(metrics.bySource?.campaign?.cpm || metrics.cpm || 0).toFixed(2), 'campaign 预算 / campaign 曝光']].map(([label, value, note], index) => <div key={label} className="bg-[var(--ink)] p-6 md:p-7"><div className="kicker text-[10px]">{label}</div><div className={`mt-3 font-display text-3xl font-bold tnum ${index === 2 ? 'text-[var(--teal)]' : index === 3 ? 'text-[var(--ember-soft)]' : 'text-[var(--bone)]'}`}>{value}</div><div className="mt-2 text-xs leading-5 text-[var(--bone-dim)]">{note}</div></div>)}
+          </div>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--rule)] pb-5 mono text-[10px] uppercase tracking-[.15em] text-[var(--bone-dim)]"><span>{counts.campaignCases || 0} campaign · {counts.legacyCases || 0} legacy</span><span>Snapshot {summary.meta?.generatedAt ? new Date(summary.meta.generatedAt).toLocaleDateString('en-CA') : '—'}</span><a href="/cases" className="text-[var(--ember-soft)] transition hover:text-white">Open case library ↗</a></div>
+        </> : <div className="mt-12 flex flex-col gap-5 border border-dashed border-[var(--rule-strong)] bg-[rgba(237,232,225,.02)] p-7 md:flex-row md:items-center md:justify-between"><div><div className="kicker text-[var(--ember-soft)]">SNAPSHOT PENDING</div><div className="mt-3 font-display text-2xl font-bold">公开数据快照尚未同步</div><p className="mt-2 max-w-xl text-sm leading-6 text-[var(--bone-dim)]">案例库已经准备好，完成一次 CMS 同步后，这里会显示可复盘的真实聚合指标。</p></div><a href="/cases" className="btn-bone inline-flex shrink-0 items-center justify-center px-4 py-3 mono text-[10px] uppercase tracking-[.16em] transition hover:text-[var(--ember)]">查看案例库状态 ↗</a></div>}
+      </div>
+    </section>
+  );
+}
+
 function MatrixSection(){
   const { t } = useT3();
   const P3 = useProjects3();
@@ -308,6 +336,7 @@ function Page(){
       <AboutSection/>
       <ImageDivider bg="divider-img-1" kickerKey="div1.kicker" quoteKey="div1.q" subKey="div1.sub"/>
       <KpiSection/>
+      <PublicDataSection/>
       <WinnersSection/>
       <StarsSection/>
       <MatrixSection/>

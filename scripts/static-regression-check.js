@@ -21,6 +21,9 @@ const serverIndex = read('server/index.js');
 const caseStudyHtml = read('Lighthouse Case Study.html');
 const projectCaseHtml = read('Project Case.html');
 const projectCase = read('project-case.jsx');
+const caseStudySync = read('server/case-study-sync.js');
+const caseStudyRoute = read('server/routes/case-study.js');
+const caseLibrary = read('case-library.jsx');
 
 function test(name, fn) {
   try {
@@ -494,6 +497,35 @@ test('Admin project and IP editors should expose and transmit visibility', () =>
   assert.ok(/is_visible: 1, slug: defaultSlug/.test(admin), 'new IP case data does not default to visible');
   assert.ok(/action: 'ip-draft'[\s\S]*is_visible: caseData\?\.is_visible/.test(admin), 'IP preview draft does not transmit is_visible');
   assert.ok(/value=\{caseData\.is_visible\?\?1\}/.test(admin), 'IP editor lacks visibility select');
+});
+
+test('Public case-study data should use a separate read-only source and authenticated sync route', () => {
+  assert.ok(/LIGHTHOUSE_SOURCE_DATABASE_URL/.test(caseStudySync), 'missing dedicated read-only source database env');
+  assert.ok(/WHERE ca\."isShow" = TRUE/.test(caseStudySync), 'source query does not filter public cases');
+  assert.ok(/tweetUrls|twitterUsername|twitterUserData/.test(caseStudySync) === false, 'source sync should not select identity fields');
+  assert.ok(/router\.post\('\/sync', authMiddleware/.test(caseStudyRoute), 'case-study sync endpoint is not authenticated');
+  assert.ok(/case_study_snapshots/.test(db), 'missing public case-study snapshot table');
+  assert.ok(/const bySource = \['campaign', 'legacy'\]/.test(caseStudySync), 'snapshot should expose source-level metrics');
+  assert.ok(/Public campaign \$\{hash/.test(caseStudySync), 'unnamed campaigns should stay separate instead of being merged');
+  assert.ok(/const client = await cmsPool\.connect\(\)/.test(caseStudySync), 'snapshot writes should use one pinned transaction client');
+  assert.ok(/syncCaseStudy\(pool\)/.test(serverIndex), 'configured deployments should prime the public snapshot after startup');
+});
+
+test('Public case library should expose source filters and pagination without identity links', () => {
+  assert.ok(/\/api\/case-study\/cases/.test(caseLibrary), 'case library does not load public case API');
+  assert.ok(/Campaign/.test(caseLibrary) && /Legacy/.test(caseLibrary), 'case library is missing source filters');
+  assert.ok(/totalPages/.test(caseLibrary), 'case library is missing pagination state');
+  assert.ok(!/tweetUrls|twitterUsername|x\.com\//.test(caseLibrary), 'case library should not render identity or post URLs');
+});
+
+test('Data-case detail pages should hide fabricated editorial testimonial content', () => {
+  assert.ok(/isDataCasePath/.test(projectCase), 'project case page does not detect data-case routes');
+  assert.ok(/api\/case-study\/projects/.test(projectCase), 'project case page does not load public data cases');
+  assert.ok(/!dataCase && <section/.test(projectCase), 'editorial testimonial section is not hidden for data cases');
+  assert.ok(/公开指标拆解/.test(projectCase), 'data-case detail page is missing evidence metrics');
+  assert.ok(/Source records/.test(projectCase), 'data-case detail page is missing anonymous source records');
+  assert.ok(/cases\?project=/.test(projectCase), 'data-case detail page cannot return to filtered case library');
+  assert.ok(/new URLSearchParams\(window\.location\.search\)/.test(caseLibrary), 'case library does not restore project filters from detail links');
 });
 
 if (process.exitCode) process.exit(process.exitCode);

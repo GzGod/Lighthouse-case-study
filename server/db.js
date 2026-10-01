@@ -94,7 +94,21 @@ async function initDB() {
       is_visible INTEGER DEFAULT 1,
       sort_order INTEGER DEFAULT 0,
       tweets INTEGER DEFAULT 0,
-      slug TEXT DEFAULT ''
+      slug TEXT DEFAULT '',
+      data_source TEXT DEFAULT 'editorial',
+      data_as_of DATE,
+      provenance_note TEXT DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS case_study_snapshots (
+      id BIGSERIAL PRIMARY KEY,
+      snapshot_key TEXT NOT NULL DEFAULT 'public-v1',
+      status TEXT NOT NULL DEFAULT 'ready',
+      payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+      source_updated_at TIMESTAMPTZ,
+      generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      row_count INTEGER NOT NULL DEFAULT 0,
+      error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE TABLE IF NOT EXISTS project_case_pages (
       id SERIAL PRIMARY KEY,
@@ -131,7 +145,11 @@ async function initDB() {
   await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS tweets INTEGER DEFAULT 0`).catch(() => {});
   await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS slug TEXT DEFAULT ''`).catch(() => {});
   await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_visible INTEGER DEFAULT 1`).catch(() => {});
+  await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'editorial'`).catch(() => {});
+  await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS data_as_of DATE`).catch(() => {});
+  await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS provenance_note TEXT DEFAULT ''`).catch(() => {});
   await pool.query(`ALTER TABLE ip_cases ADD COLUMN IF NOT EXISTS is_visible INTEGER DEFAULT 1`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS case_study_snapshots_lookup ON case_study_snapshots(snapshot_key, status, generated_at DESC)`).catch(() => {});
 
   // Backfill tweets and slugs for existing rows
   const tweetMap = { 'HashKey Exchange':8, 'Portals':18, 'zkVerify':42, 'SonicSVM':30, 'Puffpaw':15, 'Allora':38, 'Maiga':20, 'Yei Finance':26, 'Kamino':24, 'Fight.ID':28, 'Sentient':25, 'FF':22, 'Lit Protocol':24, 'HeyElsa':20, 'ZetaChain':16, 'KAIO':15 };

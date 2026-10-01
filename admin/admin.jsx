@@ -230,6 +230,7 @@ function Sidebar({ page, setPage, onLogout }) {
   const items = [
     { key: 'i18n', label: '文案编辑' },
     { key: 'projects', label: '项目管理' },
+    { key: 'case-study', label: '公开案例数据' },
     { key: 'ip-cases', label: 'IP 案例' },
     { key: 'images', label: '图片库' },
   ];
@@ -239,6 +240,55 @@ function Sidebar({ page, setPage, onLogout }) {
     <nav>{items.map(i => <a key={i.key} className={page===i.key?'active':''} href="#" onClick={e=>{e.preventDefault();setPage(i.key)}}>{i.label}</a>)}</nav>
     <button className="logout" onClick={onLogout}>退出登录</button>
   </aside>;
+}
+
+/* ── Public case-study data page ── */
+function CaseStudySyncPage() {
+  const toast = useToast();
+  const [status, setStatus] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const load = () => api('/case-study/sync-status').then(setStatus).catch(err => toast(`状态读取失败：${err.message}`));
+  useEffect(() => { load(); }, []);
+
+  const sync = async () => {
+    setSyncing(true);
+    try {
+      const result = await api('/case-study/sync', { method: 'POST' });
+      toast(`同步完成：${result.meta?.counts?.cases || 0} 条公开案例`);
+      load();
+    } catch (err) {
+      toast(`同步失败：${err.message}`);
+      load();
+    } finally { setSyncing(false); }
+  };
+
+  const latest = status?.latest;
+  return <div>
+    <h1>公开案例数据</h1>
+    <p className="page-desc">从只读源库生成匿名化聚合快照。公开页面只读取最近一次成功快照，不会暴露作者账号或推文地址。</p>
+    <div className="card" style={{maxWidth:760}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:20,flexWrap:'wrap'}}>
+        <div><div className="lang-tag">数据源连接</div><h2 style={{margin:'8px 0 0',fontSize:24}}>{status?.configured ? '已配置只读源库' : '尚未配置源库'}</h2><p style={{margin:'8px 0 0',color:'#777',fontSize:13}}>环境变量：LIGHTHOUSE_SOURCE_DATABASE_URL</p></div>
+        <button className="btn btn-primary" onClick={sync} disabled={!status?.configured || syncing}>{syncing ? '同步中...' : '同步公开案例'}</button>
+      </div>
+      <div className="form-row" style={{marginTop:24}}>
+        <div><div className="lang-tag">最近状态</div><strong>{latest?.status || '暂无快照'}</strong></div>
+        <div><div className="lang-tag">案例数量</div><strong>{latest?.row_count?.toLocaleString?.() || '—'}</strong></div>
+        <div><div className="lang-tag">生成时间</div><strong>{latest?.generated_at ? new Date(latest.generated_at).toLocaleString('zh-CN') : '—'}</strong></div>
+      </div>
+      {latest?.error && <div className="login-err" style={{marginTop:18}}>{latest.error}</div>}
+    </div>
+    <div className="card" style={{maxWidth:760,marginTop:16}}>
+      <h3>公开口径</h3>
+      <ul style={{margin:'10px 0 0 18px',color:'#666',lineHeight:1.9,fontSize:13}}>
+        <li>只纳入 source 为公开展示的案例。</li>
+        <li>预算、曝光、点赞、回复、转发和引用会聚合为项目与案例两层指标。</li>
+        <li>真实作者、账号、推文 URL 和原始文本不会写入公开快照。</li>
+        <li>同步失败时保留上一份成功快照，避免前台出现空数据。</li>
+      </ul>
+    </div>
+  </div>;
 }
 
 // Section → anchor mapping for i18n preview scroll
@@ -473,7 +523,7 @@ function ProjectsPage() {
   useEffect(() => { load(); }, []);
 
   const openNew = () => {
-    const draft = { name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1, is_visible:1, tweets:0, slug:'' };
+    const draft = { name:'', logo:'', budget:0, impressions:0, cpm:0, er:0, cpe:0, tag:'', is_baseline:1, is_visible:1, tweets:0, slug:'', data_source:'editorial', data_as_of:'', provenance_note:'' };
     setForm(draft);
     setCasePage(projectCaseDefaults(draft));
     setEditing('new');
@@ -660,11 +710,16 @@ function ProjectsPage() {
           <div className="form-group"><label>互动率 (%)</label><input type="number" step="0.01" value={form.er||0} onChange={e=>setForm({...form,er:+e.target.value})} /></div>
           <div className="form-group"><label>CPE</label><input type="number" step="0.01" value={form.cpe||0} onChange={e=>setForm({...form,cpe:+e.target.value})} /></div>
         </div>
-        <div className="form-row">
+          <div className="form-row">
           <div className="form-group"><label>标签</label><input value={form.tag||''} onChange={e=>setForm({...form,tag:e.target.value})} /></div>
           <div className="form-group"><label>推文数</label><input type="number" value={form.tweets||0} onChange={e=>setForm({...form,tweets:+e.target.value})} /></div>
           <div className="form-group"><label>进入基准</label><select value={form.is_baseline??1} onChange={e=>setForm({...form,is_baseline:+e.target.value})}><option value={1}>是</option><option value={0}>否</option></select></div>
           <div className="form-group"><label>前台展示</label><select value={form.is_visible??1} onChange={e=>setForm({...form,is_visible:+e.target.value})}><option value={1}>展示</option><option value={0}>隐藏</option></select></div>
+        </div>
+        <div className="form-row">
+          <div className="form-group"><label>数据来源</label><select value={form.data_source || 'editorial'} onChange={e=>setForm({...form,data_source:e.target.value})}><option value="editorial">编辑精选</option><option value="cms">CMS 记录</option><option value="source_snapshot">公开数据快照</option></select></div>
+          <div className="form-group"><label>数据截至</label><input type="date" value={form.data_as_of || ''} onChange={e=>setForm({...form,data_as_of:e.target.value})} /></div>
+          <div className="form-group" style={{flex:2}}><label>来源说明</label><input value={form.provenance_note || ''} onChange={e=>setForm({...form,provenance_note:e.target.value})} placeholder="例如：编辑精选，历史样本" /></div>
         </div>
         <div className="case-page-editor">
           <h3>项目展示页内容</h3>
@@ -1109,7 +1164,7 @@ function AdminApp() {
 
   if (!authed) return <LoginPage onLogin={() => setAuthed(true)} />;
 
-  const pages = { 'i18n': I18nPage, 'projects': ProjectsPage, 'ip-cases': IPCasesPage, 'images': ImagesPage };
+  const pages = { 'i18n': I18nPage, 'projects': ProjectsPage, 'case-study': CaseStudySyncPage, 'ip-cases': IPCasesPage, 'images': ImagesPage };
   const PageComp = pages[page] || I18nPage;
 
   return <div className="cms-layout">
