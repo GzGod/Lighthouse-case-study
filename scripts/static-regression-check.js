@@ -528,6 +528,14 @@ test('Public case library should expose source filters and pagination without id
   assert.ok(!/tweetUrls|twitterUsername|x\.com\//.test(caseLibrary), 'case library should not render identity or post URLs');
 });
 
+test('Public case cards should keep placement count compact and clarify per-record budget', () => {
+  assert.ok(/copy\.placementLabel\(item\.placements \|\| 1\)/.test(caseLibrary), 'placement count should render as a compact card badge');
+  assert.ok(/budget: '单次投放预算'/.test(caseLibrary), 'Chinese card budget label should clarify it is per placement');
+  assert.ok(/budget: 'Placement budget'/.test(caseLibrary), 'English card budget label should clarify it is per placement');
+  assert.ok(/grid-cols-2 gap-y-4[^\n]*sm:grid-cols-4/.test(caseLibrary), 'card metrics should use a restrained four-column layout');
+  assert.ok(/copy\.projects/.test(caseLibrary), 'case library summary should distinguish project count from placement count');
+});
+
 test('Public case snapshots should sanitize identity-bearing names and ship a data fallback', () => {
   assert.ok(/function sanitizeSnapshot/.test(caseStudySync), 'snapshot sanitization helper is missing');
   assert.ok(caseStudySync.includes('https?:\\/\\/'), 'snapshot sanitization does not detect URLs');

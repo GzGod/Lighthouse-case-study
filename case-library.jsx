@@ -16,20 +16,20 @@ const copyByLanguage = {
   zh: {
     title: <>可验证的案例，<span className="text-[var(--ember)]">不止一张成绩单。</span></>,
     intro: '把公开案例里的预算、曝光和互动放到同一套口径里。身份信息不公开，指标保留上下文，方便快速判断一个传播动作到底交付了什么。',
-    cases: '公开案例', placements: '投放次数', reach: '累计曝光', engagement: '总互动', synced: '已同步',
+    cases: '公开案例', projects: '项目数', placements: '投放次数', reach: '累计曝光', engagement: '总互动', synced: '已同步',
     coverage: '覆盖周期', sourceUpdated: '源库更新', privacy: '匿名聚合 · 不含作者身份',
     all: '全部', search: '搜索项目', allProjects: '全部项目', highestReach: '曝光最高', highestEngagement: '互动最高', lowestCpm: 'CPM 最低', lowestCpe: 'CPE 最低', latest: '最新同步',
     loading: '正在读取最新快照', loadingDetail: '页面只展示已完成同步的公开聚合数据。', missing: '公开案例快照尚未同步', missingDetail: '公开快照同步后，案例会自动显示在这里。', empty: '没有匹配的公开案例', emptyDetail: '试试清除项目、来源或搜索条件。',
-    verified: '完整指标', partial: '部分指标', budget: '预算', participants: '参与人次', publicRecord: '公开聚合记录', results: (page, pages, total) => `第 ${page} / ${pages} 页 · ${nf.format(total)} 条结果`, anonymous: '作者与推文地址已匿名化', back: '返回首页 ↗',
+    verified: '完整指标', partial: '部分指标', budget: '单次投放预算', participants: '参与人次', placementLabel: count => `${nf.format(count)} 次投放`, placementOption: count => `${nf.format(count)} 次`, publicRecord: '公开聚合记录', results: (page, pages, total) => `第 ${page} / ${pages} 页 · ${nf.format(total)} 条结果`, anonymous: '作者与推文地址已匿名化', back: '返回首页 ↗',
   },
   en: {
     title: <>Cases with context, <span className="text-[var(--ember)]">beyond a scorecard.</span></>,
     intro: 'Compare budget, reach, and engagement across public cases. Identity details stay private while the metrics keep their context, so you can see what each campaign delivered.',
-    cases: 'Public cases', placements: 'Placements', reach: 'Total reach', engagement: 'Engagement', synced: 'synced',
+    cases: 'Public cases', projects: 'Projects', placements: 'Placements', reach: 'Total reach', engagement: 'Engagement', synced: 'synced',
     coverage: 'Coverage', sourceUpdated: 'Source updated', privacy: 'Aggregated · identities hidden',
     all: 'All', search: 'Search projects', allProjects: 'All projects', highestReach: 'Highest reach', highestEngagement: 'Most engagement', lowestCpm: 'Lowest CPM', lowestCpe: 'Lowest CPE', latest: 'Latest synced',
     loading: 'Loading the latest snapshot', loadingDetail: 'Only completed public snapshots are shown here.', missing: 'Public snapshot unavailable', missingDetail: 'Cases will appear after the next data sync.', empty: 'No matching cases', emptyDetail: 'Try clearing the project, source, or search filter.',
-    verified: 'Complete metrics', partial: 'Partial metrics', budget: 'Budget', participants: 'participants', publicRecord: 'Public aggregate', results: (page, pages, total) => `Page ${page} of ${pages} · ${nf.format(total)} results`, anonymous: 'Authors and post URLs anonymized', back: 'Back to homepage ↗',
+    verified: 'Complete metrics', partial: 'Partial metrics', budget: 'Placement budget', participants: 'participants', placementLabel: count => `${nf.format(count)} placements`, placementOption: count => `${nf.format(count)} placements`, publicRecord: 'Public aggregate', results: (page, pages, total) => `Page ${page} of ${pages} · ${nf.format(total)} results`, anonymous: 'Authors and post URLs anonymized', back: 'Back to homepage ↗',
   },
 };
 
@@ -57,8 +57,8 @@ function EmptyState({ message, detail, lang = 'zh' }) {
 
 function CaseCard({ item, copy }) {
   return <a href={`/cases/${encodeURIComponent(item.projectSlug)}`} className="group block border border-[var(--rule)] bg-[rgba(13,15,18,.74)] p-5 transition hover:-translate-y-0.5 hover:border-[rgba(255,122,69,.55)] hover:bg-[rgba(21,24,29,.9)]">
-    <div className="flex items-start justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><ProjectAvatar name={item.projectName} logo={item.logo} /><div className="min-w-0"><div className="mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.source === 'campaign' ? 'CAMPAIGN' : 'LEGACY'} · {item.dataQuality === 'complete' ? copy.verified : copy.partial}</div><h3 className="display mt-3 truncate text-lg font-bold text-white transition group-hover:text-[var(--ember-soft)]">{item.projectName}</h3></div></div><span className="mono text-xs text-[var(--bone-dim)]">↗</span></div>
-    <div className="mt-5 grid grid-cols-2 gap-y-4 border-t border-[var(--rule)] pt-4 sm:grid-cols-5"><Metric label={copy.placements} value={nf.format(item.placements || 1)} tone="text-[var(--ember-soft)]" /><Metric label={copy.reach} value={compact(item.impressions)} /><Metric label={copy.engagement} value={compact(item.engagements)} tone="text-[var(--teal)]" /><Metric label="CPM" value={item.cpm ? item.cpm.toFixed(2) : '—'} /><Metric label={copy.budget} value={item.budget ? compact(item.budget) : '—'} /></div>
+    <div className="flex items-start justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><ProjectAvatar name={item.projectName} logo={item.logo} /><div className="min-w-0"><div className="mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.source === 'campaign' ? 'CAMPAIGN' : 'LEGACY'} · {item.dataQuality === 'complete' ? copy.verified : copy.partial}</div><h3 className="display mt-3 truncate text-lg font-bold text-white transition group-hover:text-[var(--ember-soft)]">{item.projectName}</h3></div></div><div className="flex shrink-0 items-center gap-2"><span className="rounded-full border border-[rgba(255,122,69,.34)] bg-[rgba(255,122,69,.08)] px-2.5 py-1 font-mono text-[10px] font-medium tracking-[.04em] text-[var(--ember-soft)]">{copy.placementLabel(item.placements || 1)}</span><span className="mono text-xs text-[var(--bone-dim)]">↗</span></div></div>
+    <div className="mt-5 grid grid-cols-2 gap-y-4 border-t border-[var(--rule)] pt-4 sm:grid-cols-4"><Metric label={copy.reach} value={compact(item.impressions)} /><Metric label={copy.engagement} value={compact(item.engagements)} tone="text-[var(--teal)]" /><Metric label="CPM" value={item.cpm ? item.cpm.toFixed(2) : '—'} /><Metric label={copy.budget} value={item.budget ? compact(item.budget) : '—'} /></div>
     <div className="mt-5 flex items-center justify-between gap-3 mono text-[10px] tracking-[.12em] text-[var(--bone-dim)]"><span>{dateLabel(item.createdAt, copy === copyByLanguage.en ? 'en' : 'zh')}</span><span>{item.participants ? `${nf.format(item.participants)} ${copy.participants}` : copy.publicRecord}</span></div>
   </a>;
 }
@@ -101,7 +101,7 @@ function App() {
           <p className="mt-6 max-w-2xl text-base leading-8 text-[var(--bone-dim)]">{copy.intro}</p>
         </div>
         <div className="grid grid-cols-2 gap-x-6 gap-y-7 border-t border-[var(--rule)] pt-6 sm:grid-cols-3 lg:grid-cols-5 lg:border-t-0 lg:pt-0">
-          <Metric label={copy.cases} value={summary ? nf.format(summary.meta?.counts?.cases || 0) : '—'} note={copy.synced} />
+          <Metric label={copy.projects} value={summary ? nf.format(summary.meta?.counts?.projects || 0) : '—'} note={copy.synced} />
           <Metric label={copy.placements} value={summary ? nf.format(summary.meta?.counts?.placements || summary.meta?.counts?.cases || 0) : '—'} />
           <Metric label={copy.reach} value={summary ? compact(metrics.impressions) : '—'} />
           <Metric label={copy.engagement} value={summary ? compact(metrics.engagements) : '—'} tone="text-[var(--teal)]" />
@@ -123,7 +123,7 @@ function App() {
             </div>
             <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:flex">
               <input value={filters.search} onChange={e => update('search', e.target.value)} placeholder={copy.search} className="min-w-0 border border-[var(--rule-strong)] bg-[var(--ink-2)] px-3 py-2 text-sm text-white outline-none placeholder:text-[var(--bone-dim)] focus:border-[var(--ember)]" />
-              <select value={filters.project} onChange={e => update('project', e.target.value)} className="min-w-0 border border-[var(--rule-strong)] bg-[var(--ink-2)] px-3 py-2 text-sm text-white outline-none"><option value="">{copy.allProjects}</option>{projects.map(item => <option key={item.slug} value={item.slug}>{item.name} · {item.placements || item.cases || 0} {copy.placements.toLowerCase()}</option>)}</select>
+              <select value={filters.project} onChange={e => update('project', e.target.value)} className="min-w-0 border border-[var(--rule-strong)] bg-[var(--ink-2)] px-3 py-2 text-sm text-white outline-none"><option value="">{copy.allProjects}</option>{projects.map(item => <option key={item.slug} value={item.slug}>{item.name} · {copy.placementOption(item.placements || item.cases || 0)}</option>)}</select>
               <select value={`${filters.sort}:${filters.direction}`} onChange={e => { const [sort, direction] = e.target.value.split(':'); setFilters(prev => ({ ...prev, sort, direction, page: 1 })); }} className="min-w-0 border border-[var(--rule-strong)] bg-[var(--ink-2)] px-3 py-2 text-sm text-white outline-none sm:col-span-2 xl:col-span-1">
                 <option value="impressions:desc">{copy.highestReach}</option><option value="engagements:desc">{copy.highestEngagement}</option><option value="cpm:asc">{copy.lowestCpm}</option><option value="cpe:asc">{copy.lowestCpe}</option><option value="createdAt:desc">{copy.latest}</option>
               </select>
