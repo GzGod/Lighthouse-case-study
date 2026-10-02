@@ -528,6 +528,7 @@ test('Data-case detail pages should hide fabricated editorial testimonial conten
   assert.ok(/new URLSearchParams\(window\.location\.search\)/.test(caseLibrary), 'case library does not restore project filters from detail links');
   assert.ok(/dateRange/.test(caseStudySync), 'public snapshot is missing coverage date range');
   assert.ok(/数据周期/.test(projectCase), 'data-case detail page is missing coverage period');
+  assert.ok(/interactionMix/.test(projectCase), 'data-case detail page is missing interaction composition');
 });
 
 if (process.exitCode) process.exit(process.exitCode);
