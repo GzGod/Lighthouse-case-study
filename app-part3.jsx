@@ -1,5 +1,5 @@
 /* Lighthouse — part 3: Matrix · Why · CTA · App shell */
-const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3 } = window.App_Part1;
+const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3, useCaseStudySummary: useCaseStudySummary3 } = window.App_Part1;
 const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet, buildStarTagMap } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
@@ -42,9 +42,9 @@ function PublicDataSection() {
   const counts = summary?.meta?.counts || {};
   const format = value => Number(value || 0).toLocaleString('en-US');
   const copy = lang === 'en' ? {
-    title: <>Put every case on the <span className="text-[var(--teal)] teal-glow">same evidence layer.</span></>, description: 'No single polished number should carry the story. Campaign and legacy records stay separate, while identity fields remain private.', cases: 'Public cases', casesNote: 'campaign + legacy', reach: 'Total reach', reachNote: 'all public cases', engagement: 'Total engagement', engagementNote: 'likes · replies · reposts · quotes', cpm: 'Campaign CPM', cpmNote: 'campaign budget / campaign reach', pending: 'Public snapshot pending', pendingNote: 'The case library is ready. Run one CMS sync to publish reviewable metrics.', view: 'View case library status ↗', library: 'Open case library ↗', snapshot: 'Snapshot', coverage: 'Coverage',
+    title: <>Put every case on the <span className="text-[var(--teal)] teal-glow">same evidence layer.</span></>, description: 'No single polished number should carry the story. Same-name projects are consolidated across sources, while identity fields remain private.', cases: 'Public cases', placements: 'Placements', casesNote: 'campaign + legacy', reach: 'Total reach', reachNote: 'all public cases', engagement: 'Total engagement', engagementNote: 'likes · replies · reposts · quotes', cpm: 'Campaign CPM', cpmNote: 'campaign budget / campaign reach', pending: 'Public snapshot pending', pendingNote: 'The case library is ready. Run one CMS sync to publish reviewable metrics.', view: 'View case library status ↗', library: 'Open case library ↗', snapshot: 'Snapshot', coverage: 'Coverage',
   } : {
-    title: <>把案例放回<span className="text-[var(--teal)] teal-glow">同一套口径。</span></>, description: '不靠单个漂亮数字讲故事。公开案例库把 campaign 和 legacy 样本分开，保留预算、曝光与互动的上下文，同时隐藏作者身份。', cases: '公开案例', casesNote: 'campaign + legacy', reach: '累计曝光', reachNote: '全部公开案例', engagement: '总互动', engagementNote: 'likes · replies · reposts · quotes', cpm: 'campaign CPM', cpmNote: 'campaign 预算 / campaign 曝光', pending: '公开数据快照尚未同步', pendingNote: '案例库已经准备好，完成一次 CMS 同步后，这里会显示可复盘的真实聚合指标。', view: '查看案例库状态 ↗', library: '打开案例库 ↗', snapshot: '快照', coverage: '覆盖周期',
+    title: <>把案例放回<span className="text-[var(--teal)] teal-glow">同一套口径。</span></>, description: '不靠单个漂亮数字讲故事。相同项目会跨数据源统一归并，保留预算、曝光与互动的上下文，同时隐藏作者身份。', cases: '公开案例', placements: '投放次数', casesNote: 'campaign + legacy', reach: '累计曝光', reachNote: '全部公开案例', engagement: '总互动', engagementNote: 'likes · replies · reposts · quotes', cpm: 'campaign CPM', cpmNote: 'campaign 预算 / campaign 曝光', pending: '公开数据快照尚未同步', pendingNote: '案例库已经准备好，完成一次 CMS 同步后，这里会显示可复盘的真实聚合指标。', view: '查看案例库状态 ↗', library: '打开案例库 ↗', snapshot: '快照', coverage: '覆盖周期',
   };
   return (
     <section id="data" className="relative overflow-hidden py-24 md:py-32">
@@ -55,14 +55,63 @@ function PublicDataSection() {
           <div className="md:col-span-10"><h2 className="font-display text-4xl font-black leading-[1.02] md:text-6xl">{copy.title}</h2><p className="mt-5 max-w-2xl font-cn text-[16px] leading-8 text-[var(--bone-dim)]">{copy.description}</p></div>
         </Reveal3>
         {state === 'ready' ? <>
-          <div className="mt-12 grid gap-px border-y border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-4">
-            {[[copy.cases, format(counts.cases), copy.casesNote], [copy.reach, format(metrics.impressions), copy.reachNote], [copy.engagement, format(metrics.engagements), copy.engagementNote], [copy.cpm, Number(metrics.bySource?.campaign?.cpm || metrics.cpm || 0).toFixed(2), copy.cpmNote]].map(([label, value, note], index) => <div key={label} className="bg-[var(--ink)] p-6 md:p-7"><div className="kicker text-[10px]">{label}</div><div className={`mt-3 font-display text-3xl font-bold tnum ${index === 2 ? 'text-[var(--teal)]' : index === 3 ? 'text-[var(--ember-soft)]' : 'text-[var(--bone)]'}`}>{value}</div><div className="mt-2 text-xs leading-5 text-[var(--bone-dim)]">{note}</div></div>)}
+          <div className="mt-12 grid gap-px border-y border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-5">
+            {[[copy.cases, format(counts.cases), copy.casesNote], [copy.placements, format(counts.placements || counts.cases), copy.casesNote], [copy.reach, format(metrics.impressions), copy.reachNote], [copy.engagement, format(metrics.engagements), copy.engagementNote], [copy.cpm, Number(metrics.bySource?.campaign?.cpm || metrics.cpm || 0).toFixed(2), copy.cpmNote]].map(([label, value, note], index) => <div key={label} className="bg-[var(--ink)] p-6 md:p-7"><div className="kicker text-[10px]">{label}</div><div className={`mt-3 font-display text-3xl font-bold tnum ${index === 3 ? 'text-[var(--teal)]' : index === 4 ? 'text-[var(--ember-soft)]' : 'text-[var(--bone)]'}`}>{value}</div><div className="mt-2 text-xs leading-5 text-[var(--bone-dim)]">{note}</div></div>)}
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--rule)] pb-5 mono text-[10px] uppercase tracking-[.15em] text-[var(--bone-dim)]"><span>{counts.campaignCases || 0} campaign · {counts.legacyCases || 0} legacy</span><span>{copy.snapshot} {summary.meta?.generatedAt ? new Date(summary.meta.generatedAt).toLocaleDateString(lang === 'en' ? 'en-CA' : 'zh-CN') : '—'}</span><a href="/cases" className="text-[var(--ember-soft)] transition hover:text-white">{copy.library}</a></div>
         </> : <div className="mt-12 flex flex-col gap-5 border border-dashed border-[var(--rule-strong)] bg-[rgba(237,232,225,.02)] p-7 md:flex-row md:items-center md:justify-between"><div><div className="kicker text-[var(--ember-soft)]">SNAPSHOT PENDING</div><div className="mt-3 font-display text-2xl font-bold">{copy.pending}</div><p className="mt-2 max-w-xl text-sm leading-6 text-[var(--bone-dim)]">{copy.pendingNote}</p></div><a href="/cases" className="btn-bone inline-flex shrink-0 items-center justify-center px-4 py-3 mono text-[10px] uppercase tracking-[.16em] transition hover:text-[var(--ember)]">{copy.view}</a></div>}
       </div>
     </section>
   );
+}
+
+function FeaturedProjectsSection() {
+  const { lang } = useT3();
+  const summary = useCaseStudySummary3();
+  const baselineProjects = useProjects3();
+  const hasPublicSnapshot = Boolean(summary?.projects?.length);
+  const projects = hasPublicSnapshot ? summary.projects.slice(0, 6) : baselineProjects.filter(project => project.slug).slice(0, 6);
+  const english = lang === 'en';
+  const number = value => Number(value || 0).toLocaleString('en-US');
+
+  return (
+    <section className="relative border-y border-[var(--rule)] bg-[var(--ink-2)] py-10 md:py-12">
+      <div className="mx-auto max-w-[1360px] px-5 sm:px-6 md:px-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="kicker text-[var(--ember-soft)]">{hasPublicSnapshot ? (english ? 'PROJECT SIGNAL · PUBLIC SNAPSHOT' : '项目实绩 · 公开快照') : (english ? 'PROJECT SIGNAL · CAMPAIGN BASELINE' : '项目实绩 · 活动基准')}</div>
+            <h2 className="mt-2 font-display text-xl font-bold text-white sm:text-2xl">{english ? 'Projects, with their results.' : '项目头像与真实结果，一眼可见。'}</h2>
+          </div>
+          <a href="/cases" className="whitespace-nowrap font-mono text-[10px] uppercase text-[var(--ember-soft)] transition hover:text-white">{english ? 'Explore all cases ↗' : '浏览全部案例 ↗'}</a>
+        </div>
+        <div className="mt-6 grid gap-px border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-3">
+          {projects.map(project => (
+            <a key={project.slug} href={`/${hasPublicSnapshot ? 'cases' : 'projects'}/${encodeURIComponent(project.slug)}`} className="group flex min-w-0 items-center gap-4 bg-[var(--ink-2)] p-4 transition hover:bg-[var(--ink-3)] sm:p-5">
+              <ProjectSignalAvatar name={project.name} logo={project.logo} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-display text-base font-semibold text-white transition group-hover:text-[var(--ember-soft)]">{project.name}</div>
+                <div className="mt-1 font-mono text-[10px] uppercase text-[var(--bone-dim)]">{hasPublicSnapshot ? `${number(project.placements ?? project.cases)} ${english ? 'placements' : '次投放'}` : `${number(project.tweets)} ${english ? 'posts in baseline' : '条基准内容'}`}</div>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="font-mono text-sm font-semibold text-[var(--teal)]">{number(project.impressions || project.imp)}</div>
+                <div className="mt-1 font-mono text-[9px] uppercase text-[var(--bone-dim)]">{english ? 'impressions' : '曝光'}</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ProjectSignalAvatar({ name, logo }) {
+  const [failed, setFailed] = React.useState(false);
+  const hue = [...String(name || '?')].reduce((sum, char) => (sum + char.charCodeAt(0)) % 360, 0);
+  const src = logo ? (logo.startsWith('/') || logo.startsWith('http') ? logo : `/${logo}`) : '';
+  const initials = String(name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+  return <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/10" style={{ background: `linear-gradient(145deg, hsl(${hue} 48% 35% / .9), rgba(13,15,18,.96))` }}>
+    {src && !failed ? <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} /> : <span className="flex h-full w-full items-center justify-center font-mono text-xs font-bold text-white/90">{initials || '?'}</span>}
+  </div>;
 }
 
 function MatrixSection(){
@@ -311,7 +360,7 @@ function WhyCta(){
             <p className="mt-8 max-w-2xl mx-auto font-cn text-[17px] leading-[1.75] text-[var(--bone-dim)]">{t("cta.p")}</p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
               <a href="https://x.com/Lighthouse_2026" className="btn-ember px-6 py-3 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.22em] hover:brightness-110 transition">{t("cta.btn1")}</a>
-              <a href="mailto:Lighthouse@mangolabs.org" className="btn-bone px-6 py-3 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.22em] hover:text-[var(--ember)] transition">{t("cta.btn2")}</a>
+              <a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="btn-bone px-6 py-3 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.22em] hover:text-[var(--ember)] transition">{t("cta.btn2")}</a>
             </div>
             <div className="mt-14 grid grid-cols-1 sm:grid-cols-3 max-w-xl mx-auto text-center gap-6 rule-t pt-8">
               <div>
@@ -338,7 +387,9 @@ function Page(){
   React.useEffect(()=>{ document.documentElement.style.scrollBehavior = "smooth"; },[]);
   return (
     <div className="min-h-screen">
+      <Nav />
       <Hero/>
+      <FeaturedProjectsSection />
       <AboutSection/>
       <ImageDivider bg="divider-img-1" kickerKey="div1.kicker" quoteKey="div1.q" subKey="div1.sub"/>
       <KpiSection/>

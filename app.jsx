@@ -1,6 +1,7 @@
 /* Lighthouse Case Study — part 1: helpers + Nav + Hero + About */
 const { useEffect, useRef, useState, useMemo } = React;
 const { LangProvider, useT, tpl } = window.i18n;
+const LighthouseNav = window.LighthouseNav;
 
 const FALLBACK_PROJECTS = JSON.parse(document.getElementById('projects-data').textContent);
 function visibleProjects(projects) {
@@ -187,33 +188,8 @@ function LangToggle({className=""}){
 }
 
 function Nav(){
-  const { t } = useT();
-  return (
-    <header className="fixed top-0 left-0 right-0 z-40" style={{backdropFilter:"blur(12px)", background:"rgba(7,8,10,0.55)", borderBottom:"1px solid var(--rule)"}}>
-      <div className="max-w-[1360px] mx-auto px-6 md:px-10 h-14 flex items-center justify-between gap-4">
-        <a href="#top" className="flex items-center gap-3 shrink-0">
-          <span className="font-display text-[17px] tracking-wide" style={{letterSpacing:".02em"}}>{t("brand.cn")}</span>
-          <span className="h-4 w-px bg-[var(--rule-strong)]"/>
-          <img src="assets/lighthouse-logo.svg" alt="Lighthouse" className="h-[18px] w-auto opacity-95"/>
-        </a>
-        <nav className="hidden lg:flex items-center gap-4 xl:gap-6 text-[10px] xl:text-[11px] font-mono uppercase tracking-[0.16em] xl:tracking-[0.22em] text-[var(--bone-dim)]">
-          <a href="#about" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.about")}</a>
-          <a href="#kpi" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.kpi")}</a>
-          <a href="#winners" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.winners")}</a>
-          <a href="/cases" className="whitespace-nowrap hover:text-[var(--ember)] transition">案例库 ↗</a>
-          <a href="/personal-ip" className="whitespace-nowrap hover:text-[var(--ember)] transition">{t("nav.ip")} ↗</a>
-          <a href="#stars" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.stars")}</a>
-          <a href="#matrix" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.matrix")}</a>
-          <a href="#cta" className="whitespace-nowrap hover:text-[var(--bone)] transition">{t("nav.cta")}</a>
-        </nav>
-        <div className="flex items-center gap-2">
-          <LangToggle/>
-          <a href="#cta" className="hidden md:inline-block whitespace-nowrap text-[11px] font-mono uppercase tracking-[0.22em] px-3.5 py-1.5 btn-bone rounded-[2px] hover:text-[var(--ember)] transition">{t("nav.cta_btn")}</a>
-          <a href="https://app.lhdao.top/" target="_blank" rel="noopener noreferrer" className="hidden md:inline-block whitespace-nowrap text-[11px] font-mono uppercase tracking-[0.22em] px-3.5 py-1.5 btn-ember rounded-[2px] hover:brightness-110 transition">{t("nav.app_btn")}</a>
-        </div>
-      </div>
-    </header>
-  );
+  const { lang, setLang } = useT();
+  return <LighthouseNav lang={lang} onLanguageChange={setLang} />;
 }
 
 function Footer(){
@@ -237,7 +213,7 @@ function Footer(){
           </div>
           <div className="flex flex-wrap gap-x-10 gap-y-3 font-mono uppercase text-[11px] tracking-[0.22em] text-[var(--bone-dim)]">
             <a href="https://x.com/Lighthouse_2026" className="hover:text-[var(--bone)]">X · @Lighthouse_2026</a>
-            <a href="#" className="hover:text-[var(--bone)]">Telegram</a>
+            <a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--bone)]">Telegram</a>
             <a href="#" className="hover:text-[var(--bone)]">Docs</a>
             <a href="#cta" className="hover:text-[var(--ember)]">{t("footer.link.contact")}</a>
           </div>
@@ -270,11 +246,10 @@ function Hero(){
   };
   const sub = publicSummary ? publicCopy.sub : tpl(t("hero.sub"), v);
   return (
-    <section id="top" className="relative min-h-[100svh] md:min-h-[100vh] flex flex-col overflow-hidden">
+    <section id="top" className="relative min-h-[calc(100svh-98px)] md:min-h-[calc(100vh-98px)] flex flex-col overflow-hidden">
       <div className="absolute inset-0 hero-img"/>
       <div className="absolute inset-0" style={{background:"linear-gradient(180deg, rgba(7,8,10,0.45) 0%, rgba(7,8,10,0.15) 35%, rgba(7,8,10,0.55) 75%, var(--ink) 100%)"}}/>
       <div className="absolute inset-0 grid-bg opacity-40"/>
-      <Nav/>
       <div className="relative flex-1 flex flex-col justify-end pt-32 sm:pt-36 md:pt-0 pb-14 sm:pb-20 md:pb-28">
         <div className="max-w-[1360px] mx-auto w-full px-5 sm:px-6 md:px-10">
           <Reveal className="absolute top-24 left-6 md:left-10 hide-sm">
@@ -287,7 +262,7 @@ function Hero(){
           </Reveal>
           <Reveal><div className="kicker mb-6">{t("hero.eyebrow")}</div></Reveal>
           <Reveal delay={1}>
-            <h1 className="font-display font-black leading-[0.98] bone-glow" style={{fontSize:"clamp(34px, 10.5vw, 92px)", letterSpacing:"-0.01em"}}>
+            <h1 className="max-w-full break-words font-display font-black leading-[0.98] bone-glow" style={{fontSize:lang === "en" ? "clamp(34px, 8vw, 76px)" : "clamp(34px, 10.5vw, 92px)", letterSpacing:"0", overflowWrap:"anywhere"}}>
               <span data-i18n-key="hero.h1_a">{t("hero.h1_a")}</span><br/>
               <span className="text-[var(--ember)] ember-glow"><span data-i18n-key="hero.h1_b">{t("hero.h1_b")}</span><br/><span data-i18n-key="hero.h1_c">{t("hero.h1_c")}</span></span>
             </h1>
@@ -320,7 +295,7 @@ function Hero(){
           </div>
           <Reveal delay={3} className="mt-10 flex flex-wrap items-center gap-4">
             <a href="#about" className="btn-ember inline-flex justify-center w-full sm:w-auto px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:brightness-110 transition">{t("hero.cta1")}</a>
-            <a href="#cta" className="btn-bone inline-flex justify-center w-full sm:w-auto px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:text-[var(--ember)] transition">{t("hero.cta2")}</a>
+            <a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="btn-bone inline-flex justify-center w-full sm:w-auto px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:text-[var(--ember)] transition">{t("hero.cta2")}</a>
             <div className="basis-full sm:basis-auto text-[11px] font-mono tracking-[0.18em] leading-relaxed text-[var(--bone-dim)] sm:ml-2">{publicSummary ? publicCopy.foot : tp("hero.foot")}</div>
           </Reveal>
           <div className="hidden md:flex items-center gap-3 mt-16 text-[var(--bone-dim)]">

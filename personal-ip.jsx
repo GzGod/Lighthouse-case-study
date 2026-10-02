@@ -1,6 +1,7 @@
 /* Personal IP page — standalone. Real case: @0xAstraSpark × Justin Sun */
 const { useEffect: useEffectIP, useRef: useRefIP, useState: useStateIP } = React;
 const { LangProvider: LPIP, useT: useTIP, DICT: DICT_IP } = window.i18n;
+const LighthouseNavIP = window.LighthouseNav;
 
 // Snapshot of DICT before any draft pollution, used for clear/reset
 const DICT_IP_CLEAN = { zh: { ...DICT_IP.zh }, en: { ...DICT_IP.en } };
@@ -73,30 +74,8 @@ function LangToggleIP() {
 }
 
 function NavIP() {
-  const { t } = useTIP();
-  return (
-    <header className="fixed top-0 left-0 right-0 z-40" style={{ backdropFilter: "blur(12px)", background: "rgba(7,8,10,0.55)", borderBottom: "1px solid var(--rule)" }}>
-      <div className="max-w-[1360px] mx-auto px-6 md:px-10 h-14 flex items-center justify-between gap-4">
-        <a href="/" className="flex items-center gap-3 shrink-0">
-          <span className="font-display text-[17px] tracking-wide" style={{ letterSpacing: ".02em" }}>{t("brand.cn")}</span>
-          <span className="h-4 w-px bg-[var(--rule-strong)]" />
-          <img src="assets/lighthouse-logo.svg" alt="Lighthouse" className="h-[18px] w-auto opacity-95" />
-        </a>
-        <nav className="hidden lg:flex items-center gap-7 text-[11px] font-mono uppercase tracking-[0.22em] text-[var(--bone-dim)]">
-          <a href="/#about" className="hover:text-[var(--bone)] transition">{t("nav.about")}</a>
-          <a href="/#kpi" className="hover:text-[var(--bone)] transition">{t("nav.kpi")}</a>
-          <a href="/#winners" className="hover:text-[var(--bone)] transition">{t("nav.winners")}</a>
-          <span className="text-[var(--ember)]">{t("nav.ip")}</span>
-          <a href="/#stars" className="hover:text-[var(--bone)] transition">{t("nav.stars")}</a>
-          <a href="/#matrix" className="hover:text-[var(--bone)] transition">{t("nav.matrix")}</a>
-          <a href="/#cta" className="hover:text-[var(--bone)] transition">{t("nav.cta")}</a>
-        </nav>
-        <div className="flex items-center gap-2">
-          <LangToggleIP />
-          <a href="/#cta" className="hidden md:inline-block text-[11px] font-mono uppercase tracking-[0.22em] px-3.5 py-1.5 btn-bone rounded-[2px] hover:text-[var(--ember)] transition">{t("nav.cta_btn")}</a>
-        </div>
-      </div>
-    </header>);
+  const { lang, setLang } = useTIP();
+  return <LighthouseNavIP lang={lang} onLanguageChange={setLang} active="ip" />;
 
 }
 
@@ -116,7 +95,7 @@ function FooterIP() {
           </div>
           <div className="flex flex-wrap gap-x-10 gap-y-3 font-mono uppercase text-[11px] tracking-[0.22em] text-[var(--bone-dim)]">
             <a href="https://x.com/Lighthouse_2026" className="hover:text-[var(--bone)]">X · @Lighthouse_2026</a>
-            <a href="mailto:Lighthouse@mangolabs.org" className="hover:text-[var(--bone)]">Lighthouse@mangolabs.org</a>
+            <a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--bone)]">Telegram · @xuegaozhanshen</a>
           </div>
         </div>
       </div>
@@ -127,10 +106,10 @@ function FooterIP() {
 function IPHero() {
   const { t } = useTIP();
   return (
-    <section className="relative overflow-hidden pt-14">
+    <section className="relative overflow-hidden pt-4">
       <div className="absolute inset-0 grid-bg opacity-30" />
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 70% 45% at 80% 20%, rgba(255,122,69,0.14), transparent 60%)" }} />
-      <div className="max-w-[1360px] mx-auto px-6 md:px-10 relative pt-24 pb-14 md:pt-32 md:pb-20">
+      <div className="max-w-[1360px] mx-auto px-6 md:px-10 relative pt-12 pb-14 md:pt-20 md:pb-20">
         <RevealIP>
           <a href="/" className="inline-block kicker hover:text-[var(--ember)] transition mb-10">{t("ip.back")}</a>
         </RevealIP>
@@ -355,7 +334,7 @@ function IPCTA() {
         </h2>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
           <a href="https://x.com/Lighthouse_2026" className="btn-ember px-6 py-3 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.22em] hover:brightness-110 transition">{t("cta.btn1")}</a>
-          <a href="mailto:Lighthouse@mangolabs.org" className="btn-bone px-6 py-3 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.22em] hover:text-[var(--ember)] transition">{t("cta.btn2")}</a>
+          <a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="btn-bone px-6 py-3 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.22em] hover:text-[var(--ember)] transition">{t("cta.btn2")}</a>
         </div>
       </div>
     </section>);

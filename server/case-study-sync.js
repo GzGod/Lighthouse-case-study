@@ -104,17 +104,19 @@ function publicCase(row, index, project) {
 function sanitizeSnapshot(payload) {
   if (!payload || !Array.isArray(payload.projects) || !Array.isArray(payload.cases)) return payload;
   const projectMap = new Map();
-  const projects = payload.projects.map(project => {
+  let projects = payload.projects.map(project => {
     const originalKey = project.key || project.slug || project.name;
-    const cleanName = project.source === 'legacy' ? 'Legacy public cases' : cleanProjectName(project.name);
+    const cleanName = cleanProjectName(project.name) || (project.source === 'legacy' ? 'Legacy public cases' : '');
     const unsafe = !cleanName || isIdentityBearingName(project.name);
     const name = cleanName || `Public campaign ${hash(originalKey)}`;
     const slug = unsafe && project.source !== 'legacy' ? `public-campaign-${hash(originalKey)}` : project.slug;
     projectMap.set(project.slug, { name, slug, logo: project.logo || '' });
     const { key: _privateKey, ...publicProject } = project;
-    return { ...publicProject, name, slug };
+    const placements = Math.max(0, number(project.placements ?? project.cases));
+    return { ...publicProject, name, slug, placements, cases: placements };
   });
-  const cases = payload.cases.map(item => {
+  const placementBySlug = new Map(projects.map(project => [project.slug, project.placements]));
+  let cases = payload.cases.map(item => {
     const mapped = projectMap.get(item.projectSlug);
     const projectName = mapped?.name || (item.source === 'legacy' ? 'Legacy public cases' : cleanProjectName(item.projectName) || `Public campaign ${hash(item.projectSlug || item.id)}`);
     return {
@@ -123,9 +125,103 @@ function sanitizeSnapshot(payload) {
       projectName,
       logo: mapped?.logo || item.logo || '',
       label: item.source === 'legacy' ? item.label : projectName,
+      placements: Math.max(0, number(item.placements ?? placementBySlug.get(mapped?.slug || item.projectSlug) ?? 1)),
     };
   });
-  return { ...payload, projects, cases };
+
+  // Older snapshots were grouped by source. Consolidate those persisted rows
+  // too, so deploying this version immediately fixes existing snapshots.
+  const merged = new Map();
+  const canonicalSlugBySlug = new Map();
+  for (const project of projects) {
+    const key = `project:${String(project.name || '').trim().toLowerCase()}`;
+    let target = merged.get(key);
+    if (!target) {
+      target = {
+        ...project,
+        sourceSet: new Set(),
+        placements: 0,
+        cases: 0,
+        budget: 0,
+        impressions: 0,
+        likes: 0,
+        replies: 0,
+        retweets: 0,
+        quotes: 0,
+        engagements: 0,
+        participants: 0,
+        startDate: null,
+        endDate: null,
+      };
+      merged.set(key, target);
+    }
+    canonicalSlugBySlug.set(project.slug, target.slug);
+    if (project.source) target.sourceSet.add(project.source);
+    if (!target.logo && project.logo) target.logo = project.logo;
+  }
+  cases = cases.map(item => {
+    const projectSlug = canonicalSlugBySlug.get(item.projectSlug) || item.projectSlug;
+    const project = [...merged.values()].find(candidate => candidate.slug === projectSlug);
+    return {
+      ...item,
+      projectSlug,
+      projectName: project?.name || item.projectName,
+      logo: project?.logo || item.logo || '',
+      label: item.source === 'legacy' ? item.label : (project?.name || item.projectName),
+    };
+  });
+  for (const item of cases) {
+    const project = [...merged.values()].find(candidate => candidate.slug === item.projectSlug);
+    if (!project) continue;
+    project.sourceSet.add(item.source);
+    project.placements += 1;
+    project.cases += 1;
+    project.budget += number(item.budget);
+    project.impressions += number(item.impressions);
+    project.likes += number(item.likes);
+    project.replies += number(item.replies);
+    project.retweets += number(item.retweets);
+    project.quotes += number(item.quotes);
+    project.engagements += number(item.engagements);
+    project.participants += number(item.participants);
+    if (item.createdAt) {
+      if (!project.startDate || new Date(item.createdAt) < new Date(project.startDate)) project.startDate = item.createdAt;
+      if (!project.endDate || new Date(item.createdAt) > new Date(project.endDate)) project.endDate = item.createdAt;
+    }
+  }
+  projects = [...merged.values()].map(project => {
+    const { sourceSet, key: _privateKey, ...publicProject } = project;
+    return {
+      ...publicProject,
+      source: sourceSet.size === 1 ? [...sourceSet][0] : 'mixed',
+      placements: project.placements,
+      cases: project.cases,
+      budget: round(project.budget),
+      cpm: project.impressions > 0 ? round(project.budget * 1000 / project.impressions) : 0,
+      cpe: project.engagements > 0 ? round(project.budget / project.engagements) : 0,
+      er: project.impressions > 0 ? round(project.engagements / project.impressions * 100) : 0,
+    };
+  });
+  const mergedPlacementBySlug = new Map(projects.map(project => [project.slug, project.placements]));
+  cases = cases.map(item => ({ ...item, placements: mergedPlacementBySlug.get(item.projectSlug) || 1 }));
+  return {
+    ...payload,
+    meta: {
+      ...(payload.meta || {}),
+      counts: {
+        ...(payload.meta?.counts || {}),
+        cases: cases.length,
+        placements: cases.length,
+        projects: projects.length,
+      },
+    },
+    metrics: {
+      ...(payload.metrics || {}),
+      placements: cases.length,
+    },
+    projects,
+    cases,
+  };
 }
 
 async function readSourceRows() {
@@ -158,6 +254,7 @@ async function readSourceRows() {
 
 function buildSnapshot(rows) {
   const projectMap = new Map();
+  const usedSlugs = new Map();
   const orderedRows = [...rows].sort((a, b) => String(a.id).localeCompare(String(b.id)));
   const projectFor = (row) => {
     const rawName = cleanProjectName(row.projectName);
@@ -166,14 +263,21 @@ function buildSnapshot(rows) {
       ? `campaign:${row.campaignId || row.id}`
       : 'legacy:public-cases';
     const name = rawName || (source === 'campaign' ? fallbackProjectName(row) : 'Legacy public cases');
-    const key = rawName ? `${source}:${name.toLowerCase()}` : fallbackKey;
+    // Named records represent the same project regardless of whether they came
+    // from the campaign or legacy source. Anonymous campaigns stay isolated by
+    // campaign id so unrelated records are never merged accidentally.
+    const key = rawName ? `project:${name.toLowerCase()}` : fallbackKey;
     if (!projectMap.has(key)) {
       const base = slugify(name, `${source}-${hash(key)}`);
+      const previousKey = usedSlugs.get(base);
+      const slug = previousKey && previousKey !== key ? `${base}-${hash(key)}` : base;
+      usedSlugs.set(slug, key);
       projectMap.set(key, {
         key,
-        slug: source === 'legacy' ? 'legacy-public-cases' : base,
+        slug: rawName ? slug : (source === 'legacy' ? 'legacy-public-cases' : base),
         name,
-        source,
+        sources: new Set(),
+        placements: 0,
         cases: 0,
         budget: 0,
         impressions: 0,
@@ -193,6 +297,8 @@ function buildSnapshot(rows) {
   const cases = orderedRows.map((row, index) => {
     const project = projectFor(row);
     const item = publicCase(row, index, project);
+    project.sources.add(item.source);
+    project.placements += 1;
     project.cases += 1;
     project.budget += item.budget;
     project.impressions += item.impressions;
@@ -211,11 +317,20 @@ function buildSnapshot(rows) {
 
   const projects = [...projectMap.values()].map(project => ({
     ...project,
+    source: project.sources.size === 1 ? [...project.sources][0] : 'mixed',
+    placements: project.placements,
+    cases: project.cases,
     budget: round(project.budget),
     cpm: project.impressions > 0 ? round(project.budget * 1000 / project.impressions) : 0,
     cpe: project.engagements > 0 ? round(project.budget / project.engagements) : 0,
     er: project.impressions > 0 ? round(project.engagements / project.impressions * 100) : 0,
-  })).sort((a, b) => b.impressions - a.impressions);
+  })).map(project => {
+    const { key: _privateKey, sources: _sources, ...publicProject } = project;
+    return publicProject;
+  }).sort((a, b) => b.impressions - a.impressions);
+
+  const placementBySlug = new Map(projects.map(project => [project.slug, project.placements]));
+  cases.forEach(item => { item.placements = placementBySlug.get(item.projectSlug) || 1; });
 
   const metrics = cases.reduce((sum, item) => {
     sum.budget += item.budget;
@@ -242,6 +357,7 @@ function buildSnapshot(rows) {
     }, { budget: 0, impressions: 0, likes: 0, replies: 0, retweets: 0, quotes: 0, engagements: 0 });
     result[source] = {
       ...aggregate,
+      placements: sourceCases.length,
       budget: round(aggregate.budget),
       cpm: aggregate.impressions > 0 ? round(aggregate.budget * 1000 / aggregate.impressions) : 0,
       cpe: aggregate.engagements > 0 ? round(aggregate.budget / aggregate.engagements) : 0,
@@ -269,6 +385,7 @@ function buildSnapshot(rows) {
       dateRange,
       counts: {
         cases: cases.length,
+        placements: cases.length,
         campaignCases: cases.filter(item => item.source === 'campaign').length,
         legacyCases: cases.filter(item => item.source === 'legacy').length,
         projects: projects.length,
@@ -277,6 +394,7 @@ function buildSnapshot(rows) {
     },
     metrics: {
       ...metrics,
+      placements: cases.length,
       budget: round(metrics.budget),
       cpm: metrics.impressions > 0 ? round(metrics.budget * 1000 / metrics.impressions) : 0,
       cpe: metrics.engagements > 0 ? round(metrics.budget / metrics.engagements) : 0,

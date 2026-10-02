@@ -25,6 +25,9 @@ const caseStudySync = read('server/case-study-sync.js');
 const caseStudyRoute = read('server/routes/case-study.js');
 const caseLibrary = read('case-library.jsx');
 const projectAvatar = read('server/project-avatar.js');
+const sharedNav = read('shared-nav.js');
+const personalIpHtml = read('Personal IP.html');
+const caseLibraryHtml = read('Case Library.html');
 
 function test(name, fn) {
   try {
@@ -208,16 +211,20 @@ test('CountUp should animate again when API data replaces the fallback snapshot'
 });
 
 test('Top navigation should include the Lighthouse app entry next to the CTA button', () => {
-  assert.ok(/"nav\.app_btn":\s*"前往灯塔 →"/.test(i18n), 'missing zh Lighthouse app nav label');
-  assert.ok(/"nav\.app_btn":\s*"Go to Lighthouse →"/.test(i18n), 'missing en Lighthouse app nav label');
-  assert.ok(/href="https:\/\/app\.lhdao\.top\/"[\s\S]*\{t\("nav\.app_btn"\)\}/.test(app), 'missing Lighthouse app link in top navigation');
+  assert.ok(/app:\s*'OPEN APP'/.test(sharedNav), 'missing English Lighthouse app nav label');
+  assert.ok(/app:\s*'打开应用'/.test(sharedNav), 'missing Chinese Lighthouse app nav label');
+  assert.ok(/href: 'https:\/\/app\.lhdao\.top\/'/.test(sharedNav), 'missing Lighthouse app link in shared navigation');
 });
 
-test('Top navigation labels should stay on one line in English', () => {
-  assert.ok(/gap-4 xl:gap-6/.test(app), 'desktop nav should tighten spacing before labels wrap');
-  assert.ok(/tracking-\[0\.16em\] xl:tracking-\[0\.22em\]/.test(app), 'desktop nav should reduce letter spacing at narrower desktop widths');
-  assert.ok((app.match(/className="whitespace-nowrap hover:text/g) || []).length >= 7, 'nav links should use whitespace-nowrap to prevent vertical word wrapping');
-  assert.ok(/hidden md:inline-block whitespace-nowrap[\s\S]*\{t\("nav\.cta_btn"\)\}/.test(app), 'CTA nav button should not wrap');
+test('Shared navigation should be used consistently across public pages', () => {
+  assert.ok(/data-shared-nav/.test(sharedNav), 'shared navigation component is missing');
+  assert.ok(/sticky top-0 z-50/.test(sharedNav), 'shared navigation should have one consistent sticky layout');
+  for (const [name, html] of [['homepage', caseStudyHtml], ['personal IP', personalIpHtml], ['case library', caseLibraryHtml], ['project detail', projectCaseHtml]]) {
+    assert.ok(/shared-nav\.js/.test(html), `${name} does not load the shared navigation`);
+  }
+  assert.ok(/whitespace-nowrap/.test(sharedNav), 'navigation labels should not wrap');
+  assert.ok(/overflow-x-auto/.test(sharedNav), 'navigation should scroll horizontally on narrow screens');
+  assert.ok(/https:\/\/t\.me\/xuegaozhanshen/.test(sharedNav), 'shared contact action should use the requested Telegram destination');
 });
 
 test('Homepage should not expose the removed light workspace dashboard', () => {
@@ -327,7 +334,7 @@ test('About facts should keep the sampled baseline note short enough for one des
 });
 
 test('Homepage dense sections should use mobile-first responsive layouts', () => {
-  assert.ok(/min-h-\[100svh\]/.test(app), 'hero should use small-viewport height for mobile browser chrome');
+  assert.ok(/100svh/.test(app), 'hero should use small-viewport height for mobile browser chrome');
   assert.ok(/pt-32 sm:pt-36 md:pt-0/.test(app), 'hero should reserve top breathing room on small screens');
   assert.ok(/grid grid-cols-1 lg:grid-cols-3/.test(app), 'hero stats should stay stacked until there is enough width for three large numbers');
   assert.ok(/basis-full sm:basis-auto/.test(app), 'hero footnote should wrap below CTA buttons on small screens');
@@ -335,6 +342,8 @@ test('Homepage dense sections should use mobile-first responsive layouts', () =>
   assert.ok(/grid grid-cols-2 sm:grid-cols-4/.test(appPart2), 'Star metric grid should not force four columns on narrow screens');
   assert.ok(/grid grid-cols-1 sm:grid-cols-3/.test(appPart3), 'CTA metric grid should stack before becoming three columns');
   assert.ok(/flex flex-wrap items-center gap-x-5 gap-y-2/.test(appPart3), 'Matrix legends should wrap instead of overflowing on narrow screens');
+  assert.ok(/function FeaturedProjectsSection/.test(appPart3), 'homepage should show a public project signal strip');
+  assert.ok(/ProjectSignalAvatar/.test(appPart3), 'homepage project strip should render project avatars');
 });
 
 test('Large metric numbers should use card-safe type scales', () => {
@@ -541,6 +550,23 @@ test('Public case snapshots should sanitize identity-bearing names and ship a da
   assert.ok(!Object.prototype.hasOwnProperty.call(payload.projects[0], 'key'), 'private project grouping key leaked into public payload');
 });
 
+test('Public case snapshots should consolidate same-name projects and expose placement counts', () => {
+  const { buildSnapshot } = require(path.join(root, 'server', 'case-study-sync.js'));
+  const row = (id, source) => ({
+    id, source, campaignId: `${source}-${id}`, projectName: 'Same Project', campaignType: 'TWEET',
+    totalBudget: 100, totalViews: 1000, totalLikes: 1, totalReplies: 2,
+    totalRetweets: 3, totalQuotes: 4, kolsParticipate: 1,
+    createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+  });
+  const payload = buildSnapshot([row('campaign-row', 'campaign'), row('legacy-row', 'legacy')]);
+  assert.strictEqual(payload.projects.length, 1, 'same-name projects should be merged across sources');
+  assert.strictEqual(payload.projects[0].source, 'mixed', 'merged project should retain mixed source provenance');
+  assert.strictEqual(payload.projects[0].placements, 2, 'merged project should count every placement');
+  assert.strictEqual(payload.projects[0].cases, 2, 'legacy cases field should remain compatible with placements');
+  assert.strictEqual(payload.meta.counts.placements, 2, 'snapshot metadata should expose total placements');
+  assert.ok(payload.cases.every(item => item.placements === 2), 'case rows should expose the aggregate placement count');
+});
+
 test('Data-case detail pages should hide fabricated editorial testimonial content', () => {
   assert.ok(/isDataCasePath/.test(projectCase), 'project case page does not detect data-case routes');
   assert.ok(/api\/case-study\/projects/.test(projectCase), 'project case page does not load public data cases');
@@ -562,6 +588,16 @@ test('Public case projects should carry resilient project avatars', () => {
   assert.ok(/LOCAL_PROJECT_LOGOS/.test(projectAvatar), 'local project logo fallback map is missing');
   assert.ok(/ProjectAvatar/.test(caseLibrary) && /onError=\{\(\) => setFailed\(true\)\}/.test(caseLibrary), 'case library cards need an image failure fallback');
   assert.ok(/ProjectAvatar/.test(projectCase), 'project case detail should render a project avatar');
+});
+
+test('Project case English copy should remain localized and fit narrow layouts', () => {
+  for (const text of ['englishCaseCopy', 'challengeIntro', 'Public metric breakdown', 'Source records', 'Campaign Review']) {
+    assert.ok(projectCase.includes(text), `missing English project case copy: ${text}`);
+  }
+  assert.ok(/dateLabel\(item\.createdAt, lang\)/.test(projectCase), 'source record dates should follow the selected language');
+  assert.ok(/text-\[clamp\(18px,4\.5vw,36px\)\]/.test(projectCase), 'detail metrics should use a responsive type scale');
+  assert.ok(/overflowWrap: 'anywhere'/.test(projectCase), 'long project copy should not force horizontal overflow');
+  assert.ok(/href="https:\/\/t\.me\/xuegaozhanshen"/.test(projectCase), 'project case CTA should use the requested Telegram link');
 });
 
 if (process.exitCode) process.exit(process.exitCode);
