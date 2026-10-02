@@ -518,6 +518,28 @@ test('Public case library should expose source filters and pagination without id
   assert.ok(!/tweetUrls|twitterUsername|x\.com\//.test(caseLibrary), 'case library should not render identity or post URLs');
 });
 
+test('Public case snapshots should sanitize identity-bearing names and ship a data fallback', () => {
+  assert.ok(/function sanitizeSnapshot/.test(caseStudySync), 'snapshot sanitization helper is missing');
+  assert.ok(/https?:\\\/\\\//.test(caseStudySync), 'snapshot sanitization does not detect URLs');
+  assert.ok(/function seedFallbackSnapshot/.test(caseStudySync), 'fallback snapshot seeder is missing');
+  assert.ok(/await seedFallbackSnapshot\(pool\)/.test(serverIndex), 'server startup does not seed the fallback snapshot');
+  const fallbackPath = path.join(root, 'server', 'public-case-study-snapshot.json');
+  const fallback = JSON.parse(fs.readFileSync(fallbackPath, 'utf8'));
+  assert.strictEqual(fallback.meta.counts.cases, 583, 'fallback snapshot should contain the current public case count');
+  const { buildSnapshot } = require(path.join(root, 'server', 'case-study-sync.js'));
+  const payload = buildSnapshot([{
+    id: 'identity-bearing-row', source: 'campaign', campaignId: 'campaign-id',
+    projectName: 'https://x.com/example/status/123', campaignType: 'TWEET',
+    totalBudget: 100, totalViews: 1000, totalLikes: 1, totalReplies: 2,
+    totalRetweets: 3, totalQuotes: 4, kolsParticipate: 1,
+    createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+  }]);
+  const serialized = JSON.stringify(payload);
+  assert.ok(!/https?:\/\//i.test(serialized) && !/\/status\/\d+/i.test(serialized), 'identity-bearing project names leaked into the snapshot');
+  assert.ok(/^Public campaign /.test(payload.projects[0].name), 'unsafe project names should use an anonymous fallback');
+  assert.ok(!Object.prototype.hasOwnProperty.call(payload.projects[0], 'key'), 'private project grouping key leaked into public payload');
+});
+
 test('Data-case detail pages should hide fabricated editorial testimonial content', () => {
   assert.ok(/isDataCasePath/.test(projectCase), 'project case page does not detect data-case routes');
   assert.ok(/api\/case-study\/projects/.test(projectCase), 'project case page does not load public data cases');
