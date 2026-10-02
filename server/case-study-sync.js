@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+const { enrichProjectLogos, withLocalProjectLogos } = require('./project-avatar');
 
 const SNAPSHOT_KEY = 'public-v1';
 const FALLBACK_SNAPSHOT_PATH = path.join(__dirname, 'public-case-study-snapshot.json');
@@ -81,6 +82,7 @@ function publicCase(row, index, project) {
     label: source === 'legacy' ? `Legacy case ${String(index + 1).padStart(3, '0')}` : name,
     projectSlug: project.slug,
     projectName: name,
+    logo: project.logo || '',
     source,
     campaignType: row.campaignType || (source === 'campaign' ? 'TWEET' : 'LEGACY'),
     budget: number(row.totalBudget),
@@ -108,7 +110,7 @@ function sanitizeSnapshot(payload) {
     const unsafe = !cleanName || isIdentityBearingName(project.name);
     const name = cleanName || `Public campaign ${hash(originalKey)}`;
     const slug = unsafe && project.source !== 'legacy' ? `public-campaign-${hash(originalKey)}` : project.slug;
-    projectMap.set(project.slug, { name, slug });
+    projectMap.set(project.slug, { name, slug, logo: project.logo || '' });
     const { key: _privateKey, ...publicProject } = project;
     return { ...publicProject, name, slug };
   });
@@ -119,6 +121,7 @@ function sanitizeSnapshot(payload) {
       ...item,
       projectSlug: mapped?.slug || item.projectSlug,
       projectName,
+      logo: mapped?.logo || item.logo || '',
       label: item.source === 'legacy' ? item.label : projectName,
     };
   });
@@ -288,7 +291,7 @@ function buildSnapshot(rows) {
 function readFallbackSnapshot() {
   try {
     const payload = JSON.parse(fs.readFileSync(FALLBACK_SNAPSHOT_PATH, 'utf8'));
-    return sanitizeSnapshot(payload);
+    return withLocalProjectLogos(sanitizeSnapshot(payload));
   } catch (error) {
     console.error(`Public case fallback snapshot unavailable: ${error.message}`);
     return null;
@@ -314,7 +317,7 @@ async function syncCaseStudy(cmsPool) {
   if (syncPromise) return syncPromise;
   syncPromise = (async () => {
     const rows = await readSourceRows();
-    const payload = buildSnapshot(rows);
+    const payload = await enrichProjectLogos(buildSnapshot(rows));
     const client = await cmsPool.connect();
     try {
       await client.query('BEGIN');
@@ -345,7 +348,8 @@ async function latestSnapshot(cmsPool) {
     [SNAPSHOT_KEY]
   );
   if (!rows[0]) return null;
-  return { ...rows[0], payload: sanitizeSnapshot(typeof rows[0].payload === 'string' ? JSON.parse(rows[0].payload) : rows[0].payload) };
+  const payload = await enrichProjectLogos(sanitizeSnapshot(typeof rows[0].payload === 'string' ? JSON.parse(rows[0].payload) : rows[0].payload));
+  return { ...rows[0], payload };
 }
 
 async function syncStatus(cmsPool) {

@@ -24,6 +24,7 @@ const projectCase = read('project-case.jsx');
 const caseStudySync = read('server/case-study-sync.js');
 const caseStudyRoute = read('server/routes/case-study.js');
 const caseLibrary = read('case-library.jsx');
+const projectAvatar = read('server/project-avatar.js');
 
 function test(name, fn) {
   try {
@@ -551,6 +552,16 @@ test('Data-case detail pages should hide fabricated editorial testimonial conten
   assert.ok(/dateRange/.test(caseStudySync), 'public snapshot is missing coverage date range');
   assert.ok(/数据周期/.test(projectCase), 'data-case detail page is missing coverage period');
   assert.ok(/interactionMix/.test(projectCase), 'data-case detail page is missing interaction composition');
+});
+
+test('Public case projects should carry resilient project avatars', () => {
+  assert.ok(/enrichProjectLogos/.test(caseStudySync), 'case study sync should enrich project logos');
+  assert.ok(/logo: project\.logo \|\| ''/.test(caseStudySync), 'public case rows should expose project logos');
+  assert.ok(/api\.rootdata\.com\/open\/ser_inv/.test(projectAvatar), 'RootData search endpoint is not configured');
+  assert.ok(/ROOTDATA_API_KEY/.test(projectAvatar), 'RootData integration must be server-keyed');
+  assert.ok(/LOCAL_PROJECT_LOGOS/.test(projectAvatar), 'local project logo fallback map is missing');
+  assert.ok(/ProjectAvatar/.test(caseLibrary) && /onError=\{\(\) => setFailed\(true\)\}/.test(caseLibrary), 'case library cards need an image failure fallback');
+  assert.ok(/ProjectAvatar/.test(projectCase), 'project case detail should render a project avatar');
 });
 
 if (process.exitCode) process.exit(process.exitCode);

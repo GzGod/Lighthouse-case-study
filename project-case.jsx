@@ -64,6 +64,16 @@ function pageField(page, key, fallback) {
   return value === undefined || value === null || value === "" ? fallback : value;
 }
 
+function ProjectAvatar({ name, logo, size = "h-14 w-14" }) {
+  const [failed, setFailed] = useState(false);
+  const hue = [...String(name || '')].reduce((sum, char) => (sum + char.charCodeAt(0)) % 360, 0);
+  const src = logo ? (logo.startsWith('/') || logo.startsWith('http') ? logo : `/${logo}`) : '';
+  const initials = String(name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+  return <div className={`${size} relative shrink-0 overflow-hidden rounded-xl border border-white/10`} style={{ background: `linear-gradient(145deg, hsl(${hue} 48% 35% / .9), rgba(13,15,18,.96))` }}>
+    {src && !failed ? <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} /> : <span className="flex h-full w-full items-center justify-center font-mono text-sm font-bold text-white/90">{initials || '?'}</span>}
+  </div>;
+}
+
 function useProject() {
   const [project, setProject] = useState(() => fallbackProject(slugFromPath()));
   useEffect(() => {
@@ -78,7 +88,7 @@ function useProject() {
         if (!found) return;
         if (isDataCasePath()) {
           const data = found.project || {};
-          setProject({ ...fallbackProject(slug), slug: data.slug, name: data.name, budget: data.budget, impressions: data.impressions, imp: data.impressions, er: data.er, cpm: data.cpm, cpe: data.cpe, tweets: data.cases, logo: '', case_study: found, case_page: {} });
+          setProject({ ...fallbackProject(slug), slug: data.slug, name: data.name, budget: data.budget, impressions: data.impressions, imp: data.impressions, er: data.er, cpm: data.cpm, cpe: data.cpe, tweets: data.cases, logo: data.logo || '', case_study: found, case_page: {} });
         } else {
           setProject({ ...fallbackProject(slug), ...found, case_page: found.case_page || {} });
         }
@@ -192,7 +202,7 @@ function ProjectCasePage() {
             <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,122,69,.24),transparent_64%)]" />
             <div className="relative">
               <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] uppercase tracking-[.2em] text-[var(--bone-dim)]"><span>{mockData.eyebrow}</span><span className="h-px w-10 bg-[var(--rule-strong)]" /><span>{mockData.volume}</span></div>
-              <div className="mt-7 flex flex-wrap items-center gap-4">{project.logo && <img src={`/${project.logo}`} alt={pageTitle} className="h-14 w-14 rounded-xl border border-white/10 object-cover" />}<h1 className="font-display text-5xl font-black leading-[.95] tracking-[-.04em] md:text-7xl">{pageTitle}</h1></div>
+              <div className="mt-7 flex flex-wrap items-center gap-4"><ProjectAvatar name={pageTitle} logo={project.logo} /><h1 className="font-display text-5xl font-black leading-[.95] tracking-[-.04em] md:text-7xl">{pageTitle}</h1></div>
               <h2 className="mt-7 max-w-3xl font-cn text-3xl leading-tight md:text-5xl"><span className="text-[var(--ember)]">{pageField(page, "hero_line_1", dataCase ? "把公开传播结果放回同一套口径" : "把项目叙事转化为可复盘增长")}</span><br /><span className="text-[var(--ember)]">{pageField(page, "hero_line_2", dataCase ? "用匿名化数据看清注意力效率" : "用数据验证 Web3 注意力效率")}</span></h2>
               <p className="font-cn mt-7 max-w-2xl text-[16px] leading-8 text-[var(--bone-dim)]">{pageField(page, "summary", dataCase ? "这是一组来自公开案例快照的聚合结果。页面保留预算、曝光和互动的上下文，但不展示作者身份或推文地址。" : mockData.summary)}</p>
               <div className="mt-7 flex flex-wrap gap-2">{tags.map(tag => <span key={tag} className="rounded-full border border-[var(--rule-strong)] bg-white/[.035] px-3 py-1 text-xs text-[var(--bone-dim)]">{tag}</span>)}</div>

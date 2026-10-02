@@ -11,6 +11,20 @@ const compact = n => {
 };
 const dateLabel = value => value ? new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(value)) : '—';
 
+function initialsFor(name) {
+  const parts = String(name || '?').trim().split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0]?.slice(0, 2) || '?').toUpperCase();
+}
+
+function ProjectAvatar({ name, logo, size = 'h-11 w-11' }) {
+  const [failed, setFailed] = useState(false);
+  const hue = [...String(name || '')].reduce((sum, char) => (sum + char.charCodeAt(0)) % 360, 0);
+  const src = logo ? (logo.startsWith('/') || logo.startsWith('http') ? logo : `/${logo}`) : '';
+  return <div className={`${size} relative shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[var(--ink-2)]`} style={{ background: `linear-gradient(145deg, hsl(${hue} 48% 35% / .9), rgba(13,15,18,.96))` }}>
+    {src && !failed ? <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} /> : <span className="flex h-full w-full items-center justify-center font-mono text-[11px] font-bold tracking-[.08em] text-white/90">{initialsFor(name)}</span>}
+  </div>;
+}
+
 function Header() {
   return <header className="sticky top-0 z-20 border-b border-[var(--rule)] bg-[rgba(7,8,10,.78)] backdrop-blur-xl">
     <div className="mx-auto flex h-16 max-w-[1320px] items-center justify-between px-5 md:px-8">
@@ -30,7 +44,7 @@ function EmptyState({ message, detail }) {
 
 function CaseCard({ item }) {
   return <a href={`/cases/${encodeURIComponent(item.projectSlug)}`} className="group block border border-[var(--rule)] bg-[rgba(13,15,18,.74)] p-5 transition hover:-translate-y-0.5 hover:border-[rgba(255,122,69,.55)] hover:bg-[rgba(21,24,29,.9)]">
-    <div className="flex items-start justify-between gap-4"><div><div className="mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.source === 'campaign' ? 'CAMPAIGN' : 'LEGACY'} · {item.dataQuality === 'complete' ? 'VERIFIED METRICS' : 'PARTIAL METRICS'}</div><h3 className="display mt-3 text-lg font-bold text-white transition group-hover:text-[var(--ember-soft)]">{item.projectName}</h3></div><span className="mono text-xs text-[var(--bone-dim)]">↗</span></div>
+    <div className="flex items-start justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><ProjectAvatar name={item.projectName} logo={item.logo} /><div className="min-w-0"><div className="mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.source === 'campaign' ? 'CAMPAIGN' : 'LEGACY'} · {item.dataQuality === 'complete' ? 'VERIFIED METRICS' : 'PARTIAL METRICS'}</div><h3 className="display mt-3 truncate text-lg font-bold text-white transition group-hover:text-[var(--ember-soft)]">{item.projectName}</h3></div></div><span className="mono text-xs text-[var(--bone-dim)]">↗</span></div>
     <div className="mt-5 grid grid-cols-2 gap-y-4 border-t border-[var(--rule)] pt-4 sm:grid-cols-4"><Metric label="曝光" value={compact(item.impressions)} /><Metric label="互动" value={compact(item.engagements)} tone="text-[var(--teal)]" /><Metric label="CPM" value={item.cpm ? item.cpm.toFixed(2) : '—'} /><Metric label="预算" value={item.budget ? compact(item.budget) : '—'} /></div>
     <div className="mt-5 flex items-center justify-between gap-3 mono text-[10px] tracking-[.12em] text-[var(--bone-dim)]"><span>{dateLabel(item.createdAt)}</span><span>{item.participants ? `${nf.format(item.participants)} participants` : '公开聚合记录'}</span></div>
   </a>;
