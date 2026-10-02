@@ -520,7 +520,7 @@ test('Public case library should expose source filters and pagination without id
 
 test('Public case snapshots should sanitize identity-bearing names and ship a data fallback', () => {
   assert.ok(/function sanitizeSnapshot/.test(caseStudySync), 'snapshot sanitization helper is missing');
-  assert.ok(/https?:\\\/\\\//.test(caseStudySync), 'snapshot sanitization does not detect URLs');
+  assert.ok(caseStudySync.includes('https?:\\/\\/'), 'snapshot sanitization does not detect URLs');
   assert.ok(/function seedFallbackSnapshot/.test(caseStudySync), 'fallback snapshot seeder is missing');
   assert.ok(/await seedFallbackSnapshot\(pool\)/.test(serverIndex), 'server startup does not seed the fallback snapshot');
   const fallbackPath = path.join(root, 'server', 'public-case-study-snapshot.json');
