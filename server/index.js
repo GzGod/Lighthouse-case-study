@@ -96,7 +96,7 @@ async function start() {
     res.sendFile(path.join(staticRoot, 'Lighthouse Case Study.html'));
   });
   app.get('/personal-ip', (req, res) => {
-    res.sendFile(path.join(staticRoot, 'Personal IP.html'));
+    res.redirect(301, '/cases');
   });
   app.get('/cases', (req, res) => {
     res.sendFile(path.join(staticRoot, 'Case Library.html'));

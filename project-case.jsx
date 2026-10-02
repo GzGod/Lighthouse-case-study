@@ -98,6 +98,55 @@ function ProjectAvatar({ name, logo, size = "h-14 w-14" }) {
   </div>;
 }
 
+function TweetPreview({ tweet, english }) {
+  const url = tweet?.url;
+  const embedRef = React.useRef(null);
+  const [embedded, setEmbedded] = useState(false);
+  useEffect(() => {
+    if (!tweet?.id || !embedRef.current) return;
+    let active = true;
+    if (!window.__lighthouseXWidgetsPromise) {
+      window.__lighthouseXWidgetsPromise = new Promise((resolve, reject) => {
+        if (window.twttr?.widgets) return resolve(window.twttr);
+        const script = document.createElement('script');
+        script.src = 'https://platform.twitter.com/widgets.js';
+        script.async = true;
+        script.onload = () => window.twttr?.widgets ? resolve(window.twttr) : reject(new Error('X widgets unavailable'));
+        script.onerror = () => reject(new Error('X widgets blocked'));
+        document.head.appendChild(script);
+      });
+    }
+    window.__lighthouseXWidgetsPromise.then(api => {
+      if (!active || !embedRef.current) return;
+      return api.widgets.createTweet(tweet.id, embedRef.current, { theme: 'dark', conversation: 'none', cards: 'visible', dnt: true, align: 'center' });
+    }).then(element => { if (active && element) setEmbedded(true); }).catch(() => {});
+    return () => { active = false; };
+  }, [tweet?.id]);
+  if (!url) return null;
+  return <article className="min-w-0 overflow-hidden rounded-[3px] border border-[var(--rule)] bg-[rgba(237,232,225,.035)] p-4 transition hover:border-[rgba(111,183,193,.55)]">
+    <div ref={embedRef} className={embedded ? 'min-w-0' : 'hidden'} />
+    {!embedded && <><div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black text-sm font-bold text-white">𝕏</div><div className="min-w-0"><div className="truncate text-sm font-semibold text-white">@{tweet.username || 'creator'}</div><div className="mono text-[10px] uppercase tracking-[.12em] text-[var(--bone-dim)]">{english ? 'Top post by reach' : '按曝光排序的头部推文'}</div></div></div>
+      <a href={url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[var(--teal)] transition hover:text-white" aria-label={english ? 'Open post on X' : '在 X 打开推文'}>↗</a>
+    </div>
+    <p className="mt-4 min-h-[3.25rem] break-words text-sm leading-6 text-[var(--bone-dim)]">{tweet.text || (english ? 'Preview this public post on X.' : '打开 X 预览这条公开推文。')}</p>
+    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--rule)] pt-3 mono text-[10px] uppercase tracking-[.1em] text-[var(--bone-dim)]"><span>{formatNumber(tweet.views)} {english ? 'views' : '曝光'}</span><span>{formatNumber(tweet.likes)} {english ? 'likes' : '赞'}</span><span>{formatNumber(tweet.retweets)} {english ? 'reposts' : '转发'}</span></div></>}
+    {embedded && <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 block text-center mono text-[10px] uppercase text-[var(--teal)] hover:text-white">{english ? 'Open on X ↗' : '在 X 打开 ↗'}</a>}
+  </article>;
+}
+
+function PlacementPanel({ item, index, copy, english, lang }) {
+  const [open, setOpen] = useState(index === 0);
+  const topTweets = Array.isArray(item.topTweets) ? item.topTweets.slice(0, 3) : [];
+  return <div className="border border-[var(--rule)] bg-white/[.02]">
+    <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)} className="flex w-full flex-wrap items-center justify-between gap-4 p-4 text-left transition hover:bg-white/[.03] sm:p-5">
+      <div className="flex min-w-0 items-center gap-4"><span className="mono text-xs font-bold text-[var(--ember-soft)]">{String(index + 1).padStart(2, '0')}</span><div><div className="font-semibold text-white">{english ? `${copy.placement} ${index + 1}` : `${copy.placement} ${index + 1} 次投放`}</div><div className="mt-1 text-xs text-[var(--bone-dim)]">{dateLabel(item.createdAt, lang)} · {formatNumber(item.impressions)} {english ? 'views' : '曝光'}</div></div></div>
+      <div className="flex items-center gap-4"><div className="text-right"><div className="mono text-[10px] uppercase text-[var(--bone-dim)]">{copy.placementBudget}</div><div className="mt-1 mono text-sm font-semibold text-white">{formatNumber(item.budget)} USDC</div></div><span className="text-[var(--ember-soft)]">{open ? '−' : '+'}</span></div>
+    </button>
+    {open && <div className="border-t border-[var(--rule)] p-4 sm:p-5"><div className="mb-4 mono text-[10px] uppercase tracking-[.15em] text-[var(--bone-dim)]">{copy.topPosts} · {english ? 'ranked by views' : '按曝光排名'}</div>{topTweets.length ? <div className="grid items-start gap-3 lg:grid-cols-3">{topTweets.map(tweet => <TweetPreview key={tweet.id} tweet={tweet} english={english} />)}</div> : <div className="border border-dashed border-[var(--rule-strong)] p-5 text-sm text-[var(--bone-dim)]">{english ? 'Post previews will appear after the next source sync.' : '下次源数据同步后会显示推文预览。'}</div>}</div>}
+  </div>;
+}
+
 function useProject() {
   const [project, setProject] = useState(() => fallbackProject(slugFromPath()));
   useEffect(() => {
@@ -171,13 +220,30 @@ function ProjectCasePage() {
     budget: 'USDC / Budget', reach: 'Reach / Impressions', er: 'Engagement rate', public: 'Public aggregate', records: 'case records', snapshot: 'Data snapshot',
     overview: 'Overview', outcomes: 'Outcomes', challenge: 'Challenge', challengeTitle: 'The challenge', challengeIntro: 'The campaign focused on these core challenges:', solution: 'Solution', solutionTitle: 'Our approach', solutionIntro: 'A connected approach across strategy, content, creators and data:',
     showcase: 'Project showcase', evidence: 'Public metric breakdown', privacy: 'Identity information hidden', evidenceNote: 'This page shows aggregated results from Lighthouse public case snapshots. Budget is calculated only for campaign records with a budget field. Legacy records retain reach and engagement, but are not counted as paid efficiency.',
-    source: 'Source records', all: 'View all in case library ↗', type: 'Type', date: 'Date', engagement: 'Engagement', testimonial: 'Client perspective', tweet: 'Related posts', tweetTitle: 'Selected campaign content', tweetNote: 'A specific X / Twitter post can be added in the CMS.',
+    source: 'Placement highlights', all: 'View all in case library ↗', type: 'Type', date: 'Date', engagement: 'Engagement', testimonial: 'Client perspective', tweet: 'Related posts', tweetTitle: 'Selected campaign content', tweetNote: 'A specific X / Twitter post can be added in the CMS.', placement: 'Placement', topPosts: 'Top 3 posts', placementBudget: 'Placement budget', sourceRecordsLabel: 'Source records',
     cta: 'Could your project be the next case?', ctaNote: 'Tell us your goals, budget and audience. We will map out an executable, measurable attention plan.', ctaButton: 'Contact on Telegram →',
     dataType: 'Data type', caseCount: 'Case count', placements: 'Placements', participants: 'Creator participations', period: 'Data period', synced: 'Last synced', identity: 'Privacy', identityValue: 'Authors and post URLs anonymized', client: 'Client', scope: 'Scope', team: 'Project team', projectPeriod: 'Campaign period',
   } : {
     hero1: '把公开传播结果放回同一套口径', hero2: '用匿名化数据看清注意力效率', summary: '这是一组来自公开案例快照的聚合结果。相同项目已统一归并，页面保留预算、曝光和互动的上下文，但不展示作者身份或推文地址。',
     budget: 'USDC / 预算', reach: '曝光 / 触达', er: '互动率', public: '公开聚合', records: '条案例', snapshot: '数据快照', overview: 'Overview', outcomes: 'Outcomes', challenge: 'Challenge', challengeTitle: '项目挑战', challengeIntro: '在项目启动前，客户面临以下核心挑战：', solution: 'Solution', solutionTitle: '灯塔方案', solutionIntro: '我们从策略、内容、创作者与数据四个维度提供全链路解决方案：', showcase: '项目展示', evidence: '公开指标拆解', privacy: '身份信息已隐藏', evidenceNote: '该页面展示的是 Lighthouse 公开案例快照的聚合结果。预算只对有预算字段的 campaign 记录计算；legacy 记录保留曝光和互动，但不会被误计入付费效率。', source: '来源记录', all: '在案例库查看全部 ↗', type: '类型', date: '日期', engagement: '互动', testimonial: '客户评价', tweet: '相关推文', tweetTitle: '传播内容精选', tweetNote: '支持 Twitter / X 推文嵌入，可在后台补充具体链接。', cta: '下一个成功案例，\n会是你的项目吗？', ctaNote: '让我们一起，点亮 Web3 的未来。', ctaButton: 'Telegram 联系 →', dataType: '数据类型', caseCount: '案例数量', placements: '投放次数', participants: '参与创作者', period: '数据周期', synced: '最后同步', identity: '身份策略', identityValue: '作者与推文地址匿名化', client: '客户名称', scope: '服务范围', team: '项目团队', projectPeriod: '项目周期',
   };
+  Object.assign(copy, english ? {
+    budget: 'Total project budget / USDC',
+    summary: 'This page combines every public placement for the project. The budget above is the sum across placements; each placement below shows its top three public posts by views.',
+    privacy: 'Only public top-post links are shown',
+    identityValue: 'Only public top-post links are shown',
+    evidenceNote: 'Project budget is the sum of all public placement budgets. The posts below are the top three by recorded views for each placement.',
+  } : {
+    budget: '项目总预算 / USDC',
+    summary: '这里汇总该项目的全部公开投放。上方预算是各次投放预算之和；下方逐次展示按曝光排名的前三条公开推文。',
+    privacy: '仅展示前三名公开推文',
+    identityValue: '仅展示前三名公开推文',
+    evidenceNote: '项目总预算为所有公开投放预算之和；每次投放的推文按记录的曝光量选出前三名。',
+    source: '每次投放精选',
+    placement: '第',
+    topPosts: '前三名推文',
+    placementBudget: '本次投放预算',
+  });
   const dataCase = project.case_study;
   const dataProject = dataCase?.project || {};
   const dataCases = dataCase?.cases || [];
@@ -258,7 +324,7 @@ function ProjectCasePage() {
 
         {dataCase && <GlassCard className="mt-4 min-w-0 p-5 sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">Evidence layer</div><h2 className="mt-3 break-words text-2xl font-bold">{copy.evidence}</h2></div><div className="mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.privacy}</div></div><div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[{k:'Likes',v:dataProject.likes},{k:'Replies',v:dataProject.replies},{k:'Reposts',v:dataProject.retweets},{k:'Quotes',v:dataProject.quotes}].map(item => <div key={item.k} className="border border-[var(--rule)] bg-white/[.025] p-4"><div className="mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.k}</div><div className="mt-3 display break-words text-2xl font-bold text-white">{formatNumber(item.v)}</div></div>)}</div><div className="mt-7 grid gap-4 sm:grid-cols-2">{interactionMix.map(item => { const share = interactionTotal > 0 ? item.value / interactionTotal * 100 : 0; return <div key={item.label}><div className="flex items-center justify-between gap-3 mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]"><span>{item.label}</span><span>{share.toFixed(1)}%</span></div><div className="mt-2 h-1.5 overflow-hidden bg-white/[.08]"><div className="h-full" style={{ width: `${Math.min(100, share)}%`, background: item.tone }} /></div></div>; })}</div><div className="mt-6 border-t border-[var(--rule)] pt-5 text-sm leading-7 text-[var(--bone-dim)]">{copy.evidenceNote}</div></GlassCard>}
 
-        {dataCase && <GlassCard className="mt-4 min-w-0 p-5 sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">Source records</div><h2 className="mt-3 text-2xl font-bold">{copy.source}</h2></div><a href={`/cases?project=${encodeURIComponent(dataProject.slug || '')}`} className="mono text-[10px] uppercase tracking-[.14em] text-[var(--ember-soft)] hover:text-white">{copy.all}</a></div><div className="mt-6 overflow-x-auto"><table className="w-full min-w-[680px] text-left"><thead><tr className="border-b border-[var(--rule)] mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]"><th className="py-3 pr-4">{copy.type}</th><th className="py-3 pr-4">{copy.date}</th><th className="py-3 pr-4 text-right">{copy.reach}</th><th className="py-3 pr-4 text-right">{copy.engagement}</th><th className="py-3 pr-4 text-right">CPM</th><th className="py-3 text-right">CPE</th></tr></thead><tbody>{dataCases.slice(0, 12).map(item => <tr key={item.id} className="border-b border-[var(--rule)] text-sm"><td className="py-3 pr-4"><span className="mono text-[10px] uppercase tracking-[.12em] text-[var(--ember-soft)]">{item.source}</span><div className="mt-1 text-[var(--bone-dim)]">{item.campaignType || 'PUBLIC RECORD'}</div></td><td className="py-3 pr-4 mono text-xs text-[var(--bone-dim)]">{dateLabel(item.createdAt, lang)}</td><td className="py-3 pr-4 text-right mono">{formatNumber(item.impressions)}</td><td className="py-3 pr-4 text-right mono">{formatNumber(item.engagements)}</td><td className="py-3 pr-4 text-right mono">{item.cpm ? item.cpm.toFixed(2) : '—'}</td><td className="py-3 text-right mono">{item.cpe ? item.cpe.toFixed(2) : '—'}</td></tr>)}</tbody></table></div>{dataCases.length > 12 && <div className="mt-4 border-t border-[var(--rule)] pt-4 mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{english ? `Showing 12 of ${formatNumber(dataCases.length)} anonymous source records.` : `共 ${formatNumber(dataCases.length)} 条匿名来源记录，此处展示前 12 条。`}</div>}</GlassCard>}
+        {dataCase && <GlassCard className="mt-4 min-w-0 p-5 sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{english ? `TOP POSTS BY PLACEMENT · ${copy.sourceRecordsLabel}` : '每次投放的头部推文 · 来源记录'}</div><h2 className="mt-3 text-2xl font-bold">{copy.source}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--bone-dim)]">{english ? 'Open a placement to preview its three highest-reach public posts.' : '展开每次投放，即可预览该次投放曝光最高的三条公开推文。'}</p></div><a href={`/cases?project=${encodeURIComponent(dataProject.slug || '')}`} className="mono text-[10px] uppercase tracking-[.14em] text-[var(--ember-soft)] hover:text-white">{copy.all}</a></div><div className="mt-6 grid gap-3">{dataCases.map((item, index) => <PlacementPanel key={item.id} item={item} index={index} copy={copy} english={english} lang={lang} />)}</div></GlassCard>}
 
         {!dataCase && <section className="mt-4 grid gap-4 lg:grid-cols-[.95fr_1.45fr]">
           <GlassCard className="min-w-0 p-5 sm:p-7"><h2 className="text-2xl font-bold">{copy.testimonial}</h2><p className="mt-6 break-words text-[15px] leading-8 text-slate-300">“{localizedField(page, 'testimonial', mockData.testimonial, english ? englishCaseCopy.testimonial : false)}”</p><div className="mt-7 flex min-w-0 items-center gap-4"><div className="h-14 w-14 shrink-0 rounded-full border border-white/15 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,.55),rgba(80,120,125,.25)_38%,rgba(10,20,24,.9))]" /><div className="min-w-0"><div className="break-words font-semibold text-white">{pageField(page, 'testimonial_name', mockData.client.name)}</div><div className="mt-1 break-words text-sm text-slate-400">{localizedField(page, 'testimonial_role', mockData.client.role, english ? 'Campaign Review' : false)}</div></div></div></GlassCard>

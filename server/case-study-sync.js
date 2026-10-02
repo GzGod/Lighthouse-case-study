@@ -72,6 +72,30 @@ function fallbackProjectName(row) {
   return `Public campaign ${hash(row.campaignId || row.id)}`;
 }
 
+function publicTopTweets(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value
+    .map(tweet => {
+      const match = String(tweet?.tweetUrl || '').match(/^https:\/\/(?:www\.)?(?:x|twitter)\.com\/([a-zA-Z0-9_]+)\/status\/(\d+)/i);
+      if (!match || seen.has(match[2])) return null;
+      seen.add(match[2]);
+      return {
+        id: match[2],
+        url: `https://x.com/${match[1]}/status/${match[2]}`,
+        username: match[1],
+        text: String(tweet.text || '').trim().slice(0, 320),
+        views: number(tweet.views),
+        likes: number(tweet.likes),
+        replies: number(tweet.replies),
+        retweets: number(tweet.retweets),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 3);
+}
+
 function publicCase(row, index, project) {
   const source = row.source === 'campaign' ? 'campaign' : 'legacy';
   const name = project.name;
@@ -98,6 +122,7 @@ function publicCase(row, index, project) {
     createdAt: row.createdAt || null,
     updatedAt: row.updatedAt || row.lastXSyncedAt || null,
     dataQuality: views > 0 && engagements > 0 ? 'complete' : 'partial',
+    topTweets: source === 'campaign' ? publicTopTweets(row.tweetsData) : [],
   };
 }
 
@@ -292,6 +317,7 @@ async function readSourceRows() {
       ca."createdAt",
       ca."updatedAt",
       ca."lastXSyncedAt",
+      ca."tweetsData",
       uc."projectName"
     FROM public.cases ca
     LEFT JOIN public.unified_campaigns uc ON uc.id = ca."campaignId"

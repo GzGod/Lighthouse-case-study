@@ -22,14 +22,13 @@
   window.LighthouseNav = function LighthouseNav({ lang = 'zh', onLanguageChange, active = '', overlay = false }) {
     const english = lang === 'en';
     const labels = english
-      ? { about: 'ATTENTION PLAYS', benchmarks: 'BENCHMARKS', playbooks: 'PLAYBOOKS', library: 'CASE LIBRARY', ip: 'PERSONAL IP', cases: 'CASES', matrix: 'TRAFFIC MATRIX', contact: 'CONTACT', app: 'OPEN APP', language: '中文' }
-      : { about: '注意力方案', benchmarks: '价格基准', playbooks: '执行案例', library: '案例库', ip: '个人 IP', cases: '代表案例', matrix: '流量矩阵', contact: 'Telegram 联系', app: '打开应用', language: 'EN' };
+      ? { about: 'ATTENTION PLAYS', benchmarks: 'BENCHMARKS', playbooks: 'PLAYBOOKS', library: 'CASE LIBRARY', cases: 'CASES', matrix: 'TRAFFIC MATRIX', contact: 'CONTACT', app: 'OPEN APP', language: '中文' }
+      : { about: '注意力方案', benchmarks: '价格基准', playbooks: '执行案例', library: '案例库', cases: '代表案例', matrix: '流量矩阵', contact: 'Telegram 联系', app: '打开应用', language: 'EN' };
     const items = [
       { key: 'about', href: '/#about', label: labels.about },
       { key: 'benchmarks', href: '/#kpi', label: labels.benchmarks },
       { key: 'playbooks', href: '/#winners', label: labels.playbooks },
       { key: 'library', href: '/cases', label: labels.library },
-      { key: 'ip', href: '/personal-ip', label: labels.ip },
       { key: 'cases', href: '/#stars', label: labels.cases },
       { key: 'matrix', href: '/#matrix', label: labels.matrix },
     ];
