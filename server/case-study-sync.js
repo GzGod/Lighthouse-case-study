@@ -6,8 +6,29 @@ const { enrichProjectLogos, withLocalProjectLogos } = require('./project-avatar'
 
 const SNAPSHOT_KEY = 'public-v1';
 const FALLBACK_SNAPSHOT_PATH = path.join(__dirname, 'public-case-study-snapshot.json');
+const FALLBACK_TOP_TWEETS_PATH = path.join(__dirname, 'public-top-tweets.json');
 let sourcePool = null;
 let syncPromise = null;
+let fallbackTopTweets = null;
+
+function withFallbackTopTweets(payload) {
+  if (!payload?.cases) return payload;
+  if (!fallbackTopTweets) {
+    try { fallbackTopTweets = JSON.parse(fs.readFileSync(FALLBACK_TOP_TWEETS_PATH, 'utf8')); }
+    catch { fallbackTopTweets = {}; }
+  }
+  return {
+    ...payload,
+    meta: {
+      ...payload.meta,
+      privacy: 'Project metrics are aggregated; only the three highest-reach public X posts for each placement are linked on project detail pages.',
+    },
+    cases: payload.cases.map(item => item.topTweets?.length ? item : {
+      ...item,
+      topTweets: fallbackTopTweets[item.id] || [],
+    }),
+  };
+}
 
 function sourceConnectionString() {
   return process.env.LIGHTHOUSE_SOURCE_DATABASE_URL || process.env.SOURCE_DATABASE_URL || '';
@@ -467,7 +488,7 @@ function buildSnapshot(rows) {
         legacyCases: cases.filter(item => item.source === 'legacy').length,
         projects: projects.length,
       },
-      privacy: 'Aggregated public metrics only; author identities and post URLs are intentionally omitted.',
+      privacy: 'Project metrics are aggregated; only the three highest-reach public X posts for each placement are linked on project detail pages.',
     },
     metrics: {
       ...metrics,
@@ -543,7 +564,7 @@ async function latestSnapshot(cmsPool) {
     [SNAPSHOT_KEY]
   );
   if (!rows[0]) return null;
-  const payload = await enrichProjectLogos(sanitizeSnapshot(typeof rows[0].payload === 'string' ? JSON.parse(rows[0].payload) : rows[0].payload));
+  const payload = await enrichProjectLogos(withFallbackTopTweets(sanitizeSnapshot(typeof rows[0].payload === 'string' ? JSON.parse(rows[0].payload) : rows[0].payload)));
   return { ...rows[0], payload };
 }
 

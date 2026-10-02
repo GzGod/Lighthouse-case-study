@@ -58,7 +58,7 @@ router.get('/cases', async (req, res, next) => {
       pageSize,
       total,
       totalPages: Math.max(Math.ceil(total / pageSize), 1),
-      items: items.slice(start, start + pageSize),
+      items: items.slice(start, start + pageSize).map(({ topTweets: _topTweets, ...item }) => item),
     });
   } catch (error) { next(error); }
 });

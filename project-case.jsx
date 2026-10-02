@@ -124,7 +124,7 @@ function TweetPreview({ tweet, english }) {
   }, [tweet?.id]);
   if (!url) return null;
   return <article className="min-w-0 overflow-hidden rounded-[3px] border border-[var(--rule)] bg-[rgba(237,232,225,.035)] p-4 transition hover:border-[rgba(111,183,193,.55)]">
-    <div ref={embedRef} className={embedded ? 'min-w-0' : 'hidden'} />
+    <div ref={embedRef} className="min-w-0" />
     {!embedded && <><div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black text-sm font-bold text-white">𝕏</div><div className="min-w-0"><div className="truncate text-sm font-semibold text-white">@{tweet.username || 'creator'}</div><div className="mono text-[10px] uppercase tracking-[.12em] text-[var(--bone-dim)]">{english ? 'Top post by reach' : '按曝光排序的头部推文'}</div></div></div>
       <a href={url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[var(--teal)] transition hover:text-white" aria-label={english ? 'Open post on X' : '在 X 打开推文'}>↗</a>
@@ -161,7 +161,7 @@ function useProject() {
         if (!found) return;
         if (isDataCasePath()) {
           const data = found.project || {};
-          setProject({ ...fallbackProject(slug), slug: data.slug, name: data.name, budget: data.budget, impressions: data.impressions, imp: data.impressions, er: data.er, cpm: data.cpm, cpe: data.cpe, tweets: data.cases, logo: data.logo || '', case_study: found, case_page: {} });
+          setProject({ ...fallbackProject(slug), slug: data.slug, name: data.name, budget: data.budget, impressions: data.impressions, imp: data.impressions, er: data.er, cpm: data.cpm, cpe: data.cpe, tweets: data.cases, placements: data.placements ?? data.cases, logo: data.logo || '', case_study: found, case_page: {} });
         } else {
           setProject({ ...fallbackProject(slug), ...found, case_page: found.case_page || {} });
         }
@@ -246,7 +246,7 @@ function ProjectCasePage() {
   });
   const dataCase = project.case_study;
   const dataProject = dataCase?.project || {};
-  const dataCases = dataCase?.cases || [];
+  const dataCases = [...(dataCase?.cases || [])].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
   const interactionTotal = Number(dataProject.engagements || 0);
   const interactionMix = [
     { label: "Likes", value: Number(dataProject.likes || 0), tone: "var(--ember-soft)" },
@@ -255,7 +255,7 @@ function ProjectCasePage() {
     { label: "Quotes", value: Number(dataProject.quotes || 0), tone: "var(--bone)" },
   ];
   const stats = useMemo(() => [
-    { value: formatNumber(project.budget || 0, dataCase ? 2 : 0), label: copy.budget, tone: "text-[var(--ember-soft)]" },
+    { value: formatNumber(project.budget || 0, Number(project.budget || 0) % 1 ? 2 : 0), label: copy.budget, tone: "text-[var(--ember-soft)]" },
     { value: formatNumber(project.impressions || project.imp || 0), label: copy.reach, tone: "text-[var(--bone)]" },
     { value: `${Number(project.er || 0).toFixed(2)}%`, label: copy.er, tone: "text-[var(--teal)]" },
     { value: Number(project.cpm || 0) ? Number(project.cpm).toFixed(2) : "—", label: "CPM / USDC", tone: "text-[var(--amber)]" },

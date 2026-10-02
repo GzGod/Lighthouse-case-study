@@ -587,6 +587,30 @@ test('Public case snapshots should consolidate same-name projects and expose pla
   assert.ok(payload.cases.every(item => item.placements === 2), 'case rows should expose the aggregate placement count');
 });
 
+test('Project details should show only the top three valid public posts for each placement', () => {
+  const { buildSnapshot } = require(path.join(root, 'server', 'case-study-sync.js'));
+  const row = {
+    id: 'post-preview-test', source: 'campaign', campaignId: 'post-preview-test', projectName: 'Preview Project',
+    totalBudget: 100, totalViews: 1000, totalLikes: 1, totalReplies: 2, totalRetweets: 3, totalQuotes: 4,
+    tweetsData: [
+      { tweetUrl: 'https://x.com/creator/status/123', views: 20 },
+      { tweetUrl: 'https://x.com/creator/status/456', views: 40 },
+      { tweetUrl: 'https://x.com/creator/status/123', views: 20 },
+      { tweetUrl: 'https://example.com/private/status/999', views: 100 },
+      { tweetUrl: 'https://x.com/creator/status/789', views: 10 },
+      { tweetUrl: 'https://x.com/creator/status/111', views: 5 },
+    ],
+  };
+  const payload = buildSnapshot([row]);
+  assert.strictEqual(payload.cases[0].topTweets.length, 3);
+  assert.deepStrictEqual(payload.cases[0].topTweets.map(tweet => tweet.id), ['456', '123', '789']);
+  assert.strictEqual(payload.projects[0].budget, 100);
+  const fallback = JSON.parse(read('server/public-top-tweets.json'));
+  assert.strictEqual(Object.keys(fallback).length, 175, 'bundled preview data should cover all public campaign placements');
+  assert.ok(/widgets\.createTweet/.test(projectCase), 'project details should render an X post preview');
+  assert.ok(/<PlacementPanel/.test(projectCase), 'project details should group post previews by placement');
+});
+
 test('Data-case detail pages should hide fabricated editorial testimonial content', () => {
   assert.ok(/isDataCasePath/.test(projectCase), 'project case page does not detect data-case routes');
   assert.ok(/api\/case-study\/projects/.test(projectCase), 'project case page does not load public data cases');
