@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { pool, initDB, seedProjects, seedI18n, seedIPCases, refreshAttentionMarketI18n } = require('./db');
 const { seedProjectCasePages } = require('./project-case-defaults');
-const { syncCaseStudy } = require('./case-study-sync');
+const { syncCaseStudy, seedFallbackSnapshot } = require('./case-study-sync');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
@@ -16,6 +16,12 @@ app.use(express.json({ limit: '5mb' }));
 async function start() {
   // Initialize database tables
   await initDB();
+  try {
+    const seededFallback = await seedFallbackSnapshot(pool);
+    if (seededFallback) console.log('Seeded public case fallback snapshot');
+  } catch (error) {
+    console.error(`Public case fallback snapshot skipped: ${error.message}`);
+  }
   await seedProjects();
   await seedProjectCasePages(pool);
   await seedIPCases();

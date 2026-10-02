@@ -1,7 +1,10 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { Pool } = require('pg');
 
 const SNAPSHOT_KEY = 'public-v1';
+const FALLBACK_SNAPSHOT_PATH = path.join(__dirname, 'public-case-study-snapshot.json');
 let sourcePool = null;
 let syncPromise = null;
 
@@ -47,6 +50,27 @@ function round(value, digits = 2) {
   return Math.round(number(value) * factor) / factor;
 }
 
+function isIdentityBearingName(value) {
+  const text = String(value || '').trim();
+  return /https?:\/\//i.test(text) || /(?:^|[\s/])(?:x\.com|twitter\.com|t\.co)\b/i.test(text) || /\/status\/\d+/i.test(text) || /@[a-z0-9_]{2,}/i.test(text);
+}
+
+function cleanProjectName(value) {
+  let text = String(value || '').trim();
+  if (!text) return '';
+  text = text
+    .replace(/https?:\/\/[^\s)]+/gi, '')
+    .replace(/(?:^|\s)@[a-z0-9_]{2,}/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[（(]\s*[）)]/g, '')
+    .trim();
+  return isIdentityBearingName(text) ? '' : text;
+}
+
+function fallbackProjectName(row) {
+  return `Public campaign ${hash(row.campaignId || row.id)}`;
+}
+
 function publicCase(row, index, project) {
   const source = row.source === 'campaign' ? 'campaign' : 'legacy';
   const name = project.name;
@@ -73,6 +97,32 @@ function publicCase(row, index, project) {
     updatedAt: row.updatedAt || row.lastXSyncedAt || null,
     dataQuality: views > 0 && engagements > 0 ? 'complete' : 'partial',
   };
+}
+
+function sanitizeSnapshot(payload) {
+  if (!payload || !Array.isArray(payload.projects) || !Array.isArray(payload.cases)) return payload;
+  const projectMap = new Map();
+  const projects = payload.projects.map(project => {
+    const originalKey = project.key || project.slug || project.name;
+    const cleanName = project.source === 'legacy' ? 'Legacy public cases' : cleanProjectName(project.name);
+    const unsafe = !cleanName || isIdentityBearingName(project.name);
+    const name = cleanName || `Public campaign ${hash(originalKey)}`;
+    const slug = unsafe && project.source !== 'legacy' ? `public-campaign-${hash(originalKey)}` : project.slug;
+    projectMap.set(project.slug, { name, slug });
+    const { key: _privateKey, ...publicProject } = project;
+    return { ...publicProject, name, slug };
+  });
+  const cases = payload.cases.map(item => {
+    const mapped = projectMap.get(item.projectSlug);
+    const projectName = mapped?.name || (item.source === 'legacy' ? 'Legacy public cases' : cleanProjectName(item.projectName) || `Public campaign ${hash(item.projectSlug || item.id)}`);
+    return {
+      ...item,
+      projectSlug: mapped?.slug || item.projectSlug,
+      projectName,
+      label: item.source === 'legacy' ? item.label : projectName,
+    };
+  });
+  return { ...payload, projects, cases };
 }
 
 async function readSourceRows() {
@@ -107,14 +157,12 @@ function buildSnapshot(rows) {
   const projectMap = new Map();
   const orderedRows = [...rows].sort((a, b) => String(a.id).localeCompare(String(b.id)));
   const projectFor = (row) => {
-    const rawName = String(row.projectName || '').trim();
+    const rawName = cleanProjectName(row.projectName);
     const source = row.source === 'campaign' ? 'campaign' : 'legacy';
     const fallbackKey = source === 'campaign'
       ? `campaign:${row.campaignId || row.id}`
       : 'legacy:public-cases';
-    const name = rawName || (source === 'campaign'
-      ? `Public campaign ${hash(row.campaignId || row.id)}`
-      : 'Legacy public cases');
+    const name = rawName || (source === 'campaign' ? fallbackProjectName(row) : 'Legacy public cases');
     const key = rawName ? `${source}:${name.toLowerCase()}` : fallbackKey;
     if (!projectMap.has(key)) {
       const base = slugify(name, `${source}-${hash(key)}`);
@@ -209,7 +257,7 @@ function buildSnapshot(rows) {
     start: new Date(Math.min(...createdDates.map(date => date.getTime()))).toISOString(),
     end: new Date(Math.max(...createdDates.map(date => date.getTime()))).toISOString(),
   } : { start: null, end: null };
-  return {
+  return sanitizeSnapshot({
     version: 1,
     meta: {
       snapshotKey: SNAPSHOT_KEY,
@@ -234,7 +282,32 @@ function buildSnapshot(rows) {
     },
     projects,
     cases,
-  };
+  });
+}
+
+function readFallbackSnapshot() {
+  try {
+    const payload = JSON.parse(fs.readFileSync(FALLBACK_SNAPSHOT_PATH, 'utf8'));
+    return sanitizeSnapshot(payload);
+  } catch (error) {
+    console.error(`Public case fallback snapshot unavailable: ${error.message}`);
+    return null;
+  }
+}
+
+async function seedFallbackSnapshot(cmsPool) {
+  if (sourceConnectionString()) return false;
+  const existing = await latestSnapshot(cmsPool);
+  if (existing) return false;
+  const payload = readFallbackSnapshot();
+  if (!payload?.meta?.counts?.cases) return false;
+  await cmsPool.query(
+    `INSERT INTO case_study_snapshots
+      (snapshot_key, status, payload, source_updated_at, generated_at, row_count, error)
+     VALUES ($1, 'ready', $2::jsonb, $3, COALESCE($4::timestamptz, NOW()), $5, NULL)`,
+    [SNAPSHOT_KEY, JSON.stringify(payload), payload.meta.sourceUpdatedAt || null, payload.meta.generatedAt || null, payload.meta.counts.cases]
+  );
+  return true;
 }
 
 async function syncCaseStudy(cmsPool) {
@@ -271,7 +344,8 @@ async function latestSnapshot(cmsPool) {
      ORDER BY generated_at DESC LIMIT 1`,
     [SNAPSHOT_KEY]
   );
-  return rows[0] || null;
+  if (!rows[0]) return null;
+  return { ...rows[0], payload: sanitizeSnapshot(typeof rows[0].payload === 'string' ? JSON.parse(rows[0].payload) : rows[0].payload) };
 }
 
 async function syncStatus(cmsPool) {
@@ -288,4 +362,4 @@ async function syncStatus(cmsPool) {
   };
 }
 
-module.exports = { SNAPSHOT_KEY, syncCaseStudy, latestSnapshot, syncStatus, buildSnapshot, readSourceRows };
+module.exports = { SNAPSHOT_KEY, syncCaseStudy, latestSnapshot, syncStatus, buildSnapshot, readSourceRows, seedFallbackSnapshot, sanitizeSnapshot };
