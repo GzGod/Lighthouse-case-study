@@ -132,6 +132,8 @@ function buildSnapshot(rows) {
         quotes: 0,
         engagements: 0,
         participants: 0,
+        startDate: null,
+        endDate: null,
       });
     }
     return projectMap.get(key);
@@ -149,6 +151,10 @@ function buildSnapshot(rows) {
     project.quotes += item.quotes;
     project.engagements += item.engagements;
     project.participants += item.participants;
+    if (item.createdAt) {
+      if (!project.startDate || new Date(item.createdAt) < new Date(project.startDate)) project.startDate = item.createdAt;
+      if (!project.endDate || new Date(item.createdAt) > new Date(project.endDate)) project.endDate = item.createdAt;
+    }
     return item;
   });
 
@@ -198,12 +204,18 @@ function buildSnapshot(rows) {
     const current = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
     return current > latest ? current : latest;
   }, 0);
+  const createdDates = cases.map(item => item.createdAt).filter(Boolean).map(value => new Date(value)).filter(date => !Number.isNaN(date.getTime()));
+  const dateRange = createdDates.length ? {
+    start: new Date(Math.min(...createdDates.map(date => date.getTime()))).toISOString(),
+    end: new Date(Math.max(...createdDates.map(date => date.getTime()))).toISOString(),
+  } : { start: null, end: null };
   return {
     version: 1,
     meta: {
       snapshotKey: SNAPSHOT_KEY,
       generatedAt: new Date().toISOString(),
       sourceUpdatedAt: sourceUpdatedAt ? new Date(sourceUpdatedAt).toISOString() : null,
+      dateRange,
       counts: {
         cases: cases.length,
         campaignCases: cases.filter(item => item.source === 'campaign').length,

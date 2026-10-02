@@ -217,7 +217,7 @@ function Nav(){
 }
 
 function Footer(){
-  const { t } = useT();
+  const { t, lang } = useT();
   const P = useProjects();
   const publicSummary = useCaseStudySummary();
   const stats = useMemo(() => deriveStats(P), [P]);
@@ -244,7 +244,7 @@ function Footer(){
         </div>
         <div className="mt-12 pt-6 rule-t flex flex-col md:flex-row justify-between gap-3 text-[11px] font-mono uppercase tracking-[0.22em] text-[var(--bone-dim)]">
           <span>{t("footer.copy")}</span>
-          <span>{publicSummary ? `${publicSummary.meta?.counts?.cases || 0} public cases · ${Number(publicSummary.metrics?.impressions || 0).toLocaleString('en-US')} impressions · snapshot ${publicSummary.meta?.generatedAt ? new Date(publicSummary.meta.generatedAt).toLocaleDateString('en-CA') : '—'}` : tp("footer.stats")}</span>
+          <span>{publicSummary ? (lang === 'en' ? `${publicSummary.meta?.counts?.cases || 0} public cases · ${Number(publicSummary.metrics?.impressions || 0).toLocaleString('en-US')} impressions · snapshot ${publicSummary.meta?.generatedAt ? new Date(publicSummary.meta.generatedAt).toLocaleDateString('en-CA') : '—'}` : `${publicSummary.meta?.counts?.cases || 0} 条公开案例 · ${Number(publicSummary.metrics?.impressions || 0).toLocaleString('en-US')} 次曝光 · 快照 ${publicSummary.meta?.generatedAt ? new Date(publicSummary.meta.generatedAt).toLocaleDateString('zh-CN') : '—'}`) : tp("footer.stats")}</span>
         </div>
       </div>
     </footer>
@@ -252,7 +252,7 @@ function Footer(){
 }
 
 function Hero(){
-  const { t } = useT();
+  const { t, lang } = useT();
   const P = useProjects();
   const publicSummary = useCaseStudySummary();
   const stats = useMemo(() => deriveStats(P), [P]);
@@ -261,7 +261,14 @@ function Hero(){
   const publicMetrics = publicSummary?.metrics || {};
   const displayStats = publicSummary ? { totalBudget: publicMetrics.budget || 0, totalImp: publicMetrics.impressions || 0, peakEr: publicMetrics.er || 0 } : stats;
   const displayCounts = publicSummary?.meta?.counts || {};
-  const sub = publicSummary ? <>基于 <span className="text-[var(--bone)]">{displayCounts.cases || 0} 条公开案例</span>、<span className="text-[var(--bone)]">{(displayCounts.campaignCases || 0)} 条 campaign</span> 和 <span className="text-[var(--bone)]">{Number(publicMetrics.impressions || 0).toLocaleString('en-US')} 次曝光</span> 的匿名化聚合快照，灯塔把注意力协作拆成可以理解、可以比较、可以复盘的真实结果。</> : tpl(t("hero.sub"), v);
+  const publicCopy = lang === 'en' ? {
+    sub: <>Built from <span className="text-[var(--bone)]">{displayCounts.cases || 0} public cases</span>, including <span className="text-[var(--bone)]">{displayCounts.campaignCases || 0} campaigns</span> and <span className="text-[var(--bone)]">{Number(publicMetrics.impressions || 0).toLocaleString('en-US')} impressions</span>. This anonymized snapshot makes attention work easier to compare and review.</>,
+    budget: 'Public campaign budget', budgetUnit: 'USDC · anonymized snapshot', impressions: 'Public case impressions', impressionsUnit: `${displayCounts.cases || 0} cases · ${displayCounts.campaignCases || 0} campaigns`, er: 'Weighted engagement rate', erUnit: 'Public cases · engagement / reach', foot: 'Public case snapshot · anonymized identities · campaign / legacy split',
+  } : {
+    sub: <>基于 <span className="text-[var(--bone)]">{displayCounts.cases || 0} 条公开案例</span>、<span className="text-[var(--bone)]">{displayCounts.campaignCases || 0} 条 campaign</span> 和 <span className="text-[var(--bone)]">{Number(publicMetrics.impressions || 0).toLocaleString('en-US')} 次曝光</span> 的匿名化聚合快照，灯塔把注意力协作拆成可以理解、可以比较、可以复盘的真实结果。</>,
+    budget: '公开 campaign 预算', budgetUnit: 'USDC · 匿名聚合快照', impressions: '公开案例曝光', impressionsUnit: `${displayCounts.cases || 0} cases · ${displayCounts.campaignCases || 0} campaign`, er: '加权互动率', erUnit: '公开案例 · 互动 / 曝光', foot: '公开案例快照 · 匿名化身份 · campaign / legacy 分层',
+  };
+  const sub = publicSummary ? publicCopy.sub : tpl(t("hero.sub"), v);
   return (
     <section id="top" className="relative min-h-[100svh] md:min-h-[100vh] flex flex-col overflow-hidden">
       <div className="absolute inset-0 hero-img"/>
@@ -290,31 +297,31 @@ function Hero(){
           </Reveal>
           <div className="mt-10 sm:mt-16 rule-t rule-b py-6 sm:py-8 grid grid-cols-1 lg:grid-cols-3 gap-7 sm:gap-8 lg:gap-10">
             <Reveal delay={2}>
-              <div className="kicker">{publicSummary ? "公开 campaign 预算" : t("hero.stat1.k")}</div>
+              <div className="kicker">{publicSummary ? publicCopy.budget : t("hero.stat1.k")}</div>
               <div className="mt-3 font-display font-black ember-glow tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", color:"var(--ember-soft)", letterSpacing:"-0.03em", lineHeight:0.98}}>
                 <CountUp to={displayStats.totalBudget} decimals={publicSummary ? 2 : 0} />
               </div>
-              <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{publicSummary ? "USDC · 匿名聚合快照" : t("hero.stat1.u")}</div>
+              <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{publicSummary ? publicCopy.budgetUnit : t("hero.stat1.u")}</div>
             </Reveal>
             <Reveal delay={3} className="pt-6 lg:pt-0 lg:border-l lg:border-[var(--rule)] lg:pl-10">
-              <div className="kicker">{publicSummary ? "公开案例曝光" : t("hero.stat2.k")}</div>
+              <div className="kicker">{publicSummary ? publicCopy.impressions : t("hero.stat2.k")}</div>
               <div className="mt-3 font-display font-black bone-glow tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", letterSpacing:"-0.03em", lineHeight:0.98}}>
                 <CountUp to={displayStats.totalImp} />
               </div>
-              <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{publicSummary ? `${displayCounts.cases || 0} cases · ${displayCounts.campaignCases || 0} campaign` : tp("hero.stat2.u")}</div>
+              <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{publicSummary ? publicCopy.impressionsUnit : tp("hero.stat2.u")}</div>
             </Reveal>
             <Reveal delay={4} className="pt-6 lg:pt-0 lg:border-l lg:border-[var(--rule)] lg:pl-10">
-              <div className="kicker">{publicSummary ? "加权互动率" : t("hero.stat3.k")}</div>
+              <div className="kicker">{publicSummary ? publicCopy.er : t("hero.stat3.k")}</div>
               <div className="mt-3 font-display font-black teal-glow tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", color:"var(--teal)", letterSpacing:"-0.03em", lineHeight:0.98}}>
                 <CountUp to={displayStats.peakEr} decimals={2} suffix="%" />
               </div>
-              <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{publicSummary ? "公开案例 · 互动 / 曝光" : tp("hero.stat3.u")}</div>
+              <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{publicSummary ? publicCopy.erUnit : tp("hero.stat3.u")}</div>
             </Reveal>
           </div>
           <Reveal delay={3} className="mt-10 flex flex-wrap items-center gap-4">
             <a href="#about" className="btn-ember inline-flex justify-center w-full sm:w-auto px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:brightness-110 transition">{t("hero.cta1")}</a>
             <a href="#cta" className="btn-bone inline-flex justify-center w-full sm:w-auto px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:text-[var(--ember)] transition">{t("hero.cta2")}</a>
-            <div className="basis-full sm:basis-auto text-[11px] font-mono tracking-[0.18em] leading-relaxed text-[var(--bone-dim)] sm:ml-2">{publicSummary ? "公开案例快照 · 匿名化身份 · campaign / legacy 分层" : tp("hero.foot")}</div>
+            <div className="basis-full sm:basis-auto text-[11px] font-mono tracking-[0.18em] leading-relaxed text-[var(--bone-dim)] sm:ml-2">{publicSummary ? publicCopy.foot : tp("hero.foot")}</div>
           </Reveal>
           <div className="hidden md:flex items-center gap-3 mt-16 text-[var(--bone-dim)]">
             <div className="h-[1px] w-16" style={{background:"var(--rule-strong)"}}/>

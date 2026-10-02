@@ -23,6 +23,10 @@ function formatNumber(value, digits = 0) {
   return n.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
+function dateLabel(value) {
+  return value ? new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" }).format(new Date(value)) : "—";
+}
+
 function slugFromPath() {
   const parts = window.location.pathname.split("/").filter(Boolean);
   return decodeURIComponent(parts[1] || "");
@@ -161,6 +165,7 @@ function ProjectCasePage() {
   const overview = dataCase ? [
     { label: "数据类型", value: dataProject.source === "campaign" ? "Campaign public snapshot" : "Legacy public snapshot" },
     { label: "案例数量", value: `${formatNumber(dataProject.cases)} 条` },
+    { label: "数据周期", value: `${dateLabel(dataProject.startDate)} — ${dateLabel(dataProject.endDate)}` },
     { label: "最后同步", value: dataCase.meta?.generatedAt ? new Date(dataCase.meta.generatedAt).toLocaleString("zh-CN") : "—" },
     { label: "身份策略", value: "作者与推文地址匿名化" },
   ] : [

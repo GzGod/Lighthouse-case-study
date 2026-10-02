@@ -108,7 +108,7 @@ function buildStarTagMap(projects, tagKeys = {}) {
 }
 
 function KpiSection(){
-  const { t } = useT2();
+  const { t, lang } = useT2();
   const P = useProjects2();
   const publicSummary = useCaseStudySummary2();
   const ds = React.useMemo(() => deriveStats2(P), [P]);
@@ -121,21 +121,26 @@ function KpiSection(){
   const publicPeakEr = publicProjects.reduce((max, p) => Math.max(max, p.er || 0), 0);
   const publicMaxImp = publicProjects.reduce((max, p) => Math.max(max, p.impressions || 0), 0);
   const publicMode = Boolean(publicSummary);
+  const publicCopy = lang === 'en' ? {
+    budget: 'Public campaign budget', reach: 'Public case reach', engagement: 'Public case engagement', cpm: 'Campaign weighted CPM', lowestCpm: 'Lowest project CPM', peakEr: 'Highest project engagement rate', cpe: 'Lowest project CPE', maxReach: 'Highest project reach', budgetNote: `${publicSummary?.meta?.counts?.campaignCases || 0} campaign cases`, reachNote: `${publicSummary?.meta?.counts?.cases || 0} public cases`, engagementNote: 'likes · replies · reposts · quotes', cpmNote: 'campaign budget / campaign reach', lowestCpmNote: 'projects with budget and reach', peakErNote: 'project aggregate, not a single-post peak', cpeNote: 'projects with budget and engagement', maxReachNote: 'highest project aggregate', description: `The public snapshot covers ${publicSummary?.meta?.counts?.cases || 0} cases: ${publicSummary?.meta?.counts?.campaignCases || 0} campaigns and ${publicSummary?.meta?.counts?.legacyCases || 0} legacy records. Source-level metrics stay separate so reach and paid efficiency remain comparable.`, unitCpe: 'USDC / engagement', unitReach: 'IMPRESSIONS',
+  } : {
+    budget: '公开 campaign 预算', reach: '公开案例曝光', engagement: '公开案例互动', cpm: 'campaign 加权 CPM', lowestCpm: '最低项目 CPM', peakEr: '最高项目互动率', cpe: '最低项目 CPE', maxReach: '最高项目曝光', budgetNote: `${publicSummary?.meta?.counts?.campaignCases || 0} 条 campaign 案例`, reachNote: `${publicSummary?.meta?.counts?.cases || 0} 条公开案例`, engagementNote: 'likes · replies · reposts · quotes', cpmNote: 'campaign 预算 / campaign 曝光', lowestCpmNote: '仅统计有预算与曝光的项目', peakErNote: '项目聚合值，不是单条帖子峰值', cpeNote: '仅统计有预算与互动的项目', maxReachNote: '项目聚合后的最高值', description: `公开数据快照覆盖 ${publicSummary?.meta?.counts?.cases || 0} 条案例，其中 ${publicSummary?.meta?.counts?.campaignCases || 0} 条 campaign、${publicSummary?.meta?.counts?.legacyCases || 0} 条 legacy。预算、曝光和互动分别保留来源口径，方便比较传播规模与付费效率。`, unitCpe: 'USDC / 互动', unitReach: 'IMPRESSIONS',
+  };
   const kpiDescription = publicMode
-    ? `公开数据快照覆盖 ${publicSummary.meta?.counts?.cases || 0} 条案例，其中 ${publicSummary.meta?.counts?.campaignCases || 0} 条 campaign、${publicSummary.meta?.counts?.legacyCases || 0} 条 legacy。预算、曝光和互动分别保留来源口径，方便比较传播规模与付费效率。`
+    ? publicCopy.description
     : tp("kpi.p");
   const kpis = [
-    {k:publicMode ? "公开 campaign 预算" : t("kpi.k1"), v:publicMode ? publicMetrics.budget : ds.totalBudget, d:publicMode ? 2 : 0, suf:"", unit:publicMode ? "USDC" : t("kpi.k1u"), note:publicMode ? `${publicSummary.meta?.counts?.campaignCases || 0} 条 campaign 案例` : tp("kpi.k1n"), tone:"ember"},
-    {k:publicMode ? "公开案例曝光" : t("kpi.k2"), v:publicMode ? publicMetrics.impressions : ds.totalImp, d:0, suf:"", unit:publicMode ? "IMPRESSIONS" : t("kpi.k2u"), note:tp("kpi.k2n"), tone:"bone"},
-    {k:publicMode ? "公开案例互动" : t("kpi.k3"), v:publicMode ? publicMetrics.engagements : ds.totalEng, d:0, suf:"", unit:publicMode ? "ENGAGEMENTS" : t("kpi.k3u"), note:publicMode ? "likes · replies · reposts · quotes" : t("kpi.k3n"), tone:"bone"},
-    {k:publicMode ? "campaign 加权 CPM" : t("kpi.k4"), v:publicMode ? (publicMetrics.bySource?.campaign?.cpm || publicMetrics.cpm) : ds.avgCpm, d:2, suf:"", unit:"USDC", note:publicMode ? "campaign 预算 / campaign 曝光" : t("kpi.k4n"), tone:"ember"},
-    {k:publicMode ? "最低项目 CPM" : t("kpi.k5"), v:publicMode ? (Number.isFinite(publicLowestCpm) ? publicLowestCpm : 0) : ds.lowestCpm, d:2, suf:"", unit:"USDC", note:publicMode ? "仅统计有预算与曝光的项目" : tp("kpi.k5n"), tone:"teal"},
-    {k:publicMode ? "最高项目互动率" : t("kpi.k6"), v:publicMode ? publicPeakEr : ds.peakEr, d:2, suf:"%", unit:publicMode ? "ENGAGEMENT RATE" : t("kpi.k6u"), note:publicMode ? "项目聚合值，不是单条帖子峰值" : tp("kpi.k6n"), tone:"teal"},
+    {k:publicMode ? publicCopy.budget : t("kpi.k1"), v:publicMode ? publicMetrics.budget : ds.totalBudget, d:publicMode ? 2 : 0, suf:"", unit:publicMode ? "USDC" : t("kpi.k1u"), note:publicMode ? publicCopy.budgetNote : tp("kpi.k1n"), tone:"ember"},
+    {k:publicMode ? publicCopy.reach : t("kpi.k2"), v:publicMode ? publicMetrics.impressions : ds.totalImp, d:0, suf:"", unit:publicMode ? "IMPRESSIONS" : t("kpi.k2u"), note:tp("kpi.k2n"), tone:"bone"},
+    {k:publicMode ? publicCopy.engagement : t("kpi.k3"), v:publicMode ? publicMetrics.engagements : ds.totalEng, d:0, suf:"", unit:publicMode ? "ENGAGEMENTS" : t("kpi.k3u"), note:publicMode ? publicCopy.engagementNote : t("kpi.k3n"), tone:"bone"},
+    {k:publicMode ? publicCopy.cpm : t("kpi.k4"), v:publicMode ? (publicMetrics.bySource?.campaign?.cpm || publicMetrics.cpm) : ds.avgCpm, d:2, suf:"", unit:"USDC", note:publicMode ? publicCopy.cpmNote : t("kpi.k4n"), tone:"ember"},
+    {k:publicMode ? publicCopy.lowestCpm : t("kpi.k5"), v:publicMode ? (Number.isFinite(publicLowestCpm) ? publicLowestCpm : 0) : ds.lowestCpm, d:2, suf:"", unit:"USDC", note:publicMode ? publicCopy.lowestCpmNote : tp("kpi.k5n"), tone:"teal"},
+    {k:publicMode ? publicCopy.peakEr : t("kpi.k6"), v:publicMode ? publicPeakEr : ds.peakEr, d:2, suf:"%", unit:publicMode ? "ENGAGEMENT RATE" : t("kpi.k6u"), note:publicMode ? publicCopy.peakErNote : tp("kpi.k6n"), tone:"teal"},
   ];
   if (publicMode) kpis[1].note = `${publicSummary.meta?.counts?.cases || 0} 条公开案例`;
   const subs = [
-    {k:publicMode ? "最低项目 CPE" : t("kpi.sub1.k"), v:(publicMode ? (Number.isFinite(publicLowestCpe) ? publicLowestCpe : 0) : ds.lowestCpe).toFixed(2), unit:publicMode ? "USDC / 互动" : t("kpi.sub1.u"), who:publicMode ? "仅统计有预算与互动的项目" : tp("kpi.sub1.who")},
-    {k:publicMode ? "最高项目曝光" : t("kpi.sub2.k"), v:fmt2(publicMode ? publicMaxImp : ds.maxImp), unit:publicMode ? "IMPRESSIONS" : t("kpi.sub2.u"), who:publicMode ? "项目聚合后的最高值" : tp("kpi.sub2.who")},
+    {k:publicMode ? publicCopy.cpe : t("kpi.sub1.k"), v:(publicMode ? (Number.isFinite(publicLowestCpe) ? publicLowestCpe : 0) : ds.lowestCpe).toFixed(2), unit:publicMode ? publicCopy.unitCpe : t("kpi.sub1.u"), who:publicMode ? publicCopy.cpeNote : tp("kpi.sub1.who")},
+    {k:publicMode ? publicCopy.maxReach : t("kpi.sub2.k"), v:fmt2(publicMode ? publicMaxImp : ds.maxImp), unit:publicMode ? publicCopy.unitReach : t("kpi.sub2.u"), who:publicMode ? publicCopy.maxReachNote : tp("kpi.sub2.who")},
   ];
   return (
     <section id="kpi" className="relative py-28 md:py-36 overflow-hidden">
