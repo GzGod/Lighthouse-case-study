@@ -522,18 +522,23 @@ test('Public case-study data should use a separate read-only source and authenti
 });
 
 test('Public case library should expose source filters and pagination without identity links', () => {
-  assert.ok(/\/api\/case-study\/cases/.test(caseLibrary), 'case library does not load public case API');
-  assert.ok(/Campaign/.test(caseLibrary) && /Legacy/.test(caseLibrary), 'case library is missing source filters');
+  assert.ok(/\/api\/case-study\/summary/.test(caseLibrary), 'case library does not load the aggregate project snapshot');
+  assert.ok(/Campaign/.test(caseLibrary), 'case library is missing campaign source filter');
+  assert.ok(!/\[\['', copy\.all\], \['campaign', 'Campaign'\], \['legacy'/.test(caseLibrary), 'case library should not expose the anonymous legacy source filter');
   assert.ok(/totalPages/.test(caseLibrary), 'case library is missing pagination state');
   assert.ok(!/tweetUrls|twitterUsername|x\.com\//.test(caseLibrary), 'case library should not render identity or post URLs');
 });
 
 test('Public case cards should keep placement count compact and clarify per-record budget', () => {
   assert.ok(/copy\.placementLabel\(item\.placements \|\| 1\)/.test(caseLibrary), 'placement count should render as a compact card badge');
-  assert.ok(/budget: '单次投放预算'/.test(caseLibrary), 'Chinese card budget label should clarify it is per placement');
-  assert.ok(/budget: 'Placement budget'/.test(caseLibrary), 'English card budget label should clarify it is per placement');
+  assert.ok(/projectBudget: '项目总预算'/.test(caseLibrary), 'Chinese card should show the aggregate project budget');
+  assert.ok(/projectBudget: 'Total project budget'/.test(caseLibrary), 'English card should show the aggregate project budget');
+  assert.ok(/placementBudget: '本次投放预算'/.test(caseLibrary), 'Chinese card should clarify the individual placement budget');
+  assert.ok(/placementBudget: 'Placement budget'/.test(caseLibrary), 'English card should clarify the individual placement budget');
   assert.ok(/grid-cols-2 gap-y-4[^\n]*sm:grid-cols-4/.test(caseLibrary), 'card metrics should use a restrained four-column layout');
   assert.ok(/copy\.projects/.test(caseLibrary), 'case library summary should distinguish project count from placement count');
+  assert.ok(/function projectCard/.test(caseLibrary), 'case library should build cards from aggregate project rows');
+  assert.ok(/projectBudget: Number\(item\.budget \|\| 0\)/.test(caseLibrary), 'project cards should expose aggregate project budget');
 });
 
 test('Public case snapshots should sanitize identity-bearing names and ship a data fallback', () => {
@@ -556,6 +561,13 @@ test('Public case snapshots should sanitize identity-bearing names and ship a da
   assert.ok(!/https?:\/\//i.test(serialized) && !/\/status\/\d+/i.test(serialized), 'identity-bearing project names leaked into the snapshot');
   assert.ok(/^Public campaign /.test(payload.projects[0].name), 'unsafe project names should use an anonymous fallback');
   assert.ok(!Object.prototype.hasOwnProperty.call(payload.projects[0], 'key'), 'private project grouping key leaked into public payload');
+});
+
+test('Anonymous legacy public cases should not be exposed as a public project', () => {
+  assert.ok(/hiddenLegacySlug = 'legacy-public-cases'/.test(caseStudySync), 'legacy aggregate hide rule is missing');
+  assert.ok(/visibleProjects = payload\.projects\.filter/.test(caseStudySync), 'legacy aggregate project should be removed from snapshots');
+  assert.ok(/\.filter\(row => row\.source === 'campaign' \|\| cleanProjectName\(row\.projectName\)\)/.test(caseStudySync), 'unnamed legacy source rows should be excluded during sync');
+  assert.ok(/\['', copy\.all\], \['campaign', 'Campaign'\]/.test(caseLibrary), 'case library should only expose the campaign source filter');
 });
 
 test('Public case snapshots should consolidate same-name projects and expose placement counts', () => {

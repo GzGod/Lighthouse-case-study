@@ -103,8 +103,11 @@ function publicCase(row, index, project) {
 
 function sanitizeSnapshot(payload) {
   if (!payload || !Array.isArray(payload.projects) || !Array.isArray(payload.cases)) return payload;
+  const hiddenLegacySlug = 'legacy-public-cases';
+  const visibleProjects = payload.projects.filter(project => project.slug !== hiddenLegacySlug && project.name !== 'Legacy public cases');
+  const visibleCases = payload.cases.filter(item => item.projectSlug !== hiddenLegacySlug && item.projectName !== 'Legacy public cases');
   const projectMap = new Map();
-  let projects = payload.projects.map(project => {
+  let projects = visibleProjects.map(project => {
     const originalKey = project.key || project.slug || project.name;
     const cleanName = cleanProjectName(project.name) || (project.source === 'legacy' ? 'Legacy public cases' : '');
     const unsafe = !cleanName || isIdentityBearingName(project.name);
@@ -116,7 +119,7 @@ function sanitizeSnapshot(payload) {
     return { ...publicProject, name, slug, placements, cases: placements };
   });
   const placementBySlug = new Map(projects.map(project => [project.slug, project.placements]));
-  let cases = payload.cases.map(item => {
+  let cases = visibleCases.map(item => {
     const mapped = projectMap.get(item.projectSlug);
     const projectName = mapped?.name || (item.source === 'legacy' ? 'Legacy public cases' : cleanProjectName(item.projectName) || `Public campaign ${hash(item.projectSlug || item.id)}`);
     return {
@@ -204,6 +207,44 @@ function sanitizeSnapshot(payload) {
   });
   const mergedPlacementBySlug = new Map(projects.map(project => [project.slug, project.placements]));
   cases = cases.map(item => ({ ...item, placements: mergedPlacementBySlug.get(item.projectSlug) || 1 }));
+  const aggregate = cases.reduce((sum, item) => {
+    sum.budget += number(item.budget);
+    sum.impressions += number(item.impressions);
+    sum.likes += number(item.likes);
+    sum.replies += number(item.replies);
+    sum.retweets += number(item.retweets);
+    sum.quotes += number(item.quotes);
+    sum.engagements += number(item.engagements);
+    return sum;
+  }, { budget: 0, impressions: 0, likes: 0, replies: 0, retweets: 0, quotes: 0, engagements: 0 });
+  const bySource = ['campaign', 'legacy'].reduce((result, source) => {
+    const sourceCases = cases.filter(item => item.source === source);
+    const sourceAggregate = sourceCases.reduce((sum, item) => {
+      sum.budget += number(item.budget);
+      sum.impressions += number(item.impressions);
+      sum.likes += number(item.likes);
+      sum.replies += number(item.replies);
+      sum.retweets += number(item.retweets);
+      sum.quotes += number(item.quotes);
+      sum.engagements += number(item.engagements);
+      return sum;
+    }, { budget: 0, impressions: 0, likes: 0, replies: 0, retweets: 0, quotes: 0, engagements: 0 });
+    result[source] = {
+      ...sourceAggregate,
+      placements: sourceCases.length,
+      budget: round(sourceAggregate.budget),
+      cpm: sourceAggregate.impressions > 0 ? round(sourceAggregate.budget * 1000 / sourceAggregate.impressions) : 0,
+      cpe: sourceAggregate.engagements > 0 ? round(sourceAggregate.budget / sourceAggregate.engagements) : 0,
+      er: sourceAggregate.impressions > 0 ? round(sourceAggregate.engagements / sourceAggregate.impressions * 100) : 0,
+      cases: sourceCases.length,
+    };
+    return result;
+  }, {});
+  const dates = cases.map(item => item.createdAt).filter(Boolean).map(value => new Date(value)).filter(date => !Number.isNaN(date.getTime()));
+  const dateRange = dates.length ? {
+    start: new Date(Math.min(...dates.map(date => date.getTime()))).toISOString(),
+    end: new Date(Math.max(...dates.map(date => date.getTime()))).toISOString(),
+  } : { start: null, end: null };
   return {
     ...payload,
     meta: {
@@ -212,12 +253,20 @@ function sanitizeSnapshot(payload) {
         ...(payload.meta?.counts || {}),
         cases: cases.length,
         placements: cases.length,
+        campaignCases: cases.filter(item => item.source === 'campaign').length,
+        legacyCases: cases.filter(item => item.source === 'legacy').length,
         projects: projects.length,
       },
+      dateRange,
     },
     metrics: {
-      ...(payload.metrics || {}),
+      ...aggregate,
       placements: cases.length,
+      budget: round(aggregate.budget),
+      cpm: aggregate.impressions > 0 ? round(aggregate.budget * 1000 / aggregate.impressions) : 0,
+      cpe: aggregate.engagements > 0 ? round(aggregate.budget / aggregate.engagements) : 0,
+      er: aggregate.impressions > 0 ? round(aggregate.engagements / aggregate.impressions * 100) : 0,
+      bySource,
     },
     projects,
     cases,
@@ -255,7 +304,9 @@ async function readSourceRows() {
 function buildSnapshot(rows) {
   const projectMap = new Map();
   const usedSlugs = new Map();
-  const orderedRows = [...rows].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  const orderedRows = [...rows]
+    .filter(row => row.source === 'campaign' || cleanProjectName(row.projectName))
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)));
   const projectFor = (row) => {
     const rawName = cleanProjectName(row.projectName);
     const source = row.source === 'campaign' ? 'campaign' : 'legacy';
