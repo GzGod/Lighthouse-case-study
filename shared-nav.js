@@ -27,9 +27,7 @@
     const items = [
       { key: 'about', href: '/#about', label: labels.about },
       { key: 'benchmarks', href: '/#kpi', label: labels.benchmarks },
-      { key: 'playbooks', href: '/#winners', label: labels.playbooks },
       { key: 'library', href: '/cases', label: labels.library },
-      { key: 'cases', href: '/#stars', label: labels.cases },
       { key: 'matrix', href: '/#matrix', label: labels.matrix },
     ];
     const headerClass = 'sticky top-0 z-50 border-b border-white/10 bg-[rgba(7,8,10,.94)] backdrop-blur-xl';

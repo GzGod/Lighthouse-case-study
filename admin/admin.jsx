@@ -288,6 +288,50 @@ function CaseStudySyncPage() {
         <li>同步失败时保留上一份成功快照，避免前台出现空数据。</li>
       </ul>
     </div>
+    <CaseStudyLogoManager />
+  </div>;
+}
+
+function CaseStudyLogoManager() {
+  const toast = useToast();
+  const [projects, setProjects] = useState([]);
+  const [search, setSearch] = useState('');
+  const [busy, setBusy] = useState('');
+  const load = () => api('/case-study/logo-admin').then(setProjects).catch(error => toast(`头像读取失败：${error.message}`));
+  useEffect(() => { load(); }, []);
+  const save = async (slug, logo) => {
+    setBusy(slug);
+    try {
+      await api(`/case-study/logos/${encodeURIComponent(slug)}`, { method: 'PUT', body: JSON.stringify({ logo }) });
+      await load();
+      toast(logo ? '手动头像已设为最高优先级' : '已恢复自动头像');
+    } catch (error) { toast(`头像保存失败：${error.message}`); }
+    finally { setBusy(''); }
+  };
+  const upload = async (slug, file) => {
+    if (!file) return;
+    setBusy(slug);
+    try {
+      const result = await apiUpload(file);
+      if (!result.path) throw new Error(result.error || '上传失败');
+      await api(`/case-study/logos/${encodeURIComponent(slug)}`, { method: 'PUT', body: JSON.stringify({ logo: result.path }) });
+      await load();
+      toast('头像已上传并覆盖自动结果');
+    } catch (error) { toast(`头像上传失败：${error.message}`); }
+    finally { setBusy(''); }
+  };
+  const filtered = projects.filter(project => project.name.toLowerCase().includes(search.toLowerCase()));
+  return <div className="card" style={{marginTop:16}}>
+    <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center',flexWrap:'wrap'}}>
+      <div><h3 style={{margin:'0 0 6px'}}>公开项目头像</h3><p className="page-desc" style={{margin:0}}>自动从源库、官网和公开项目数据补全；手动上传始终优先。</p></div>
+      <input value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索项目" style={{maxWidth:230}} />
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10,marginTop:18}}>
+      {filtered.map(project => <div key={project.slug} style={{display:'flex',alignItems:'center',gap:10,border:'1px solid #333',padding:10,borderRadius:6,minWidth:0}}>
+        {project.logo ? <img src={imageSrc(project.logo)} alt="" style={{width:42,height:42,objectFit:'cover',borderRadius:7,flexShrink:0}} /> : <div style={{width:42,height:42,borderRadius:7,background:'#272727',display:'grid',placeItems:'center',flexShrink:0}}>{project.name.slice(0,2).toUpperCase()}</div>}
+        <div style={{minWidth:0,flex:1}}><div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{project.name}</div><div style={{fontSize:11,color:'#888'}}>{project.logoProvider === 'manual' ? '手动覆盖' : project.logoProvider || '首字母兜底'}</div><div style={{display:'flex',gap:6,marginTop:6,flexWrap:'wrap'}}><label className="btn btn-ghost btn-sm" style={{cursor:busy===project.slug?'wait':'pointer'}}>上传覆盖<input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" disabled={busy===project.slug} hidden onChange={event => { upload(project.slug,event.target.files?.[0]); event.target.value=''; }} /></label>{project.manualLogo && <button className="btn btn-ghost btn-sm" disabled={busy===project.slug} onClick={()=>save(project.slug,'')}>恢复自动</button>}</div></div>
+      </div>)}
+    </div>
   </div>;
 }
 

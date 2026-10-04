@@ -21,7 +21,7 @@ const ATTENTION_MARKET_COPY_KEYS = [
   'win.kicker', 'win.h2_a', 'win.h2_b', 'win.p', 'win.d1.en', 'win.d1.take', 'win.d2.en', 'win.d2.take', 'win.d3.lead',
   'stars.kicker', 'ip.h2_b', 'ip.p',
   'stars.h2_b', 'stars.p', 'stars.s1.tag', 'stars.s1.take', 'stars.s2.take', 'stars.s3.tag', 'stars.s3.take', 'stars.s4.take',
-  'matrix.kicker', 'matrix.h2_a', 'matrix.h2_b', 'matrix.p', 'matrix.legend_other', 'matrix.scatter_note',
+  'matrix.kicker', 'matrix.h2_a', 'matrix.h2_b', 'matrix.p', 'matrix.legend_all', 'matrix.legend_other', 'matrix.scatter_note',
   'matrix.foot1', 'matrix.foot2', 'matrix.foot3', 'matrix.table.title', 'matrix.col.name',
   'why.kicker', 'why.h2_a', 'why.h2_b', 'why.w1.d', 'why.w2.d', 'why.w3.t', 'why.w3.d', 'why.w4.d', 'why.w5.t', 'why.w5.d', 'why.w6.d',
   'cta.kicker', 'cta.h2_a', 'cta.h2_b', 'cta.p', 'cta.s1.k', 'cta.s3.k',
@@ -110,6 +110,16 @@ async function initDB() {
       error TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS case_project_logos (
+      slug TEXT PRIMARY KEY,
+      manual_logo TEXT NOT NULL DEFAULT '',
+      auto_logo BYTEA,
+      auto_mime TEXT,
+      auto_provider TEXT,
+      auto_source_url TEXT,
+      auto_checked_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
     CREATE TABLE IF NOT EXISTS project_case_pages (
       id SERIAL PRIMARY KEY,
       project_id INTEGER NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
@@ -182,9 +192,9 @@ async function initDB() {
     ['zh', 'stars.s2.story', '{starName} 是当前基准池里单场曝光最高的样本，交付了 {starImp} 次曝光。这个位置会优先锁定最大声量样本，避免它同时占用其他玩法位。', ['starName', 'starImp']],
     ['zh', 'stars.s3.story', '{starName} 在未被占用的样本里互动率最高，达到 {starEr}%。这里代表的不是单纯买曝光，而是内容、受众和话题真正接上的讨论深度。', ['starName', 'starEr']],
     ['zh', 'stars.s4.story', '{starName} 是未被占用样本里更适合做低预算曝光参照的项目：预算 {starBudget} USDC、CPM {starCpm}、曝光 {starImp}。这个位置会随后台数据自动重算。', ['starName', 'starBudget', 'starCpm', 'starImp']],
-    ['zh', 'matrix.h2_a', '{baselineCount} 个基准样本，', ['baselineCount']],
-    ['zh', 'matrix.scatter_note', '§ 散点图展示 {baselineCount} 个可进入常规对照的注意力样本', ['baselineCount']],
-    ['zh', 'matrix.table.title', '完整数据表 · {baselineCount} 个基准样本', ['baselineCount']],
+    ['zh', 'matrix.h2_a', '{baselineCount} 个公开项目，', ['baselineCount']],
+    ['zh', 'matrix.scatter_note', '§ 散点图展示全部 {baselineCount} 个公开项目', ['baselineCount']],
+    ['zh', 'matrix.table.title', '完整数据表 · {baselineCount} 个公开项目', ['baselineCount']],
     ['zh', 'why.w2.d', '{baselineCount} 个基准项目和 {baselineTweets} 条推文沉淀出一条可对照的参考线，后续不管是投流、助推还是议题讨论，都更容易落到具体预算区间。', ['baselineCount', 'baselineTweets']],
     ['zh', 'footer.stats', '{baselineCount} 个基准项目 · {baselineTweets} 条推文 · 总曝光 {totalImpFmt} · 可作为后续合作参照', ['baselineCount', 'baselineTweets', 'totalImpFmt']],
     ['en', 'hero.stats_tl', '{baselineCount} baseline projects · {baselineTweets} tweets · Q4·25 — Q2·26', ['baselineCount', 'baselineTweets']],
@@ -204,9 +214,9 @@ async function initDB() {
     ['en', 'stars.s2.story', '{starName} is the highest-reach baseline sample right now, delivering {starImp} impressions. This slot claims the largest reach project first so it cannot also occupy another playbook slot.', ['starName', 'starImp']],
     ['en', 'stars.s3.story', '{starName} has the highest engagement rate among the remaining samples at {starEr}%. This slot represents discussion depth: content, audience, and topic design actually connecting.', ['starName', 'starEr']],
     ['en', 'stars.s4.story', '{starName} is the best low-budget reach reference among projects not already selected: {starBudget} USDC budget, {starCpm} CPM, and {starImp} impressions. This slot recalculates with CMS data.', ['starName', 'starBudget', 'starCpm', 'starImp']],
-    ['en', 'matrix.h2_a', '{baselineCount} baseline samples,', ['baselineCount']],
-    ['en', 'matrix.scatter_note', '§ Scatter shows {baselineCount} benchmarkable attention samples (CPM 10–100)', ['baselineCount']],
-    ['en', 'matrix.table.title', 'Full data table · {baselineCount} baseline samples', ['baselineCount']],
+    ['en', 'matrix.h2_a', '{baselineCount} public projects,', ['baselineCount']],
+    ['en', 'matrix.scatter_note', '§ Scatter shows all {baselineCount} public projects', ['baselineCount']],
+    ['en', 'matrix.table.title', 'Full data table · {baselineCount} public projects', ['baselineCount']],
     ['en', 'why.w2.d', '{baselineCount} baseline projects and {baselineTweets} tweets have built a reference line that makes it easier to price paid reach, boosts, and market conversation within concrete ranges.', ['baselineCount', 'baselineTweets']],
     ['en', 'footer.stats', '{baselineCount} baseline projects · {baselineTweets} tweets · {totalImpFmt} total impressions · benchmark reference on Base', ['baselineCount', 'baselineTweets', 'totalImpFmt']],
   ];

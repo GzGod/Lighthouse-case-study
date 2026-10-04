@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 const { enrichProjectLogos, withLocalProjectLogos } = require('./project-avatar');
+const { applyProjectLogos, refreshProjectLogos } = require('./project-logo-service');
 
 const SNAPSHOT_KEY = 'public-v1';
 const FALLBACK_SNAPSHOT_PATH = path.join(__dirname, 'public-case-study-snapshot.json');
@@ -91,6 +92,19 @@ function cleanProjectName(value) {
 
 function fallbackProjectName(row) {
   return `Public campaign ${hash(row.campaignId || row.id)}`;
+}
+
+function officialWebsite(value, projectName) {
+  const name = String(projectName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (name.length < 3) return '';
+  for (const raw of String(value || '').match(/https?:\/\/[^\s，,]+/gi) || []) {
+    try {
+      const url = new URL(raw.replace(/[.)。]+$/, ''));
+      const host = url.hostname.toLowerCase().replace(/^www\./, '').replace(/[^a-z0-9]/g, '');
+      if (url.protocol === 'https:' && host.includes(name) && !/(xcom|twittercom|tme|githubcom|onelinkme)$/.test(host)) return url.origin;
+    } catch {}
+  }
+  return '';
 }
 
 function publicTopTweets(value) {
@@ -339,7 +353,9 @@ async function readSourceRows() {
       ca."updatedAt",
       ca."lastXSyncedAt",
       ca."tweetsData",
-      uc."projectName"
+      uc."projectName",
+      uc."projectLogo",
+      uc."requiredLinkUrl"
     FROM public.cases ca
     LEFT JOIN public.unified_campaigns uc ON uc.id = ca."campaignId"
     WHERE ca."isShow" = TRUE
@@ -374,6 +390,8 @@ function buildSnapshot(rows) {
         key,
         slug: rawName ? slug : (source === 'legacy' ? 'legacy-public-cases' : base),
         name,
+        logo: /^https:\/\/[^\s]+$/i.test(String(row.projectLogo || '')) ? row.projectLogo : '',
+        website: officialWebsite(row.requiredLinkUrl, name),
         sources: new Set(),
         placements: 0,
         cases: 0,
@@ -394,6 +412,8 @@ function buildSnapshot(rows) {
 
   const cases = orderedRows.map((row, index) => {
     const project = projectFor(row);
+    if (!project.logo && /^https:\/\/[^\s]+$/i.test(String(row.projectLogo || ''))) project.logo = row.projectLogo;
+    if (!project.website) project.website = officialWebsite(row.requiredLinkUrl, project.name);
     const item = publicCase(row, index, project);
     project.sources.add(item.source);
     project.placements += 1;
@@ -564,7 +584,9 @@ async function latestSnapshot(cmsPool) {
     [SNAPSHOT_KEY]
   );
   if (!rows[0]) return null;
-  const payload = await enrichProjectLogos(withFallbackTopTweets(sanitizeSnapshot(typeof rows[0].payload === 'string' ? JSON.parse(rows[0].payload) : rows[0].payload)));
+  const basePayload = await enrichProjectLogos(withFallbackTopTweets(sanitizeSnapshot(typeof rows[0].payload === 'string' ? JSON.parse(rows[0].payload) : rows[0].payload)));
+  const payload = await applyProjectLogos(cmsPool, basePayload);
+  refreshProjectLogos(cmsPool, basePayload).catch(error => console.warn(`Project logo refresh skipped: ${error.message}`));
   return { ...rows[0], payload };
 }
 

@@ -118,31 +118,16 @@ test('Admin i18n editor should clearly separate draft preview from saved homepag
   assert.ok(/保存后主页生效/.test(admin), 'i18n editor should explain that the homepage changes after saving');
 });
 
-test('Star samples should be selected dynamically from live metrics without duplicate projects', () => {
-  assert.ok(/function selectUniqueStarProjects/.test(appPart2), 'missing dynamic star sample selector');
-  assert.ok(/const usedStarProjectIds = new Set\(\);/.test(appPart2), 'star selector should track used projects');
-  assert.ok(/pickStarProject\(base, usedStarProjectIds, 's2'/.test(appPart2), 'largest-reach slot should be picked from live data');
-  assert.ok(/pickStarProject\(base, usedStarProjectIds, 's3'/.test(appPart2), 'discussion-depth slot should be picked from live data');
-  assert.ok(/pickStarProject\(base, usedStarProjectIds, 's4'/.test(appPart2), 'low-budget reach slot should be picked from live data');
-  assert.ok(/buildStarSlugSet\(P3\)/.test(appPart3), 'Matrix highlights should follow the dynamic star samples');
-  assert.ok(!/const CURATED_STARS = \[/.test(appPart2), 'star samples are still bound to a fixed slug list');
-  assert.ok(!/P\.find\(proj => \(proj\.slug \|\| ''\) === cs\.slug\)/.test(appPart2), 'stars still find projects by fixed curated slug');
-  assert.ok(!/const budget = p\?\.budget \|\| 0;/.test(appPart2), 'still falls back to zero-value curated-star stats');
-});
-
-test('Matrix and admin tags should be synced to the unique star sample slots', () => {
-  assert.ok(/function buildStarTagMap/.test(appPart2), 'missing shared star-slot tag map');
-  assert.ok(/buildStarTagMap\(P3, MATRIX_TAGS\)/.test(appPart3), 'Matrix tags should use the same unique star-slot selection as Stars');
-  assert.ok(/buildAdminProjectTagMap\(projects\)[\s\S]*selectAdminStarProjects\(projects\)/.test(admin), 'admin tags should use the same unique star-slot selection');
-  assert.ok(/tag\.cpm_king",?\s*:\s*"低预算曝光"/.test(i18n), 'zh tag label should match low-budget reach sample');
-  assert.ok(/tag\.value_king",?\s*:\s*"综合效率"/.test(i18n), 'zh tag label should match efficiency sample');
-  assert.ok(/tag\.eng_king",?\s*:\s*"讨论深度"/.test(i18n), 'zh tag label should match discussion-depth sample');
-  assert.ok(/staleLabelReplacements[\s\S]*低预算曝光[\s\S]*综合效率[\s\S]*讨论深度/.test(db), 'server should migrate stale persisted tag labels');
-  assert.ok(!/addExtrema\('imp', MATRIX_TAGS\.reach/.test(appPart3), 'Matrix tags still assign independent reach extrema');
-  assert.ok(!/addExtrema\('cpm', MATRIX_TAGS\.cpm/.test(appPart3), 'Matrix tags still assign independent CPM extrema');
-  assert.ok(!/if \(erLeaders\[0\]\) addTag\(erLeaders\[0\]\.project/.test(appPart3), 'Matrix tags still assign independent ER extrema');
-  assert.ok(!/addExtrema\('imp', 'reach'/.test(admin), 'admin tags still assign independent reach extrema');
-  assert.ok(!/addExtrema\('cpm', 'cpm'/.test(admin), 'admin tags still assign independent CPM extrema');
+test('Homepage should use the full public project set in one traffic matrix', () => {
+  assert.ok(/const publicSummary = useCaseStudySummary3\(\)/.test(appPart3), 'Matrix should read the public case-study summary');
+  assert.ok(/publicSummary\?\.projects/.test(appPart3), 'Matrix should prefer aggregated public projects');
+  assert.ok(/<ScatterChart rows=\{matrixProjects\}/.test(appPart3), 'Scatter chart should receive every matrix project');
+  assert.ok(/<Scatter data=\{rows\}/.test(appPart3), 'Scatter chart should render all rows in one series');
+  assert.ok(!/P3\.filter\(r=>r\.is_baseline !== 0\)/.test(appPart3), 'Matrix still filters to baseline-only rows');
+  assert.ok(!/<WinnersSection\/>/.test(appPart3), 'Removed baseline ranking section is still rendered');
+  assert.ok(!/<StarsSection\/>/.test(appPart3), 'Removed four-sample section is still rendered');
+  assert.ok(!/href: '\/#winners'/.test(sharedNav), 'Removed ranking section remains in navigation');
+  assert.ok(!/href: '\/#stars'/.test(sharedNav), 'Removed sample section remains in navigation');
 });
 
 test('Server startup should refresh dynamic star sample story placeholders', () => {
@@ -360,15 +345,10 @@ test('Matrix reference labels should be dynamic values, not stale hardcoded copy
   assert.ok(/\$\{tr\("matrix\.col\.er"\)\}\s*\$\{ds\.avgEr\.toFixed\(2\)\}%/.test(appPart3), 'ER reference label is not dynamic');
 });
 
-test('Matrix table tags should be derived from live project metrics', () => {
-  assert.ok(/function projectTagKey/.test(appPart3), 'missing stable project key helper for computed tags');
-  assert.ok(/function buildMatrixTagMap/.test(appPart3), 'missing computed matrix tag map');
-  assert.ok(/cpm:\s*"tag\.cpm_king"/.test(appPart3), 'computed tags should include low-budget/CPM slot');
-  assert.ok(/value:\s*"tag\.value_king"/.test(appPart3), 'computed tags should include efficiency slot');
-  assert.ok(/reach:\s*"tag\.reach_king"/.test(appPart3), 'computed tags should include top reach slot');
-  assert.ok(/eng:\s*"tag\.eng_king"/.test(appPart3), 'computed tags should include discussion depth slot');
-  assert.ok(/tagMap\.get\(projectTagKey\(r\)\)/.test(appPart3), 'table rows should read tags from the computed tag map');
-  assert.ok(!/const tagLabel = r\.tag/.test(appPart3), 'matrix table still uses manually stored project tag');
+test('Full traffic matrix should not reintroduce curated ranking tags', () => {
+  assert.ok(/<Scatter data=\{rows\}/.test(appPart3), 'matrix should render the full project set');
+  assert.ok(!/matrix\.col\.tag/.test(appPart3), 'matrix table still exposes the removed ranking tag column');
+  assert.ok(!/tagMap\.get\(projectTagKey\(r\)\)/.test(appPart3), 'matrix table still depends on curated ranking tags');
 });
 
 test('Admin project table tags should be derived from live metrics, not stale DB tag text', () => {

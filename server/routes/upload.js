@@ -69,6 +69,9 @@ module.exports = function(pool) {
   });
 
   router.delete('/:id', authMiddleware, async (req, res) => {
+    const publicPath = `/api/upload/${req.params.id}/raw`;
+    const { rows: inUse } = await pool.query('SELECT 1 FROM case_project_logos WHERE manual_logo = $1 LIMIT 1', [publicPath]);
+    if (inUse[0]) return res.status(409).json({ error: 'This image is used as a manual project avatar. Restore automatic avatars before deleting it.' });
     await pool.query('DELETE FROM images WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
   });

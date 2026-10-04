@@ -19,6 +19,7 @@ const LOCAL_PROJECT_LOGOS = {
 };
 
 const rootDataLogoCache = new Map();
+const BUNDLED_LOGOS = require('./public-project-logos.json');
 
 function normalizedName(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -67,8 +68,10 @@ async function rootDataLogo(name) {
 function withLocalProjectLogos(payload) {
   if (!payload?.projects) return payload;
   const projects = payload.projects.map(project => {
-    const logo = project.logo || localProjectLogo(project);
-    return { ...project, logo, logoProvider: project.logoProvider || (logo ? 'local' : 'fallback') };
+    const bundled = BUNDLED_LOGOS[project.slug] || {};
+    const logo = project.logo || bundled.logo || localProjectLogo(project);
+    const logoProvider = project.logo ? (project.logoProvider || 'source') : bundled.logo ? 'source' : logo ? 'local' : 'fallback';
+    return { ...project, website: project.website || bundled.website || '', logo, logoProvider };
   });
   const logos = new Map(projects.map(project => [project.slug, project.logo || '']));
   return {
@@ -81,28 +84,7 @@ function withLocalProjectLogos(payload) {
 }
 
 async function enrichProjectLogos(payload) {
-  const localPayload = withLocalProjectLogos(payload);
-  if (!localPayload?.projects?.length || !process.env.ROOTDATA_API_KEY) return localPayload;
-  const projects = [...localPayload.projects];
-  const candidates = projects.map((project, index) => ({ project, index }))
-    .filter(({ project }) => !project.logo && !isGeneratedProject(project));
-  let cursor = 0;
-  const workers = Array.from({ length: Math.min(4, candidates.length) }, async () => {
-    while (cursor < candidates.length) {
-      const current = candidates[cursor++];
-      const logo = await rootDataLogo(current.project.name);
-      if (logo) projects[current.index] = { ...current.project, logo, logoProvider: 'rootdata' };
-    }
-  });
-  await Promise.all(workers);
-  const logos = new Map(projects.map(project => [project.slug, project.logo || '']));
-  return {
-    ...localPayload,
-    projects,
-    cases: Array.isArray(localPayload.cases)
-      ? localPayload.cases.map(item => ({ ...item, logo: item.logo || logos.get(item.projectSlug) || '' }))
-      : localPayload.cases,
-  };
+  return withLocalProjectLogos(payload);
 }
 
-module.exports = { LOCAL_PROJECT_LOGOS, enrichProjectLogos, localProjectLogo, normalizedName, withLocalProjectLogos };
+module.exports = { LOCAL_PROJECT_LOGOS, enrichProjectLogos, isGeneratedProject, localProjectLogo, normalizedName, rootDataLogo, withLocalProjectLogos };

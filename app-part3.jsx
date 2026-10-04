@@ -1,34 +1,12 @@
 /* Lighthouse — part 3: Matrix · Why · CTA · App shell */
 const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3, useCaseStudySummary: useCaseStudySummary3 } = window.App_Part1;
-const { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet, buildStarTagMap } = window.App_Part2;
+const { KpiSection, PersonalIPSection, ImageDivider } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
-
-const MATRIX_TAGS = {
-  cpm: "tag.cpm_king",
-  value: "tag.value_king",
-  reach: "tag.reach_king",
-  eng: "tag.eng_king",
-  eng2: "tag.eng_2",
-  flagship: "tag.flagship",
-};
-
-function projectTagKey(project) {
-  return String(project?.slug || project?.name || '').trim();
-}
 
 function projectCaseHref(project) {
   const slug = String(project?.slug || '').trim();
   return slug ? `/projects/${encodeURIComponent(slug)}` : '#';
-}
-
-function finitePositive(project, key) {
-  const value = Number(project?.[key]);
-  return Number.isFinite(value) && value > 0 ? value : null;
-}
-
-function buildMatrixTagMap(projects) {
-  return buildStarTagMap(projects, MATRIX_TAGS);
 }
 
 function PublicDataSection() {
@@ -117,29 +95,43 @@ function ProjectSignalAvatar({ name, logo }) {
 function MatrixSection(){
   const { t } = useT3();
   const P3 = useProjects3();
-  const ds = React.useMemo(() => deriveStats3(P3), [P3]);
-  const sv = React.useMemo(() => buildStatsVars3(P3, ds), [P3, ds]);
+  const publicSummary = useCaseStudySummary3();
+  const matrixProjects = React.useMemo(() => {
+    const projects = publicSummary?.projects;
+    if (Array.isArray(projects) && projects.length) {
+      return projects.map(project => ({
+        ...project,
+        imp: Number(project.impressions ?? project.imp ?? 0),
+        budget: Number(project.budget ?? 0),
+        cpm: Number(project.cpm ?? 0),
+        er: Number(project.er ?? 0),
+        cpe: Number(project.cpe ?? 0),
+        is_baseline: 1,
+        is_visible: 1,
+      }));
+    }
+    return P3;
+  }, [P3, publicSummary]);
+  const ds = React.useMemo(() => deriveStats3(matrixProjects), [matrixProjects]);
+  const sv = React.useMemo(() => buildStatsVars3(matrixProjects, ds), [matrixProjects, ds]);
   const tp = (k) => tpl3(t(k), sv);
   const [sortKey, setSortKey] = React.useState("cpm");
   const [sortDir, setSortDir] = React.useState("asc");
   const [hovered, setHovered] = React.useState(null);
   const rows = React.useMemo(()=>{
-    const d = [...P3];
+    const d = [...matrixProjects];
     d.sort((a,b)=>{
       const va = a[sortKey], vb = b[sortKey];
       if (typeof va === "string") return sortDir==="asc"? va.localeCompare(vb) : vb.localeCompare(va);
       return sortDir==="asc" ? va-vb : vb-va;
     });
     return d;
-  },[P3, sortKey,sortDir]);
-  const tagMap = React.useMemo(() => buildStarTagMap(P3, MATRIX_TAGS), [P3]);
+  },[matrixProjects, sortKey,sortDir]);
   function setSort(k){
     if(sortKey===k) setSortDir(s=>s==="asc"?"desc":"asc");
     else { setSortKey(k); setSortDir("asc"); }
   }
   const arrow = (k)=> sortKey===k ? (sortDir==="asc"?"↑":"↓") : "·";
-  const stars = React.useMemo(() => buildStarSlugSet(P3), [P3]);
-
   return (
     <section id="matrix" className="relative py-28 md:py-36 overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1px]" style={{background:"var(--rule-strong)"}}/>
@@ -161,12 +153,11 @@ function MatrixSection(){
               <span>{t("matrix.legend1")}</span><span>{t("matrix.legend2")}</span><span>{t("matrix.legend3")}</span>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-mono uppercase tracking-[0.2em]">
-              <span className="flex items-center gap-2"><span className="dot" style={{background:"var(--ember)"}}/>{t("matrix.legend_star")}</span>
-              <span className="flex items-center gap-2"><span className="dot" style={{background:"var(--teal)"}}/>{t("matrix.legend_other")}</span>
+              <span className="flex items-center gap-2"><span className="dot" style={{background:"var(--teal)"}}/>{t("matrix.legend_all")}</span>
             </div>
           </div>
           <div className="w-full h-[360px] sm:h-[430px] md:h-[520px]">
-            <ScatterChart rows={P3.filter(r=>r.is_baseline !== 0)} stars={stars} setHovered={setHovered} tr={t} ds={ds}/>
+            <ScatterChart rows={matrixProjects} setHovered={setHovered} tr={t} ds={ds}/>
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-4 text-[11px] font-mono tracking-[0.14em] text-[var(--bone-dim)]">
             <div>{tp("matrix.scatter_note")}</div>
@@ -200,21 +191,17 @@ function MatrixSection(){
                   <th className="py-4 pr-4 text-right cursor-pointer hover:text-[var(--bone)]" onClick={()=>setSort("cpm")}>{t("matrix.col.cpm")} {arrow("cpm")}</th>
                   <th className="py-4 pr-4 text-right cursor-pointer hover:text-[var(--bone)]" onClick={()=>setSort("er")}>{t("matrix.col.er")} {arrow("er")}</th>
                   <th className="py-4 pr-4 text-right cursor-pointer hover:text-[var(--bone)]" onClick={()=>setSort("cpe")}>{t("matrix.col.cpe")} {arrow("cpe")}</th>
-                  <th className="py-4 pr-4 text-right">{t("matrix.col.tag")}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r,i)=>{
-                  const isStar = stars.has(r.slug || '');
-                  const isNonBase = r.is_baseline === 0;
-                  const tagKeys = tagMap.get(projectTagKey(r)) || [];
                   return (
-                    <tr key={r.name} className="rule-t hover:bg-[var(--ink-2)] transition" style={isNonBase?{background:"rgba(237,232,225,0.025)", opacity:0.85}:isStar?{background:"rgba(255,122,69,0.05)"}:{}}>
+                    <tr key={r.slug || r.name} className="rule-t hover:bg-[var(--ink-2)] transition">
                       <td className="py-4 pr-4 font-mono text-[12px] text-[var(--bone-dim)]">{String(i+1).padStart(2,"0")}</td>
-                      <td className="py-4 pr-4 font-cn text-[16px]" style={{color: isNonBase?"var(--bone-dim)":isStar?"var(--ember-soft)":"var(--bone)"}}>
+                      <td className="py-4 pr-4 font-cn text-[16px]" style={{color:"var(--bone)"}}>
                         <a href={projectCaseHref(r)} className="group flex items-center gap-3">
-                          <img src={r.logo} alt="" className="w-[24px] h-[24px] rounded object-cover flex-shrink-0" style={{background:"var(--ink-2)", opacity:isNonBase?0.5:1}}/>
-                          <span className="transition group-hover:text-[var(--ember-soft)]">{r.name}{isNonBase && <span className="ml-2 font-mono text-[10px] tracking-[0.18em] text-[var(--bone-dim)] uppercase">· {t("matrix.nonbase")}</span>}</span>
+                          {r.logo ? <img src={r.logo} alt="" className="w-[24px] h-[24px] rounded object-cover flex-shrink-0" style={{background:"var(--ink-2)"}}/> : <span className="w-[24px] h-[24px] rounded bg-[var(--ink-2)] flex-shrink-0"/>}
+                          <span className="transition group-hover:text-[var(--ember-soft)]">{r.name}</span>
                         </a>
                       </td>
                       <td className="py-4 pr-4 text-right font-mono">{fmt3(r.budget)}</td>
@@ -222,13 +209,6 @@ function MatrixSection(){
                       <td className="py-4 pr-4 text-right font-mono" style={{color: r.cpm<=30?"var(--ember-soft)":r.cpm>=80?"var(--bone-dim)":"var(--bone)"}}>{r.cpm.toFixed(2)}</td>
                       <td className="py-4 pr-4 text-right font-mono" style={{color: r.er>=1?"var(--teal)":"var(--bone)"}}>{r.er.toFixed(2)}%</td>
                       <td className="py-4 pr-4 text-right font-mono" style={{color: r.cpe<=3?"var(--ember-soft)":r.cpe>=10?"var(--bone-dim)":"var(--bone)"}}>{r.cpe.toFixed(2)}</td>
-                      <td className="py-4 pr-4 text-right font-mono text-[11px] tracking-[0.14em] uppercase" style={{color: tagKeys.length?"var(--ember)":"var(--bone-dim)"}}>
-                        {tagKeys.length ? (
-                          <div className="flex flex-col items-end gap-1">
-                            {tagKeys.map(key => <span key={key}>{t(key)}</span>)}
-                          </div>
-                        ) : "—"}
-                      </td>
                     </tr>
                   );
                 })}
@@ -240,7 +220,6 @@ function MatrixSection(){
                   <td className="py-5 pr-4 text-right font-mono font-bold">{ds.avgCpm.toFixed(2)}</td>
                   <td className="py-5 pr-4 text-right font-mono font-bold">{ds.avgEr.toFixed(2)}%</td>
                   <td className="py-5 pr-4 text-right font-mono font-bold">{ds.avgCpe.toFixed(2)}</td>
-                  <td className="py-5 pr-4 text-right font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--bone-dim)]">{t("matrix.sum.tag")}</td>
                 </tr>
               </tbody>
             </table>
@@ -252,17 +231,23 @@ function MatrixSection(){
   );
 }
 
-function ScatterChart({rows, stars, setHovered, tr, ds}){
+function ScatterChart({rows, setHovered, tr, ds}){
   if(!R) return <div className="h-full flex items-center justify-center text-[var(--bone-dim)] font-mono text-xs">Loading chart…</div>;
   const {ResponsiveContainer, ScatterChart:RC, CartesianGrid, XAxis, YAxis, Scatter, Tooltip, ZAxis, ReferenceLine, Label} = R;
-  const starData = rows.filter(r=>stars.has(r.slug || ''));
-  const otherData = rows.filter(r=>!stars.has(r.slug || ''));
+  const cpmValues = rows.map(row => Number(row.cpm) || 0);
+  const erValues = rows.map(row => Number(row.er) || 0);
+  const cpmMin = cpmValues.length ? Math.min(...cpmValues) : 0;
+  const cpmMax = cpmValues.length ? Math.max(...cpmValues) : 1;
+  const erMin = erValues.length ? Math.min(...erValues) : 0;
+  const erMax = erValues.length ? Math.max(...erValues) : 1;
+  const cpmDomain = cpmMin === cpmMax ? [Math.max(0, cpmMin - 1), cpmMax + 1] : [Math.max(0, cpmMin * 0.95), cpmMax * 1.05];
+  const erDomain = erMin === erMax ? [Math.max(0, erMin - 0.1), erMax + 0.1] : [Math.max(0, erMin * 0.95), erMax * 1.05];
   const tip = ({active, payload})=>{
     if(!active || !payload || !payload.length) return null;
     const d = payload[0].payload;
     return (
       <div className="p-4 font-mono text-[11px]" style={{background:"var(--ink)", border:"1px solid var(--rule-strong)", minWidth:220}}>
-        <div className="font-cn font-bold text-[14px] mb-2" style={{color: stars.has(d.slug || '')?"var(--ember)":"var(--teal)"}}>{d.name}</div>
+        <div className="font-cn font-bold text-[14px] mb-2" style={{color:"var(--teal)"}}>{d.name}</div>
         <div className="flex justify-between py-0.5"><span className="text-[var(--bone-dim)]">{tr("matrix.tip.budget")}</span><span className="tnum">{d.budget.toLocaleString()} USDC</span></div>
         <div className="flex justify-between py-0.5"><span className="text-[var(--bone-dim)]">{tr("matrix.tip.imp")}</span><span className="tnum">{d.imp.toLocaleString()}</span></div>
         <div className="flex justify-between py-0.5"><span className="text-[var(--bone-dim)]">{tr("matrix.tip.cpm")}</span><span className="tnum">{d.cpm.toFixed(2)} USDC</span></div>
@@ -274,12 +259,10 @@ function ScatterChart({rows, stars, setHovered, tr, ds}){
   const cell = (p, color)=>{
     const {cx, cy, payload} = p;
     const rr = Math.max(6, Math.min(34, Math.sqrt(payload.imp/1000)*1.05));
-    const isStar = stars.has(payload.slug || '');
     return (
       <g>
-        <circle cx={cx} cy={cy} r={rr+10} fill={color} opacity={isStar?0.12:0.05}/>
-        <circle cx={cx} cy={cy} r={rr} fill={color} opacity={isStar?0.38:0.22} stroke={color} strokeWidth={isStar?1.5:1}/>
-        {isStar && <text x={cx} y={cy - rr - 7} textAnchor="middle" style={{fill:"var(--bone)", fontFamily:"Space Grotesk", fontSize:12, fontWeight:600}}>{payload.name}</text>}
+        <circle cx={cx} cy={cy} r={rr+10} fill={color} opacity={0.05}/>
+        <circle cx={cx} cy={cy} r={rr} fill={color} opacity={0.26} stroke={color} strokeWidth={1}/>
       </g>
     );
   };
@@ -289,10 +272,10 @@ function ScatterChart({rows, stars, setHovered, tr, ds}){
           onMouseMove={(e)=>{ if(e && e.activePayload && e.activePayload[0]) setHovered(e.activePayload[0].payload); }}
           onMouseLeave={()=>setHovered(null)}>
         <CartesianGrid strokeDasharray="2 4" stroke="rgba(237,232,225,0.08)"/>
-        <XAxis type="number" dataKey="cpm" domain={[10,100]} tickCount={10} stroke="rgba(237,232,225,0.25)">
+        <XAxis type="number" dataKey="cpm" domain={cpmDomain} tickCount={8} stroke="rgba(237,232,225,0.25)">
           <Label value={tr("matrix.axis_x")} offset={-28} position="insideBottom" />
         </XAxis>
-        <YAxis type="number" dataKey="er" domain={[0,1.4]} tickCount={8} stroke="rgba(237,232,225,0.25)" tickFormatter={(v)=>`${v.toFixed(2)}%`}>
+        <YAxis type="number" dataKey="er" domain={erDomain} tickCount={8} stroke="rgba(237,232,225,0.25)" tickFormatter={(v)=>`${v.toFixed(2)}%`}>
           <Label value={tr("matrix.axis_y")} offset={-24} position="insideLeft" angle={-90} />
         </YAxis>
         <ZAxis range={[60,1200]} />
@@ -303,8 +286,7 @@ function ScatterChart({rows, stars, setHovered, tr, ds}){
           <Label value={`${tr("matrix.col.er")} ${ds.avgEr.toFixed(2)}%`} position="right" fill="var(--teal)" fontFamily="JetBrains Mono" fontSize={10}/>
         </ReferenceLine>
         <Tooltip content={tip} cursor={{stroke:"var(--rule-strong)", strokeDasharray:"2 4"}}/>
-        <Scatter data={otherData} shape={(p)=>cell(p, "#6fb7c1")} />
-        <Scatter data={starData}  shape={(p)=>cell(p, "#ff7a45")} />
+        <Scatter data={rows} shape={(p)=>cell(p, "#6fb7c1")} />
       </RC>
     </ResponsiveContainer>
   );
@@ -394,8 +376,6 @@ function Page(){
       <ImageDivider bg="divider-img-1" kickerKey="div1.kicker" quoteKey="div1.q" subKey="div1.sub"/>
       <KpiSection/>
       <PublicDataSection/>
-      <WinnersSection/>
-      <StarsSection/>
       <MatrixSection/>
       <WhyCta/>
       <Footer/>

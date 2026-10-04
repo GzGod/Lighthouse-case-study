@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { pool, initDB, seedProjects, seedI18n, seedIPCases, refreshAttentionMarketI18n } = require('./db');
 const { seedProjectCasePages } = require('./project-case-defaults');
-const { syncCaseStudy, seedFallbackSnapshot } = require('./case-study-sync');
+const { syncCaseStudy, seedFallbackSnapshot, latestSnapshot } = require('./case-study-sync');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
@@ -125,11 +125,14 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`Lighthouse CMS running at http://localhost:${PORT}`);
     console.log(`Admin panel: http://localhost:${PORT}/admin`);
+    const refreshLogos = () => latestSnapshot(pool).catch(error => console.warn(`Automatic project logo refresh skipped: ${error.message}`));
     if (process.env.LIGHTHOUSE_SOURCE_DATABASE_URL || process.env.SOURCE_DATABASE_URL) {
       syncCaseStudy(pool)
-        .then(payload => console.log(`Initial public case snapshot synced: ${payload.meta.counts.cases} cases`))
+        .then(payload => { console.log(`Initial public case snapshot synced: ${payload.meta.counts.cases} cases`); return refreshLogos(); })
         .catch(error => console.error(`Initial public case snapshot skipped: ${error.message}`));
     }
+    setTimeout(refreshLogos, 5000).unref();
+    setInterval(refreshLogos, 24 * 60 * 60 * 1000).unref();
   });
 }
 

@@ -1,8 +1,52 @@
 const express = require('express');
 const { authMiddleware } = require('../auth');
 const { latestSnapshot, syncCaseStudy, syncStatus } = require('../case-study-sync');
+const { safeLogoPath } = require('../project-logo-service');
 
 const router = express.Router();
+
+router.get('/logo-admin', authMiddleware, async (req, res, next) => {
+  try {
+    const snapshot = await latestSnapshot(req.app.locals.cmsPool);
+    if (!snapshot) return res.status(503).json({ error: 'Snapshot unavailable' });
+    const { rows } = await req.app.locals.cmsPool.query('SELECT slug, manual_logo, auto_provider, auto_checked_at, auto_logo IS NOT NULL AS has_auto FROM case_project_logos');
+    const records = new Map(rows.map(row => [row.slug, row]));
+    res.json(snapshot.payload.projects.map(project => ({
+      slug: project.slug, name: project.name, logo: project.logo, logoProvider: project.logoProvider,
+      manualLogo: records.get(project.slug)?.manual_logo || '',
+      autoProvider: records.get(project.slug)?.auto_provider || '',
+      autoCheckedAt: records.get(project.slug)?.auto_checked_at || null,
+    })));
+  } catch (error) { next(error); }
+});
+
+router.get('/logos/:slug', async (req, res, next) => {
+  try {
+    const { rows } = await req.app.locals.cmsPool.query('SELECT auto_logo, auto_mime FROM case_project_logos WHERE slug = $1', [req.params.slug]);
+    if (!rows[0]?.auto_logo) return res.status(404).send('Logo not found');
+    res.setHeader('Content-Type', rows[0].auto_mime || 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(rows[0].auto_logo);
+  } catch (error) { next(error); }
+});
+
+router.put('/logos/:slug', authMiddleware, async (req, res, next) => {
+  try {
+    const logo = String(req.body?.logo || '').trim();
+    if (logo && !safeLogoPath(logo)) return res.status(400).json({ error: 'Use an uploaded image or a valid HTTPS image URL' });
+    if (!/^[a-z0-9-]+$/.test(req.params.slug)) return res.status(400).json({ error: 'Invalid project slug' });
+    const uploadId = logo.match(/^\/api\/upload\/(\d+)\/raw$/)?.[1];
+    if (uploadId) {
+      const { rows: imageRows } = await req.app.locals.cmsPool.query('SELECT 1 FROM images WHERE id = $1', [uploadId]);
+      if (!imageRows[0]) return res.status(400).json({ error: 'Uploaded image not found' });
+    }
+    const snapshot = await latestSnapshot(req.app.locals.cmsPool);
+    if (!snapshot?.payload?.projects?.some(project => project.slug === req.params.slug)) return res.status(404).json({ error: 'Project not found' });
+    await req.app.locals.cmsPool.query(`INSERT INTO case_project_logos (slug, manual_logo, updated_at)
+      VALUES ($1,$2,NOW()) ON CONFLICT (slug) DO UPDATE SET manual_logo=$2, updated_at=NOW()`, [req.params.slug, logo]);
+    res.json({ ok: true, logo });
+  } catch (error) { next(error); }
+});
 
 function payloadFrom(snapshot) {
   if (!snapshot) return null;
