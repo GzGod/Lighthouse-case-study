@@ -116,17 +116,34 @@ module.exports = function(pool) {
   });
 
   router.get('/:slug/case-page', async (req, res) => {
-    const { rows } = await pool.query(
-      `SELECT p.*, COALESCE(cp.page_data, '{}'::jsonb) AS case_page,
-              row_to_json(pe.*) AS enrichment
-       FROM projects p
-       LEFT JOIN project_case_pages cp ON cp.project_id = p.id
-       LEFT JOIN project_enrichment pe ON pe.slug = p.slug
-       WHERE p.slug = $1 AND p.is_visible <> 0`,
-      [req.params.slug]
-    );
-    if (!rows[0]) return res.status(404).json({ error: 'Project not found' });
-    res.json(rows[0]);
+    try {
+      const { rows } = await pool.query(
+        `SELECT p.*, COALESCE(cp.page_data, '{}'::jsonb) AS case_page,
+                row_to_json(pe.*) AS enrichment
+         FROM projects p
+         LEFT JOIN project_case_pages cp ON cp.project_id = p.id
+         LEFT JOIN project_enrichment pe ON pe.slug = p.slug
+         WHERE p.slug = $1 AND p.is_visible <> 0`,
+        [req.params.slug]
+      );
+      if (!rows[0]) return res.status(404).json({ error: 'Project not found' });
+      res.json(rows[0]);
+    } catch (e) {
+      // project_enrichment table may not exist yet — fall back without it
+      try {
+        const { rows } = await pool.query(
+          `SELECT p.*, COALESCE(cp.page_data, '{}'::jsonb) AS case_page
+           FROM projects p
+           LEFT JOIN project_case_pages cp ON cp.project_id = p.id
+           WHERE p.slug = $1 AND p.is_visible <> 0`,
+          [req.params.slug]
+        );
+        if (!rows[0]) return res.status(404).json({ error: 'Project not found' });
+        res.json({ ...rows[0], enrichment: null });
+      } catch (e2) {
+        res.status(500).json({ error: e2.message });
+      }
+    }
   });
 
   router.post('/', authMiddleware, async (req, res) => {

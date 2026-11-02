@@ -83,7 +83,7 @@ module.exports = function mount(pool) {
   });
 
   // Aggregate stats across all projects for overview
-  router.get('/enrichment/overview', async (req, res) => {
+  router.get('/overview', async (req, res) => {
     try {
       const { rows } = await pool.query(`
         SELECT
@@ -103,8 +103,7 @@ module.exports = function mount(pool) {
   });
 
   // ROI estimator: given a budget, return expected impressions/engagement
-  // based on real Lighthouse platform benchmarks
-  router.get('/enrichment/roi-estimate', async (req, res) => {
+  router.get('/roi-estimate', async (req, res) => {
     const budget = parseFloat(req.query.budget);
     if (!budget || budget <= 0) return res.status(400).json({ error: 'budget required' });
 
