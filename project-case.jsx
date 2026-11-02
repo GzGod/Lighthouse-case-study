@@ -161,9 +161,9 @@ function useProject() {
         if (!found) return;
         if (isDataCasePath()) {
           const data = found.project || {};
-          setProject({ ...fallbackProject(slug), slug: data.slug, name: data.name, budget: data.budget, impressions: data.impressions, imp: data.impressions, er: data.er, cpm: data.cpm, cpe: data.cpe, tweets: data.cases, placements: data.placements ?? data.cases, logo: data.logo || '', case_study: found, case_page: {} });
+          setProject({ ...fallbackProject(slug), slug: data.slug, name: data.name, budget: data.budget, impressions: data.impressions, imp: data.impressions, er: data.er, cpm: data.cpm, cpe: data.cpe, tweets: data.cases, placements: data.placements ?? data.cases, logo: data.logo || '', case_study: found, case_page: {}, enrichment: null });
         } else {
-          setProject({ ...fallbackProject(slug), ...found, case_page: found.case_page || {} });
+          setProject({ ...fallbackProject(slug), ...found, case_page: found.case_page || {}, enrichment: found.enrichment || null });
         }
       })
       .catch(() => {});
@@ -210,10 +210,11 @@ function HeroVisual() {
 }
 
 // ─── Before/After enrichment section ───────────────────────────────────────
-function useEnrichment(slug) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+function useEnrichment(slug, preloaded) {
+  const [data, setData] = useState(preloaded || null);
+  const [loading, setLoading] = useState(!preloaded);
   useEffect(() => {
+    if (preloaded) { setData(preloaded); setLoading(false); return; }
     if (!slug) return;
     setLoading(true);
     fetch(`/api/projects/${encodeURIComponent(slug)}/enrichment`)
@@ -221,7 +222,7 @@ function useEnrichment(slug) {
       .then(d => { setData(d && d.available ? d : null); })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, preloaded]);
   return { data, loading };
 }
 
@@ -269,8 +270,8 @@ function MetricDelta({ before, after, label, format }) {
   );
 }
 
-function BeforeAfterSection({ slug, english }) {
-  const { data, loading } = useEnrichment(slug);
+function BeforeAfterSection({ slug, english, preloaded }) {
+  const { data, loading } = useEnrichment(slug, preloaded);
   if (loading) return (
     <GlassCard className="mt-4 min-w-0 p-5 sm:p-7">
       <div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{english ? 'Before / After' : '投放前后对比'}</div>
@@ -573,7 +574,7 @@ function ProjectCasePage() {
           <GlassCard className="relative min-w-0 overflow-hidden p-5 sm:p-7"><h2 className="text-2xl font-bold">{copy.tweet}</h2><div className="relative mt-7 flex min-h-[150px] min-w-0 items-center justify-center border border-dashed border-[var(--rule-strong)] bg-[rgba(237,232,225,.025)] p-5"><div className="absolute right-10 top-1/2 -translate-y-1/2 font-mono text-[150px] font-bold leading-none text-white/[.045]">X</div><div className="relative min-w-0 max-w-full text-center"><div className="break-words text-lg text-slate-300">{localizedField(page, 'tweet_title', copy.tweetTitle, english)}</div><div className="mt-2 break-words text-sm text-slate-500">{localizedField(page, 'tweet_note', copy.tweetNote, english)}</div>{page.tweet_url && <a className="mt-4 inline-flex max-w-full break-all text-sm text-[var(--ember-soft)] hover:underline" href={page.tweet_url} target="_blank" rel="noopener noreferrer">{page.tweet_url}</a>}</div></div></GlassCard>
         </section>}
 
-        <BeforeAfterSection slug={project.slug || slugFromPath()} english={english} />
+        <BeforeAfterSection slug={project.slug || slugFromPath()} english={english} preloaded={project.enrichment} />
 
         <section id="cta" className="mt-5 overflow-hidden border border-[var(--rule-strong)] bg-[linear-gradient(110deg,rgba(111,183,193,.20),rgba(13,15,18,.88)_52%,rgba(255,122,69,.22))] p-5 shadow-[0_24px_80px_rgba(0,0,0,.32)] sm:p-8 md:p-10"><div className="flex min-w-0 flex-col gap-6 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><h2 className="break-words text-[clamp(26px,4vw,40px)] font-black leading-tight" style={{ overflowWrap: 'anywhere' }}>{localizedField(page, 'cta_title', copy.cta, english).split('\n').map((line, index) => <React.Fragment key={`${index}-${line}`}>{index > 0 && <br />}{line}</React.Fragment>)}</h2><p className="mt-3 break-words text-sm leading-6 text-slate-300">{localizedField(page, 'cta_note', copy.ctaNote, english)}</p></div><a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center justify-center border border-[rgba(255,122,69,.56)] bg-[rgba(255,122,69,.22)] px-5 py-4 font-mono text-[10px] uppercase text-[var(--bone)] shadow-[0_14px_36px_rgba(255,122,69,.18)] transition hover:brightness-110">{copy.ctaButton}</a></div></section>
       </main>
