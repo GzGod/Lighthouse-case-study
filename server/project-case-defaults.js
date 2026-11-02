@@ -426,9 +426,12 @@ async function seedIPCaseContent(pool) {
   if (!existing.length) return;
   const caseId = existing[0].id;
 
-  // Upsert each lang/key combination
+  // Upsert each lang/key combination — keys must be prefixed with slug
+  // because IPCaseSection builds lookup as `${slug}.${key}`
+  const slug = 'astra';
   for (const [lang, entries] of Object.entries(ASTRA_I18N)) {
-    for (const [key, value] of Object.entries(entries)) {
+    for (const [shortKey, value] of Object.entries(entries)) {
+      const key = shortKey.startsWith(slug + '.') ? shortKey : `${slug}.${shortKey}`;
       await pool.query(
         `INSERT INTO ip_case_i18n (case_id, lang, key, value)
          VALUES ($1, $2, $3, $4)
