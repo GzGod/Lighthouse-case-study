@@ -108,7 +108,7 @@ module.exports = function mount(pool) {
     if (!budget || budget <= 0) return res.status(400).json({ error: 'budget required' });
 
     try {
-      // Try to compute benchmarks from real enrichment data first
+      // Try enrichment table first (populated when source DB is connected)
       const { rows: enrichRows } = await pool.query(`
         SELECT
           AVG(CASE WHEN during_views > 0 AND consumed_budget > 0
@@ -119,26 +119,37 @@ module.exports = function mount(pool) {
             THEN during_engagement::numeric / during_views * 100 ELSE NULL END) as avg_er,
           COUNT(*) FILTER (WHERE campaign_count > 0) as projects_count,
           SUM(campaign_count) as total_campaigns,
-          SUM(consumed_budget) as total_consumed,
-          SUM(during_views) as total_views,
-          SUM(during_engagement) as total_engagement
+          SUM(consumed_budget) as total_consumed
         FROM project_enrichment
         WHERE campaign_count > 0 AND consumed_budget > 0
-      `);
+      `).catch(() => ({ rows: [{}] }));
 
-      // Fall back to hardcoded Lighthouse benchmarks if enrichment not yet populated
-      const r = enrichRows[0] || {};
-      const cpm = parseFloat(r.avg_cpm) || 40;         // USDC per 1000 impressions
-      const cpe = parseFloat(r.avg_cpe) || 18.5;       // USDC per engagement
-      const er  = parseFloat(r.avg_er)  || 1.1;        // % engagement rate
+      // Fall back to case_study_snapshots (always available)
+      const { rows: snapshotRows } = await pool.query(`
+        SELECT payload FROM case_study_snapshots
+        WHERE snapshot_key = 'public-v1' AND status = 'ready'
+        ORDER BY generated_at DESC LIMIT 1
+      `).catch(() => ({ rows: [] }));
+
+      const enrichData = enrichRows[0] || {};
+      const snapshot = snapshotRows[0]?.payload;
+      const snapMetrics = snapshot?.metrics?.bySource?.campaign || snapshot?.metrics || {};
+
+      // Use best available data: enrichment > snapshot > hardcoded
+      const cpm = parseFloat(enrichData.avg_cpm) || parseFloat(snapMetrics.cpm) || 7.37;
+      const cpe = parseFloat(enrichData.avg_cpe) || 15.0;
+      const er  = parseFloat(enrichData.avg_er)  || parseFloat(snapMetrics.er) || 0.74;
 
       const est_impressions = Math.round(budget / cpm * 1000);
-      const est_engagement  = Math.round(budget / cpe);
-      const est_tweets      = Math.round(budget / 120);  // ~120 USDC avg per tweet
+      const est_engagement  = Math.round(budget / Math.max(0.01, cpe));
+      const est_tweets      = Math.round(budget / 120);
 
-      // Industry comparison (traditional KOL market)
       const industry_cpm = 50;
       const industry_er  = 0.4;
+
+      const dataSource = parseInt(enrichData.projects_count) > 0
+        ? `${enrichData.projects_count} projects · ${enrichData.total_campaigns} campaigns`
+        : (snapshot ? `${snapshot.meta?.counts?.cases || 0} public cases · Lighthouse data` : 'Lighthouse platform benchmarks');
 
       res.json({
         budget,
@@ -160,9 +171,7 @@ module.exports = function mount(pool) {
           impressions_multiplier: +(budget / cpm * 1000 / (budget / industry_cpm * 1000)).toFixed(1),
           er_multiplier: +(er / industry_er).toFixed(1),
         },
-        data_from: parseInt(r.projects_count) > 0
-          ? `${r.projects_count} projects · ${r.total_campaigns} campaigns · ${Math.round(parseFloat(r.total_consumed) || 0)} USDC deployed`
-          : 'Lighthouse platform benchmarks',
+        data_from: dataSource,
       });
     } catch (e) {
       res.status(500).json({ error: e.message });
