@@ -212,6 +212,53 @@ function ImageDivider({bg, kickerKey, quoteKey, subKey}){
   );
 }
 
+function BenchmarkBand(){
+  const { lang } = useT2();
+  const publicSummary = useCaseStudySummary2();
+  const en = lang === 'en';
+
+  const metrics = publicSummary?.metrics || {};
+  const campaignCpm = metrics.bySource?.campaign?.cpm || metrics.cpm || 7.37;
+  const campaignEr  = metrics.bySource?.campaign?.er  || metrics.er  || 0.74;
+
+  const benchmarks = en ? [
+    { label: 'Lighthouse CPM',    value: `$${Number(campaignCpm).toFixed(2)}`, sub: 'USDC per 1,000 views', tone: 'var(--ember-soft)', },
+    { label: 'Industry avg CPM',  value: '$50+',  sub: 'traditional KOL market',  tone: 'var(--bone-dim)', },
+    { label: 'Lighthouse ER',     value: `${Number(campaignEr).toFixed(2)}%`, sub: 'weighted engagement rate',   tone: 'var(--teal)', },
+    { label: 'Industry avg ER',   value: '~0.4%', sub: 'Web3 KOL average',         tone: 'var(--bone-dim)', },
+    { label: 'Cost advantage',    value: `${Math.round(50 / Math.max(0.01, campaignCpm))}×`, sub: 'cheaper per 1,000 impressions', tone: 'var(--amber)', },
+    { label: 'Engagement edge',   value: `${(Number(campaignEr) / 0.4).toFixed(1)}×`, sub: 'vs industry baseline', tone: 'var(--amber)', },
+  ] : [
+    { label: 'Lighthouse CPM',    value: `$${Number(campaignCpm).toFixed(2)}`, sub: 'USDC / 每千次曝光', tone: 'var(--ember-soft)', },
+    { label: '行业均值 CPM',       value: '$50+',  sub: '传统 KOL 市场',          tone: 'var(--bone-dim)', },
+    { label: 'Lighthouse ER',     value: `${Number(campaignEr).toFixed(2)}%`, sub: '加权平均互动率',         tone: 'var(--teal)', },
+    { label: '行业均值 ER',        value: '~0.4%', sub: 'Web3 KOL 均值',           tone: 'var(--bone-dim)', },
+    { label: '成本优势',           value: `${Math.round(50 / Math.max(0.01, campaignCpm))}×`, sub: '每千次曝光更便宜', tone: 'var(--amber)', },
+    { label: '互动优势',           value: `${(Number(campaignEr) / 0.4).toFixed(1)}×`, sub: '对比行业基准',      tone: 'var(--amber)', },
+  ];
+
+  return (
+    <section className="relative border-y border-[var(--rule)] bg-[var(--ink-2)] py-10 md:py-12 overflow-hidden">
+      <div className="max-w-[1360px] mx-auto px-6 md:px-10">
+        <div className="mb-6 flex items-center gap-4">
+          <div className="kicker">{en ? 'VS INDUSTRY' : '对比行业均值'}</div>
+          <div className="h-px flex-1" style={{background:'var(--rule)'}}/>
+          {publicSummary && <div className="font-mono text-[10px] text-[var(--bone-dim)] uppercase tracking-[.16em]">{en ? 'from real campaign data' : '来自真实 campaign 数据'}</div>}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px" style={{background:'var(--rule)'}}>
+          {benchmarks.map((b, i) => (
+            <div key={i} className="bg-[var(--ink-2)] p-5 md:p-6 hover:bg-[var(--ink)] transition">
+              <div className="font-mono text-[10px] uppercase tracking-[.18em] text-[var(--bone-dim)]">{b.label}</div>
+              <div className="mt-3 font-display font-black tnum leading-none" style={{fontSize:'clamp(24px,3.5vw,38px)', color: b.tone}}>{b.value}</div>
+              <div className="mt-2 font-mono text-[10px] text-[var(--bone-dim)]">{b.sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function WinnersSection(){
   const { t } = useT2();
   const P = useProjects2();
@@ -623,4 +670,4 @@ function IPCard({ caseData, index, t }){
   );
 }
 
-window.App_Part2 = { KpiSection, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet, buildStarTagMap };
+window.App_Part2 = { KpiSection, BenchmarkBand, WinnersSection, StarsSection, PersonalIPSection, ImageDivider, buildStarSlugSet, buildStarTagMap };

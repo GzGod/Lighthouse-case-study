@@ -1,6 +1,6 @@
 /* Lighthouse — part 3: Matrix · Why · CTA · App shell */
 const { Reveal: Reveal3, useProjects: useProjects3, deriveStats: deriveStats3, buildStatsVars: buildStatsVars3, fmt: fmt3, useT: useT3, LangProvider: LP3, tpl: tpl3, useCaseStudySummary: useCaseStudySummary3 } = window.App_Part1;
-const { KpiSection, PersonalIPSection, ImageDivider } = window.App_Part2;
+const { KpiSection, BenchmarkBand, PersonalIPSection, ImageDivider } = window.App_Part2;
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
 
@@ -547,6 +547,7 @@ function Page(){
       <AboutSection/>
       <ImageDivider bg="divider-img-1" kickerKey="div1.kicker" quoteKey="div1.q" subKey="div1.sub"/>
       <KpiSection/>
+      <BenchmarkBand/>
       <PublicDataSection/>
       <MatrixSection/>
       <WhyCta/>
