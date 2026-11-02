@@ -50,24 +50,26 @@ function fetchJson(url, opts = {}) {
 }
 
 // ─── Project metadata: handles, coingecko ids, token symbols ─────────────────
+// All CoinGecko IDs and symbols verified via CoinGecko search API + DexScreener
+// "coingecko: null" = not listed on CoinGecko; dex-only or no TGE
 const PROJECT_META = {
-  'surf':             { handle: 'surfaihq',       coingecko: null,              symbol: null,   chain: null },
-  'zetachain':        { handle: 'zetachain',       coingecko: 'zetachain',       symbol: 'ZETA', chain: 'zeta' },
-  'kaio':             { handle: null,              coingecko: null,              symbol: 'KAIO', chain: null },
-  'hashkey-exchange': { handle: 'hashkeyexchange', coingecko: 'hashkey-token',   symbol: 'HKB',  chain: 'ethereum' },
-  'portals':          { handle: 'portals',         coingecko: 'portals-2',       symbol: 'PORTAL', chain: 'solana' },
-  'zkverify':         { handle: 'zkverify',        coingecko: null,              symbol: 'ZKV',  chain: null },
-  'sonicsvm':         { handle: 'soniclabs',       coingecko: 'sonic-svm',       symbol: 'SONIC', chain: 'sonic' },
-  'puffpaw':          { handle: 'puffpaw',         coingecko: 'puffpaw',         symbol: 'PUFF', chain: 'blast' },
-  'allora':           { handle: 'AlloraNetwork',   coingecko: 'allora-network',  symbol: 'ALLO', chain: 'ethereum' },
-  'maiga':            { handle: null,              coingecko: null,              symbol: null,   chain: null },
-  'yei-finance':      { handle: 'YeiFinance',      coingecko: 'yei-finance',     symbol: 'YEI',  chain: 'sei' },
-  'kamino':           { handle: 'KaminoFinance',   coingecko: 'kamino-finance',  symbol: 'KMNO', chain: 'solana' },
-  'fight-id':         { handle: 'joinfightid',     coingecko: 'fight-id',        symbol: 'FIGHT', chain: 'ethereum' },
-  'sentient':         { handle: 'sentient_agi',    coingecko: 'sentient',        symbol: 'SENT', chain: 'base' },
-  'ff':               { handle: null,              coingecko: null,              symbol: 'FF',   chain: null },
-  'lit-protocol':     { handle: 'LitProtocol',     coingecko: 'lit-protocol',    symbol: 'LIT',  chain: 'ethereum' },
-  'heyelsa':          { handle: 'heyelsaai',       coingecko: null,              symbol: null,   chain: null },
+  'surf':             { handle: 'surfaihq',        coingecko: null,              symbol: null,      chain: null },
+  'zetachain':        { handle: 'zetachain',        coingecko: 'zetachain',       symbol: 'ZETA',    chain: 'zeta' },
+  'kaio':             { handle: null,               coingecko: null,              symbol: 'KAIO',    chain: 'ethereum', dex_search: 'KAIO' },
+  'hashkey-exchange': { handle: 'hashkeyexchange',  coingecko: 'hashkey-ecopoints', symbol: 'HSK',  chain: 'ethereum' },
+  'portals':          { handle: 'portals',          coingecko: null,              symbol: 'PORTALS', chain: 'solana', dex_search: 'PORTALS' },
+  'zkverify':         { handle: 'zkverify',         coingecko: null,              symbol: 'VFY',     chain: 'base', dex_search: 'VFY' },
+  'sonicsvm':         { handle: 'soniclabs',        coingecko: 'sonic-svm',       symbol: 'SONIC',   chain: 'sonic' },
+  'puffpaw':          { handle: 'puffpaw',          coingecko: null,              symbol: null,      chain: null },
+  'allora':           { handle: 'AlloraNetwork',    coingecko: 'allora',          symbol: 'ALLO',    chain: 'ethereum' },
+  'maiga':            { handle: null,               coingecko: null,              symbol: 'MAIGA',   chain: 'bsc', dex_search: 'MAIGA' },
+  'yei-finance':      { handle: 'YeiFinance',       coingecko: 'yei-finance',     symbol: 'CLO',     chain: 'sei' },
+  'kamino':           { handle: 'KaminoFinance',    coingecko: 'kamino',          symbol: 'KMNO',    chain: 'solana' },
+  'fight-id':         { handle: 'joinfightid',      coingecko: null,              symbol: null,      chain: null },
+  'sentient':         { handle: 'sentient_agi',     coingecko: 'sentient',        symbol: 'SENT',    chain: 'base' },
+  'ff':               { handle: null,               coingecko: null,              symbol: 'FF',      chain: 'bsc', dex_search: 'FF' },
+  'lit-protocol':     { handle: 'LitProtocol',      coingecko: 'lit-protocol',    symbol: 'LITKEY',  chain: 'base' },
+  'heyelsa':          { handle: 'heyelsaai',        coingecko: null,              symbol: null,      chain: null },
 };
 
 // ─── CoinGecko: current price + 30d history ─────────────────────────────────
@@ -188,6 +190,65 @@ async function fetchSocialVolume(sourcePool, handle) {
   } catch (e) {
     console.warn(`[enrichment] social volume ${handle}: ${e.message}`);
     return null;
+  }
+}
+
+// ─── Source DB: infer project name from KOL tweet content (cross-validation) ─
+// For campaigns with no projectName, scan KOL tweets for @mentions, hashtags,
+// and URLs to find which project they were actually promoting.
+async function inferProjectFromTweets(sourcePool, campaignId) {
+  if (!sourcePool || !campaignId) return null;
+  try {
+    const { rows } = await sourcePool.query(`
+      SELECT krt.tweet_text
+      FROM unified_campaign_participants ucp
+      JOIN kol_raw_tweets krt ON krt.kol_id = ucp."userId"
+      WHERE ucp."campaignId" = $1
+        AND krt.tweet_text IS NOT NULL
+        AND LENGTH(krt.tweet_text) > 20
+      LIMIT 20
+    `, [campaignId]);
+    if (!rows.length) return null;
+    const fullText = rows.map(r => r.tweet_text).join(' ');
+    const mentions = [...new Set((fullText.match(/@(\w+)/g) || []).map(m => m.slice(1).toLowerCase()))].slice(0, 10);
+    const hashtags = [...new Set((fullText.match(/#(\w+)/g) || []).map(h => h.slice(1).toLowerCase()))].slice(0, 10);
+    const domains  = [...new Set((fullText.match(/https?:\/\/[^\s]+/g) || []).map(u => { try { return new URL(u).hostname.replace('www.', ''); } catch { return null; } }).filter(Boolean))].slice(0, 5);
+    return { mentions, hashtags, domains };
+  } catch { return null; }
+}
+
+// ─── Source DB: aggregate anonymous campaigns (no projectName) with tweet cross-validation ──
+async function fetchAnonymousCampaignStats(sourcePool) {
+  if (!sourcePool) return [];
+  try {
+    const { rows } = await sourcePool.query(`
+      SELECT
+        c.id,
+        c."totalBudget",
+        c."consumedBudget",
+        c.type,
+        c."createdAt",
+        c."tweetAuthorHandle",
+        c."requiredHashtags",
+        c."requiredMentions",
+        c."targetUsername",
+        COUNT(p.id) as participant_count,
+        COALESCE(SUM(p.views), 0) as total_views,
+        COALESCE(SUM(p.likes + p.retweets + p.replies), 0) as total_engagement
+      FROM unified_campaigns c
+      LEFT JOIN unified_campaign_participants p ON c.id = p."campaignId"
+      WHERE c.status = 'ENDED'
+        AND (c."projectName" IS NULL OR c."projectName" = '')
+        AND c."consumedBudget" > 0
+      GROUP BY c.id
+      HAVING COALESCE(SUM(p.views), 0) > 1000
+      ORDER BY total_views DESC
+      LIMIT 30
+    `);
+    return rows;
+  } catch (e) {
+    console.warn(`[enrichment] anonymous campaigns: ${e.message}`);
+    return [];
   }
 }
 
@@ -320,10 +381,13 @@ async function runEnrichment(cmsPool) {
     console.log(`[enrichment] Processing ${slug}...`);
 
     // Parallel fetches: token data (only if has TGE) + campaign data
+    // Token logic: CoinGecko first (has coingecko id), else DexScreener (has dex_search),
+    // else Gate.io for exchange-listed symbols
+    const dexQuery = meta.dex_search || (meta.symbol && !meta.coingecko ? meta.symbol : null);
     const [cgData, gateData, dexData, campaignTS, beforeAfter, socialVol] = await Promise.all([
       meta.coingecko ? fetchCoinGeckoData(meta.coingecko).catch(e => { errors.coingecko = e.message; return null; }) : Promise.resolve(null),
       meta.symbol && meta.coingecko ? fetchGateData(meta.symbol).catch(e => { errors.gate = e.message; return null; }) : Promise.resolve(null),
-      meta.symbol && !meta.coingecko ? fetchDexData(meta.symbol).catch(e => { errors.dex = e.message; return null; }) : Promise.resolve(null),
+      dexQuery ? fetchDexData(dexQuery).catch(e => { errors.dex = e.message; return null; }) : Promise.resolve(null),
       sourcePool ? fetchCampaignTimeSeries(sourcePool, projectName).catch(e => { errors.campaign_ts = e.message; return null; }) : Promise.resolve(null),
       sourcePool ? fetchBeforeAfterMetrics(sourcePool, projectName).catch(e => { errors.before_after = e.message; return null; }) : Promise.resolve(null),
       sourcePool && meta.handle ? fetchSocialVolume(sourcePool, meta.handle).catch(e => { errors.social = e.message; return null; }) : Promise.resolve(null),
