@@ -303,7 +303,7 @@ function RoiEstimatorSection(){
     const id = setTimeout(() => {
       if (!budget || budget <= 0) return;
       setLoading(true);
-      fetch(`/api/enrichment/enrichment/roi-estimate?budget=${encodeURIComponent(budget)}`)
+      fetch(`/api/enrichment/roi-estimate?budget=${encodeURIComponent(budget)}`)
         .then(r => r.ok ? r.json() : null)
         .then(d => setData(d))
         .catch(() => setData(null))
