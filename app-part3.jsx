@@ -292,6 +292,176 @@ function ScatterChart({rows, setHovered, tr, ds}){
   );
 }
 
+function RoiEstimatorSection(){
+  const { t } = useT3();
+  const [budget, setBudget] = React.useState(5000);
+  const [data, setData] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const english = (window.useLighthouseLanguage && window.useLighthouseLanguage()[0] === 'en') || (document.documentElement.lang === 'en');
+
+  React.useEffect(() => {
+    const id = setTimeout(() => {
+      if (!budget || budget <= 0) return;
+      setLoading(true);
+      fetch(`/api/enrichment/enrichment/roi-estimate?budget=${encodeURIComponent(budget)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => setData(d))
+        .catch(() => setData(null))
+        .finally(() => setLoading(false));
+    }, 250);
+    return () => clearTimeout(id);
+  }, [budget]);
+
+  const fmt = n => new Intl.NumberFormat('en-US').format(Math.round(n || 0));
+  const copy = english ? {
+    kicker: 'ROI ESTIMATOR',
+    h2_a: 'What your budget',
+    h2_b: 'could deliver',
+    sub: 'Estimate reach, engagement and tweet count based on real Lighthouse campaign benchmarks. Adjust the slider and watch the numbers update.',
+    budget: 'Budget (USDC)',
+    est_impressions: 'Est. impressions',
+    est_engagement: 'Est. engagement',
+    est_tweets: 'Est. tweets',
+    vs_industry: 'vs traditional KOL market',
+    lighthouse: 'Lighthouse',
+    industry: 'Industry avg',
+    advantage: 'advantage',
+    data_from: 'Based on',
+    cta: 'Get a detailed plan →',
+  } : {
+    kicker: 'ROI 估算器',
+    h2_a: '你的预算',
+    h2_b: '能跑出什么效果',
+    sub: '基于 Lighthouse 真实投放数据估算曝光、互动和推文数。拖动滑块，数字会自动更新。',
+    budget: '预算 (USDC)',
+    est_impressions: '预计曝光',
+    est_engagement: '预计互动',
+    est_tweets: '预计推文',
+    vs_industry: '对比传统 KOL 市场',
+    lighthouse: 'Lighthouse',
+    industry: '行业均值',
+    advantage: '优势',
+    data_from: '数据来源',
+    cta: '获取详细方案 →',
+  };
+
+  const lh = data?.lighthouse;
+  const ind = data?.industry;
+
+  return (
+    <section id="roi-estimator" className="relative py-24 md:py-32 overflow-hidden border-y border-[var(--rule)] bg-[var(--ink-2)]">
+      <div className="max-w-[1360px] mx-auto px-6 md:px-10 relative">
+        <Reveal3 className="grid md:grid-cols-12 gap-8 items-end mb-12">
+          <div className="md:col-span-2 kicker">{copy.kicker}</div>
+          <div className="md:col-span-10">
+            <h2 className="font-display font-black leading-[1.02]" style={{fontSize:"clamp(32px, 5vw, 64px)", letterSpacing:"-0.015em"}}>
+              {copy.h2_a}<br/><span className="text-[var(--ember)] ember-glow">{copy.h2_b}</span>
+            </h2>
+            <p className="mt-6 max-w-2xl font-cn text-[15px] leading-[1.7] text-[var(--bone-dim)]">{copy.sub}</p>
+          </div>
+        </Reveal3>
+
+        <Reveal3 delay={1}>
+          <div className="grid lg:grid-cols-[.8fr_1.2fr] gap-6">
+            <div className="border border-[var(--rule)] bg-[var(--ink)] p-6 md:p-8">
+              <label className="font-mono text-[10px] uppercase tracking-[.2em] text-[var(--bone-dim)]">{copy.budget}</label>
+              <div className="mt-3 font-display font-black tnum text-[44px] md:text-[56px] leading-none text-[var(--ember-soft)]">
+                {fmt(budget)}<span className="text-[20px] text-[var(--bone-dim)] ml-2">USDC</span>
+              </div>
+              <input
+                type="range"
+                min="500"
+                max="50000"
+                step="500"
+                value={budget}
+                onChange={e => setBudget(parseInt(e.target.value))}
+                className="w-full mt-5 accent-[var(--ember)]"
+                style={{ accentColor: 'var(--ember)' }}
+              />
+              <div className="mt-2 flex justify-between font-mono text-[10px] text-[var(--bone-dim)]">
+                <span>500</span><span>50,000</span>
+              </div>
+              <div className="mt-6 grid grid-cols-3 gap-2">
+                {[2000, 5000, 10000].map(preset => (
+                  <button
+                    key={preset}
+                    onClick={() => setBudget(preset)}
+                    className={`font-mono text-[11px] uppercase tracking-[.12em] px-3 py-2 border transition ${budget === preset ? 'border-[var(--ember)] bg-[rgba(255,122,69,.18)] text-[var(--bone)]' : 'border-[var(--rule-strong)] text-[var(--bone-dim)] hover:border-[var(--ember-soft)]'}`}
+                  >
+                    {fmt(preset)}
+                  </button>
+                ))}
+              </div>
+              {data?.data_from && (
+                <div className="mt-6 font-mono text-[10px] text-[var(--bone-dim)] border-t border-[var(--rule)] pt-4">
+                  {copy.data_from}: {data.data_from}
+                </div>
+              )}
+            </div>
+
+            <div className="border border-[var(--rule)] bg-[var(--ink)] p-6 md:p-8">
+              {loading ? (
+                <div className="font-mono text-xs text-[var(--bone-dim)]">…</div>
+              ) : !lh ? (
+                <div className="font-mono text-xs text-[var(--bone-dim)]">{english ? 'Enter budget to estimate' : '输入预算以估算'}</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-px" style={{background:'var(--rule)'}}>
+                    <div className="bg-[var(--ink)] p-5">
+                      <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.est_impressions}</div>
+                      <div className="mt-2 font-display font-bold tnum text-[28px] md:text-[32px] text-[var(--teal)]">{fmt(lh.est_impressions)}</div>
+                    </div>
+                    <div className="bg-[var(--ink)] p-5">
+                      <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.est_engagement}</div>
+                      <div className="mt-2 font-display font-bold tnum text-[28px] md:text-[32px] text-white">{fmt(lh.est_engagement)}</div>
+                    </div>
+                    <div className="bg-[var(--ink)] p-5">
+                      <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.est_tweets}</div>
+                      <div className="mt-2 font-display font-bold tnum text-[28px] md:text-[32px] text-[var(--ember-soft)]">{fmt(lh.est_tweets)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)] mb-3">{copy.vs_industry}</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="border border-[var(--rule)] p-4">
+                        <div className="font-mono text-[10px] uppercase tracking-[.14em] text-[var(--ember-soft)]">{copy.lighthouse}</div>
+                        <div className="mt-2 space-y-1">
+                          <div className="font-mono text-xs text-[var(--bone-dim)]">CPM <span className="text-[var(--bone)]">${lh.cpm}</span></div>
+                          <div className="font-mono text-xs text-[var(--bone-dim)]">ER <span className="text-[var(--bone)]">{lh.er}%</span></div>
+                          <div className="font-mono text-xs text-[var(--bone-dim)]">CPE <span className="text-[var(--bone)]">${lh.cpe}</span></div>
+                        </div>
+                      </div>
+                      <div className="border border-[var(--rule)] p-4">
+                        <div className="font-mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.industry}</div>
+                        <div className="mt-2 space-y-1">
+                          <div className="font-mono text-xs text-[var(--bone-dim)]">CPM <span className="text-[var(--bone-dim)]">${ind.cpm}</span></div>
+                          <div className="font-mono text-xs text-[var(--bone-dim)]">ER <span className="text-[var(--bone-dim)]">{ind.er}%</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {data.lighthouse_advantage && (
+                    <div className="mt-5 flex flex-wrap gap-3 font-mono text-[11px]">
+                      <span className="px-3 py-1.5 border border-[var(--ember)] bg-[rgba(255,122,69,.12)] text-[var(--ember-soft)] uppercase tracking-[.14em]">
+                        {data.lighthouse_advantage.impressions_multiplier}× {copy.advantage} {english ? 'reach' : '曝光'}
+                      </span>
+                      <span className="px-3 py-1.5 border border-[var(--teal)] bg-[rgba(111,183,193,.10)] text-[var(--teal)] uppercase tracking-[.14em]">
+                        {data.lighthouse_advantage.er_multiplier}× {copy.advantage} ER
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </Reveal3>
+      </div>
+    </section>
+  );
+}
+
 function WhyCta(){
   const { t } = useT3();
   const P3 = useProjects3();
@@ -328,6 +498,8 @@ function WhyCta(){
           </div>
         </div>
       </section>
+
+      <RoiEstimatorSection />
 
       <section id="cta" className="relative overflow-hidden">
         <div className="relative min-h-[640px] sm:h-[72vh] sm:min-h-[560px] flex items-center justify-center py-24 sm:py-0">

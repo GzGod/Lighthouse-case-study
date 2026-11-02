@@ -102,5 +102,73 @@ module.exports = function mount(pool) {
     }
   });
 
+  // ROI estimator: given a budget, return expected impressions/engagement
+  // based on real Lighthouse platform benchmarks
+  router.get('/enrichment/roi-estimate', async (req, res) => {
+    const budget = parseFloat(req.query.budget);
+    if (!budget || budget <= 0) return res.status(400).json({ error: 'budget required' });
+
+    try {
+      // Try to compute benchmarks from real enrichment data first
+      const { rows: enrichRows } = await pool.query(`
+        SELECT
+          AVG(CASE WHEN during_views > 0 AND consumed_budget > 0
+            THEN consumed_budget / during_views * 1000 ELSE NULL END) as avg_cpm,
+          AVG(CASE WHEN during_engagement > 0 AND consumed_budget > 0
+            THEN consumed_budget / during_engagement ELSE NULL END) as avg_cpe,
+          AVG(CASE WHEN during_views > 0 AND during_engagement > 0
+            THEN during_engagement::numeric / during_views * 100 ELSE NULL END) as avg_er,
+          COUNT(*) FILTER (WHERE campaign_count > 0) as projects_count,
+          SUM(campaign_count) as total_campaigns,
+          SUM(consumed_budget) as total_consumed,
+          SUM(during_views) as total_views,
+          SUM(during_engagement) as total_engagement
+        FROM project_enrichment
+        WHERE campaign_count > 0 AND consumed_budget > 0
+      `);
+
+      // Fall back to hardcoded Lighthouse benchmarks if enrichment not yet populated
+      const r = enrichRows[0] || {};
+      const cpm = parseFloat(r.avg_cpm) || 40;         // USDC per 1000 impressions
+      const cpe = parseFloat(r.avg_cpe) || 18.5;       // USDC per engagement
+      const er  = parseFloat(r.avg_er)  || 1.1;        // % engagement rate
+
+      const est_impressions = Math.round(budget / cpm * 1000);
+      const est_engagement  = Math.round(budget / cpe);
+      const est_tweets      = Math.round(budget / 120);  // ~120 USDC avg per tweet
+
+      // Industry comparison (traditional KOL market)
+      const industry_cpm = 50;
+      const industry_er  = 0.4;
+
+      res.json({
+        budget,
+        lighthouse: {
+          est_impressions,
+          est_engagement,
+          est_tweets: Math.max(1, est_tweets),
+          cpm: +cpm.toFixed(2),
+          cpe: +cpe.toFixed(2),
+          er:  +er.toFixed(2),
+        },
+        industry: {
+          est_impressions: Math.round(budget / industry_cpm * 1000),
+          est_engagement:  Math.round(budget / industry_cpm * 1000 * industry_er / 100),
+          cpm: industry_cpm,
+          er:  industry_er,
+        },
+        lighthouse_advantage: {
+          impressions_multiplier: +(budget / cpm * 1000 / (budget / industry_cpm * 1000)).toFixed(1),
+          er_multiplier: +(er / industry_er).toFixed(1),
+        },
+        data_from: parseInt(r.projects_count) > 0
+          ? `${r.projects_count} projects · ${r.total_campaigns} campaigns · ${Math.round(parseFloat(r.total_consumed) || 0)} USDC deployed`
+          : 'Lighthouse platform benchmarks',
+      });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   return router;
 };
