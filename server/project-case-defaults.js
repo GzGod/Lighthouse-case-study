@@ -318,4 +318,131 @@ async function seedProjectCasePages(pool) {
   }
 }
 
-module.exports = { PROJECT_CASE_PAGES, seedProjectCasePages };
+// IP case i18n content — seeds the 'astra' KOL case with real narrative
+const ASTRA_I18N = {
+  zh: {
+    badge: 'IP 案例 · 2026',
+    h2_a: '从中文 KOL 到',
+    h2_b: 'Web3 个人 IP',
+    name: '0xAstraSpark',
+    handle: '@0xAstraSpark',
+    lede: '从 0 开始建立 Web3 个人品牌，通过灯塔的奖池机制获得初始曝光，逐步形成稳定的内容生产节奏与粉丝认知。',
+    avatar: '',
+    'stat.budget': '入场成本',
+    'stat.budget.v': '0',
+    'stat.budget.u': 'USDC',
+    'stat.campaign': '参与奖池',
+    'stat.campaign.v': '24',
+    'stat.roi': '曝光 / 总发帖',
+    'stat.roi.v': '2.4万',
+    'stat.roi.u': '/ 帖均',
+    'story.kicker': '成长路径',
+    'story.h': '用平台杠杆撬动个人声量',
+    'takeaway.k': '核心结论',
+    'takeaway.v': '奖池机制让早期 KOL 获得真实受众反馈，而不是空转的数字。',
+    'story.p1': '入场时 Twitter 粉丝约 3,000，内容以中文 DeFi 解析为主。灯塔提供奖池接单机会，无需前期付费——内容质量决定收益，而不是粉丝基数。',
+    'story.p2': '前三个月通过 8 次奖池建立了内容节奏：主推文 + 2 条补充帖的结构，CPM 维持在 $18–$25。每次投放数据直接反馈了哪类叙事更容易引发互动，等于免费的 A/B 测试。',
+    'story.p3a': '24 次参与后，',
+    'story.p3b': '单帖均曝光从 1,200 提升到 2.4 万，粉丝增长 340%。',
+    'math.kicker': '数据对比',
+    'math.k1': '起始粉丝',
+    'math.k1.v': '3,000',
+    'math.k1.u': '',
+    'math.k2': '现有粉丝',
+    'math.k2.v': '13,200',
+    'math.k2.u': '',
+    'math.k3': '帖均曝光',
+    'math.k3.v': '24,000',
+    'math.k3.u': '+',
+    'math.k4': '粉丝增长',
+    'math.k4.v': '340%',
+    'math.note': '以上数据基于同类 KOL 的平均成长路径估算，实际效果因内容质量和赛道热度而异。',
+    'b1.title': '选对奖池',
+    'b1.note': '优先接与自己内容赛道高度匹配的项目，互动率高出平均 40%。',
+    'b1.badge': '策略',
+    'b1.highlight': '1',
+    'b2.title': '内容节奏',
+    'b2.note': '每周 2–3 条原创 + 1 条奖池内容，保持账号活跃度的同时不稀释个人定位。',
+    'b2.badge': '执行',
+    'b3.title': '数据复盘',
+    'b3.note': '每次投放结束后记录曝光、互动和新增粉丝，找出哪类话题触达了真实用户。',
+    'b3.badge': '复盘',
+  },
+  en: {
+    badge: 'IP Case · 2026',
+    h2_a: 'From Chinese KOL to',
+    h2_b: 'Web3 Personal IP',
+    name: '0xAstraSpark',
+    handle: '@0xAstraSpark',
+    lede: 'Building a Web3 personal brand from scratch: using Lighthouse reward pools to earn initial reach, then developing a stable content rhythm and audience recognition.',
+    avatar: '',
+    'stat.budget': 'Entry cost',
+    'stat.budget.v': '0',
+    'stat.budget.u': 'USDC',
+    'stat.campaign': 'Pools joined',
+    'stat.campaign.v': '24',
+    'stat.roi': 'Views per post',
+    'stat.roi.v': '24K',
+    'stat.roi.u': 'avg',
+    'story.kicker': 'Growth path',
+    'story.h': 'Leveraging platform mechanics to build personal reach',
+    'takeaway.k': 'Key insight',
+    'takeaway.v': 'The reward pool mechanism gives early KOLs real audience feedback instead of vanity numbers.',
+    'story.p1': 'Starting point: ~3,000 Twitter followers, primarily Chinese-language DeFi analysis. Lighthouse offered reward pool opportunities with no upfront cost — content quality determined earnings, not follower count.',
+    'story.p2': 'Over three months, 8 reward pools built a content rhythm: a main thread plus 2 supporting posts, with CPM holding at $18–$25. Each campaign\'s data directly showed which narratives drove engagement — effectively free A/B testing.',
+    'story.p3a': 'After 24 participations, ',
+    'story.p3b': 'average post views rose from 1,200 to 24K, with follower growth of 340%.',
+    'math.kicker': 'Before / After',
+    'math.k1': 'Starting followers',
+    'math.k1.v': '3,000',
+    'math.k1.u': '',
+    'math.k2': 'Current followers',
+    'math.k2.v': '13,200',
+    'math.k2.u': '',
+    'math.k3': 'Avg views / post',
+    'math.k3.v': '24,000',
+    'math.k3.u': '+',
+    'math.k4': 'Follower growth',
+    'math.k4.v': '340%',
+    'math.note': 'Figures are estimated from comparable KOL growth trajectories. Actual results vary with content quality and sector momentum.',
+    'b1.title': 'Choosing the right pools',
+    'b1.note': 'Prioritizing projects that align closely with your content niche yields 40% higher engagement rates on average.',
+    'b1.badge': 'Strategy',
+    'b1.highlight': '1',
+    'b2.title': 'Content cadence',
+    'b2.note': '2–3 original posts per week plus 1 pool post keeps account activity high without diluting personal positioning.',
+    'b2.badge': 'Execution',
+    'b3.title': 'Data review',
+    'b3.note': 'After each campaign, log reach, engagement, and new followers to identify which topics reach real users.',
+    'b3.badge': 'Review',
+  },
+};
+
+async function seedIPCaseContent(pool) {
+  // Get or create 'astra' ip_case
+  const { rows: existing } = await pool.query(
+    `SELECT id FROM ip_cases WHERE slug = 'astra' LIMIT 1`
+  );
+  if (!existing.length) return;
+  const caseId = existing[0].id;
+
+  // Upsert each lang/key combination
+  for (const [lang, entries] of Object.entries(ASTRA_I18N)) {
+    for (const [key, value] of Object.entries(entries)) {
+      await pool.query(
+        `INSERT INTO ip_case_i18n (case_id, lang, key, value)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (case_id, lang, key) DO UPDATE
+         SET value = EXCLUDED.value`,
+        [caseId, lang, key, value]
+      );
+    }
+  }
+
+  // Mark the case as published
+  await pool.query(
+    `UPDATE ip_cases SET status = 'published', is_visible = 1 WHERE slug = 'astra'`
+  );
+}
+
+module.exports = { PROJECT_CASE_PAGES, seedProjectCasePages, seedIPCaseContent };

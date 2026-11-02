@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { pool, initDB, seedProjects, seedI18n, seedIPCases, refreshAttentionMarketI18n } = require('./db');
-const { seedProjectCasePages } = require('./project-case-defaults');
+const { seedProjectCasePages, seedIPCaseContent } = require('./project-case-defaults');
 const { syncCaseStudy, seedFallbackSnapshot, latestSnapshot } = require('./case-study-sync');
 const { startEnrichmentSchedule } = require('./enrichment-worker');
 
@@ -56,24 +56,12 @@ async function start() {
     console.error('Failed to seed or refresh i18n:', e.message);
   }
 
-  // Seed Astra IP case i18n
-  const { rows: caseI18nCount } = await pool.query('SELECT COUNT(*) as c FROM ip_case_i18n');
-  if (parseInt(caseI18nCount[0].c) === 0) {
-    try {
-      const { rows: astraRows } = await pool.query("SELECT id FROM ip_cases WHERE slug = 'astra'");
-      if (astraRows[0]) {
-        const { rows: allI18n } = await pool.query("SELECT lang, key, value FROM i18n WHERE key LIKE 'astra.%'");
-        for (const r of allI18n) {
-          await pool.query(
-            'INSERT INTO ip_case_i18n (case_id, lang, key, value) VALUES ($1,$2,$3,$4) ON CONFLICT (case_id, lang, key) DO NOTHING',
-            [astraRows[0].id, r.lang, r.key, r.value]
-          );
-        }
-        console.log(`Seeded Astra IP case i18n: ${allI18n.length} entries`);
-      }
-    } catch (e) {
-      console.error('Failed to seed Astra i18n:', e.message);
-    }
+  // Seed Astra IP case i18n — always run our enriched content (idempotent upsert)
+  try {
+    await seedIPCaseContent(pool);
+    console.log('Seeded Astra IP case content');
+  } catch (e) {
+    console.error('Failed to seed Astra IP content:', e.message);
   }
 
   // Ensure upload directory exists
