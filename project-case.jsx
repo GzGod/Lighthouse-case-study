@@ -270,7 +270,7 @@ function MetricDelta({ before, after, label, format }) {
   );
 }
 
-function BeforeAfterSection({ slug, english, preloaded }) {
+function BeforeAfterSection({ slug, english, preloaded, project }) {
   const { data, loading } = useEnrichment(slug, preloaded);
   if (loading) return (
     <GlassCard className="mt-4 min-w-0 p-5 sm:p-7">
@@ -278,11 +278,39 @@ function BeforeAfterSection({ slug, english, preloaded }) {
       <div className="mt-6 font-mono text-xs text-[var(--bone-dim)]">{english ? 'Loading enrichment data…' : '正在加载投放效果数据…'}</div>
     </GlassCard>
   );
-  if (!data) return null;
 
-  const c = data.campaign || {};
-  const token = data.token;
-  const social = data.social || {};
+  // Build a fallback from the project's own metrics when enrichment isn't loaded
+  const fallback = !data && project ? {
+    available: true,
+    slug,
+    project_name: project.name,
+    has_token: false,
+    token_symbol: null,
+    token: null,
+    campaign: {
+      start: null,
+      end: null,
+      count: project.tweets || 0,
+      total_budget: project.budget || 0,
+      consumed_budget: project.budget || 0,
+      during_views: project.imp || project.impressions || 0,
+      during_engagement: Math.round((project.imp || 0) * (project.er || 0) / 100),
+      peak_views: 0,
+      time_series: [],
+      insights: {
+        cpm: project.cpm || null,
+        cpe: project.cpe || null,
+        er: project.er || null,
+      },
+    },
+    social: { author_count: 0, viewer_count: 0, window_start: null, history: [] },
+  } : null;
+  const d = data || fallback;
+  if (!d) return null;
+
+  const c = d.campaign || {};
+  const token = d.token;
+  const social = d.social || {};
   const hasCampaignData = c.count > 0 || c.during_views > 0;
   const hasTokenData = !!token && (token.price_usd || token.volume_24h);
   const hasSocialData = social.author_count > 0 || social.viewer_count > 0;
@@ -405,7 +433,7 @@ function BeforeAfterSection({ slug, english, preloaded }) {
           <div className="border border-[var(--rule)] bg-white/[.02] p-4">
             <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.socialAuthors}</div>
             <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--ember-soft)]">{formatNumber(social.author_count || 0)}</div>
-            <div className="mt-1 font-mono text-[10px] text-[var(--bone-dim)]">@{data.twitter_handle || '—'}</div>
+            <div className="mt-1 font-mono text-[10px] text-[var(--bone-dim)]">@{d.twitter_handle || '—'}</div>
           </div>
           <div className="border border-[var(--rule)] bg-white/[.02] p-4">
             <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.socialViews}</div>
@@ -417,7 +445,7 @@ function BeforeAfterSection({ slug, english, preloaded }) {
 
       {hasTokenData ? (
         <div className="mt-6 border border-[var(--rule)] bg-white/[.02] p-4">
-          <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--ember-soft)]">{copy.token} · {data.token_symbol}</div>
+          <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--ember-soft)]">{copy.token} · {d.token_symbol}</div>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.tokenPrice}</div>
@@ -574,7 +602,7 @@ function ProjectCasePage() {
           <GlassCard className="relative min-w-0 overflow-hidden p-5 sm:p-7"><h2 className="text-2xl font-bold">{copy.tweet}</h2><div className="relative mt-7 flex min-h-[150px] min-w-0 items-center justify-center border border-dashed border-[var(--rule-strong)] bg-[rgba(237,232,225,.025)] p-5"><div className="absolute right-10 top-1/2 -translate-y-1/2 font-mono text-[150px] font-bold leading-none text-white/[.045]">X</div><div className="relative min-w-0 max-w-full text-center"><div className="break-words text-lg text-slate-300">{localizedField(page, 'tweet_title', copy.tweetTitle, english)}</div><div className="mt-2 break-words text-sm text-slate-500">{localizedField(page, 'tweet_note', copy.tweetNote, english)}</div>{page.tweet_url && <a className="mt-4 inline-flex max-w-full break-all text-sm text-[var(--ember-soft)] hover:underline" href={page.tweet_url} target="_blank" rel="noopener noreferrer">{page.tweet_url}</a>}</div></div></GlassCard>
         </section>}
 
-        <BeforeAfterSection slug={project.slug || slugFromPath()} english={english} preloaded={project.enrichment} />
+        <BeforeAfterSection slug={project.slug || slugFromPath()} english={english} preloaded={project.enrichment} project={project} />
 
         <section id="cta" className="mt-5 overflow-hidden border border-[var(--rule-strong)] bg-[linear-gradient(110deg,rgba(111,183,193,.20),rgba(13,15,18,.88)_52%,rgba(255,122,69,.22))] p-5 shadow-[0_24px_80px_rgba(0,0,0,.32)] sm:p-8 md:p-10"><div className="flex min-w-0 flex-col gap-6 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><h2 className="break-words text-[clamp(26px,4vw,40px)] font-black leading-tight" style={{ overflowWrap: 'anywhere' }}>{localizedField(page, 'cta_title', copy.cta, english).split('\n').map((line, index) => <React.Fragment key={`${index}-${line}`}>{index > 0 && <br />}{line}</React.Fragment>)}</h2><p className="mt-3 break-words text-sm leading-6 text-slate-300">{localizedField(page, 'cta_note', copy.ctaNote, english)}</p></div><a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center justify-center border border-[rgba(255,122,69,.56)] bg-[rgba(255,122,69,.22)] px-5 py-4 font-mono text-[10px] uppercase text-[var(--bone)] shadow-[0_14px_36px_rgba(255,122,69,.18)] transition hover:brightness-110">{copy.ctaButton}</a></div></section>
       </main>
