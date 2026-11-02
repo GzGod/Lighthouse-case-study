@@ -5,6 +5,7 @@ const fs = require('fs');
 const { pool, initDB, seedProjects, seedI18n, seedIPCases, refreshAttentionMarketI18n } = require('./db');
 const { seedProjectCasePages } = require('./project-case-defaults');
 const { syncCaseStudy, seedFallbackSnapshot, latestSnapshot } = require('./case-study-sync');
+const { startEnrichmentSchedule } = require('./enrichment-worker');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
@@ -85,6 +86,7 @@ async function start() {
   app.use('/api/projects', require('./routes/projects')(pool));
   app.use('/api/ip-cases', require('./routes/ip-cases')(pool));
   app.use('/api/case-study', require('./routes/case-study'));
+  app.use('/api/enrichment', require('./routes/enrichment')(pool));
   app.use('/api/upload', require('./routes/upload')(pool));
 
   // Serve static files
@@ -130,6 +132,8 @@ async function start() {
       syncCaseStudy(pool)
         .then(payload => { console.log(`Initial public case snapshot synced: ${payload.meta.counts.cases} cases`); return refreshLogos(); })
         .catch(error => console.error(`Initial public case snapshot skipped: ${error.message}`));
+      // Start enrichment worker (before/after metrics, token data)
+      startEnrichmentSchedule(pool);
     }
     setTimeout(refreshLogos, 5000).unref();
     setInterval(refreshLogos, 24 * 60 * 60 * 1000).unref();

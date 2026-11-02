@@ -209,6 +209,248 @@ function HeroVisual() {
   );
 }
 
+// ─── Before/After enrichment section ───────────────────────────────────────
+function useEnrichment(slug) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!slug) return;
+    setLoading(true);
+    fetch(`/api/projects/${encodeURIComponent(slug)}/enrichment`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setData(d && d.available ? d : null); })
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [slug]);
+  return { data, loading };
+}
+
+function Sparkline({ values, width = 240, height = 48, color = "var(--ember-soft)" }) {
+  if (!values || values.length < 2) return <div className="font-mono text-[10px] text-[var(--bone-dim)]">{values?.length || 0} pts</div>;
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * width;
+    const y = height - ((v - min) / range) * height;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return (
+    <svg width={width} height={height} className="block" preserveAspectRatio="none" viewBox={`0 0 ${width} ${height}`}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+      <circle cx={width} cy={height - ((values[values.length - 1] - min) / range) * height} r="2" fill={color} />
+    </svg>
+  );
+}
+
+function MetricDelta({ before, after, label, format }) {
+  const fmtFn = format || ((n) => formatNumber(n));
+  const delta = before > 0 ? ((after - before) / before * 100) : (after > 0 ? 100 : 0);
+  const positive = delta >= 0;
+  return (
+    <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+      <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{label}</div>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <div>
+          <div className="font-mono text-[9px] uppercase tracking-[.14em] text-[var(--bone-dim)]">Before</div>
+          <div className="mt-1 break-words font-mono text-lg font-semibold text-[var(--bone-dim)]">{before > 0 ? fmtFn(before) : '—'}</div>
+        </div>
+        <div>
+          <div className="font-mono text-[9px] uppercase tracking-[.14em] text-[var(--ember-soft)]">After</div>
+          <div className="mt-1 break-words font-mono text-lg font-semibold text-white">{fmtFn(after)}</div>
+        </div>
+      </div>
+      {before > 0 && (
+        <div className={`mt-3 font-mono text-xs ${positive ? 'text-[var(--teal)]' : 'text-[var(--ember-soft)]'}`}>
+          {positive ? '↑' : '↓'} {Math.abs(delta).toFixed(1)}%
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BeforeAfterSection({ slug, english }) {
+  const { data, loading } = useEnrichment(slug);
+  if (loading) return (
+    <GlassCard className="mt-4 min-w-0 p-5 sm:p-7">
+      <div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{english ? 'Before / After' : '投放前后对比'}</div>
+      <div className="mt-6 font-mono text-xs text-[var(--bone-dim)]">{english ? 'Loading enrichment data…' : '正在加载投放效果数据…'}</div>
+    </GlassCard>
+  );
+  if (!data) return null;
+
+  const c = data.campaign || {};
+  const token = data.token;
+  const social = data.social || {};
+  const hasCampaignData = c.count > 0 || c.during_views > 0;
+  const hasTokenData = !!token && (token.price_usd || token.volume_24h);
+  const hasSocialData = social.author_count > 0 || social.viewer_count > 0;
+
+  if (!hasCampaignData && !hasTokenData && !hasSocialData) return null;
+
+  const copy = english ? {
+    title: 'Before / After',
+    subtitle: 'What changed after running campaigns on Lighthouse',
+    campaignPeriod: 'Campaign period',
+    campaigns: 'Campaigns',
+    budget: 'Budget used',
+    duringViews: 'Impressions delivered',
+    duringEngagement: 'Engagement delivered',
+    peakViews: 'Peak single-post views',
+    cpm: 'CPM',
+    cpe: 'CPE',
+    er: 'Engagement rate',
+    token: 'Token market data',
+    tokenPrice: 'Current price',
+    tokenVolume: '24h volume',
+    tokenAth: 'ATH',
+    tokenChart: 'Price since campaign',
+    noToken: 'Pre-TGE project — no token data yet',
+    social: 'Social volume',
+    socialAuthors: 'Authors mentioning project',
+    socialViews: 'Mention reach',
+    socialNote: '30-day window from sa_timeline_counts',
+    timeSeries: 'Daily campaign reach',
+    noTimeSeries: 'Time series will appear after first campaign sync',
+  } : {
+    title: '投放前后对比',
+    subtitle: '在 Lighthouse 跑完投放之后发生了什么',
+    campaignPeriod: '投放周期',
+    campaigns: '投放次数',
+    budget: '已消耗预算',
+    duringViews: '投放期曝光',
+    duringEngagement: '投放期互动',
+    peakViews: '单条最高曝光',
+    cpm: 'CPM',
+    cpe: 'CPE',
+    er: '互动率',
+    token: '代币市场数据',
+    tokenPrice: '当前价格',
+    tokenVolume: '24h 交易量',
+    tokenAth: '历史最高',
+    tokenChart: '投放以来价格走势',
+    noToken: '尚未 TGE，暂无代币数据',
+    social: '社交声量',
+    socialAuthors: '提及该项目的作者数',
+    socialViews: '提及曝光量',
+    socialNote: '30 天窗口，来自 sa_timeline_counts',
+    timeSeries: '每日投放曝光',
+    noTimeSeries: '首次投放同步后会出现时间序列',
+  };
+
+  const tsValues = (c.time_series || []).map(t => t.views || 0);
+  const priceValues = token?.price_history?.map(p => p.price) || [];
+
+  return (
+    <GlassCard className="mt-4 min-w-0 p-5 sm:p-7">
+      <div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{copy.title}</div>
+      <h2 className="mt-3 break-words text-2xl font-bold">{copy.subtitle}</h2>
+
+      {hasCampaignData && (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.campaignPeriod}</div>
+            <div className="mt-2 font-mono text-sm text-white">{c.start ? c.start.slice(0, 10) : '—'}</div>
+            <div className="font-mono text-xs text-[var(--bone-dim)]">{c.end ? '→ ' + c.end.slice(0, 10) : ''}</div>
+          </div>
+          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.campaigns}</div>
+            <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--ember-soft)]">{formatNumber(c.count || 0)}</div>
+          </div>
+          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.budget}</div>
+            <div className="mt-2 break-words font-mono text-2xl font-bold text-white">{formatNumber(c.consumed_budget || 0, 2)}</div>
+            <div className="mt-1 font-mono text-[10px] text-[var(--bone-dim)]">USDC</div>
+          </div>
+          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.duringViews}</div>
+            <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--teal)]">{formatNumber(c.during_views || 0)}</div>
+          </div>
+          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.duringEngagement}</div>
+            <div className="mt-2 break-words font-mono text-2xl font-bold text-white">{formatNumber(c.during_engagement || 0)}</div>
+          </div>
+          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.peakViews}</div>
+            <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--amber)]">{formatNumber(c.peak_views || 0)}</div>
+          </div>
+          {c.insights?.cpm != null && (
+            <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.cpm}</div>
+              <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--ember-soft)]">{c.insights.cpm}</div>
+              <div className="mt-1 font-mono text-[10px] text-[var(--bone-dim)]">USDC</div>
+            </div>
+          )}
+          {c.insights?.er != null && (
+            <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.er}</div>
+              <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--teal)]">{c.insights.er}%</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tsValues.length >= 2 && (
+        <div className="mt-6 border border-[var(--rule)] bg-white/[.02] p-4">
+          <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.timeSeries}</div>
+          <div className="mt-3 overflow-x-auto">
+            <Sparkline values={tsValues} width={Math.min(720, Math.max(240, tsValues.length * 12))} height={64} color="var(--teal)" />
+          </div>
+        </div>
+      )}
+
+      {hasSocialData && (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.socialAuthors}</div>
+            <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--ember-soft)]">{formatNumber(social.author_count || 0)}</div>
+            <div className="mt-1 font-mono text-[10px] text-[var(--bone-dim)]">@{data.twitter_handle || '—'}</div>
+          </div>
+          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.socialViews}</div>
+            <div className="mt-2 break-words font-mono text-2xl font-bold text-white">{formatNumber(social.viewer_count || 0)}</div>
+            <div className="mt-1 font-mono text-[10px] text-[var(--bone-dim)]">{copy.socialNote}</div>
+          </div>
+        </div>
+      )}
+
+      {hasTokenData ? (
+        <div className="mt-6 border border-[var(--rule)] bg-white/[.02] p-4">
+          <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--ember-soft)]">{copy.token} · {data.token_symbol}</div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.tokenPrice}</div>
+              <div className="mt-1 break-words font-mono text-xl font-bold text-white">${formatNumber(token.price_usd || 0, 4)}</div>
+            </div>
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.tokenVolume}</div>
+              <div className="mt-1 break-words font-mono text-xl font-bold text-[var(--teal)]">${formatNumber(token.volume_24h || 0)}</div>
+            </div>
+            {token.ath && (
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.tokenAth}</div>
+                <div className="mt-1 break-words font-mono text-xl font-bold text-[var(--amber)]">${formatNumber(token.ath, 4)}</div>
+              </div>
+            )}
+          </div>
+          {priceValues.length >= 2 && (
+            <div className="mt-4">
+              <div className="font-mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.tokenChart}</div>
+              <div className="mt-2 overflow-x-auto">
+                <Sparkline values={priceValues} width={Math.min(720, Math.max(240, priceValues.length * 2))} height={56} color="var(--amber)" />
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-6 border border-dashed border-[var(--rule-strong)] p-4 text-center font-mono text-xs text-[var(--bone-dim)]">
+          {copy.noToken}
+        </div>
+      )}
+    </GlassCard>
+  );
+}
+
 function ProjectCasePage() {
   const [lang, setLang] = useLighthouseLanguage();
   const english = lang === 'en';
@@ -330,6 +572,8 @@ function ProjectCasePage() {
           <GlassCard className="min-w-0 p-5 sm:p-7"><h2 className="text-2xl font-bold">{copy.testimonial}</h2><p className="mt-6 break-words text-[15px] leading-8 text-slate-300">“{localizedField(page, 'testimonial', mockData.testimonial, english ? englishCaseCopy.testimonial : false)}”</p><div className="mt-7 flex min-w-0 items-center gap-4"><div className="h-14 w-14 shrink-0 rounded-full border border-white/15 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,.55),rgba(80,120,125,.25)_38%,rgba(10,20,24,.9))]" /><div className="min-w-0"><div className="break-words font-semibold text-white">{pageField(page, 'testimonial_name', mockData.client.name)}</div><div className="mt-1 break-words text-sm text-slate-400">{localizedField(page, 'testimonial_role', mockData.client.role, english ? 'Campaign Review' : false)}</div></div></div></GlassCard>
           <GlassCard className="relative min-w-0 overflow-hidden p-5 sm:p-7"><h2 className="text-2xl font-bold">{copy.tweet}</h2><div className="relative mt-7 flex min-h-[150px] min-w-0 items-center justify-center border border-dashed border-[var(--rule-strong)] bg-[rgba(237,232,225,.025)] p-5"><div className="absolute right-10 top-1/2 -translate-y-1/2 font-mono text-[150px] font-bold leading-none text-white/[.045]">X</div><div className="relative min-w-0 max-w-full text-center"><div className="break-words text-lg text-slate-300">{localizedField(page, 'tweet_title', copy.tweetTitle, english)}</div><div className="mt-2 break-words text-sm text-slate-500">{localizedField(page, 'tweet_note', copy.tweetNote, english)}</div>{page.tweet_url && <a className="mt-4 inline-flex max-w-full break-all text-sm text-[var(--ember-soft)] hover:underline" href={page.tweet_url} target="_blank" rel="noopener noreferrer">{page.tweet_url}</a>}</div></div></GlassCard>
         </section>}
+
+        <BeforeAfterSection slug={project.slug || slugFromPath()} english={english} />
 
         <section id="cta" className="mt-5 overflow-hidden border border-[var(--rule-strong)] bg-[linear-gradient(110deg,rgba(111,183,193,.20),rgba(13,15,18,.88)_52%,rgba(255,122,69,.22))] p-5 shadow-[0_24px_80px_rgba(0,0,0,.32)] sm:p-8 md:p-10"><div className="flex min-w-0 flex-col gap-6 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><h2 className="break-words text-[clamp(26px,4vw,40px)] font-black leading-tight" style={{ overflowWrap: 'anywhere' }}>{localizedField(page, 'cta_title', copy.cta, english).split('\n').map((line, index) => <React.Fragment key={`${index}-${line}`}>{index > 0 && <br />}{line}</React.Fragment>)}</h2><p className="mt-3 break-words text-sm leading-6 text-slate-300">{localizedField(page, 'cta_note', copy.ctaNote, english)}</p></div><a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center justify-center border border-[rgba(255,122,69,.56)] bg-[rgba(255,122,69,.22)] px-5 py-4 font-mono text-[10px] uppercase text-[var(--bone)] shadow-[0_14px_36px_rgba(255,122,69,.18)] transition hover:brightness-110">{copy.ctaButton}</a></div></section>
       </main>
