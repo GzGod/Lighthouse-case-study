@@ -161,7 +161,7 @@ function KpiSection(){
             const color = k.tone==="ember"?"var(--ember-soft)":k.tone==="teal"?"var(--teal)":"var(--bone)";
             const glow = k.tone==="ember"?"ember-glow":k.tone==="teal"?"teal-glow":"bone-glow";
             return (
-              <Reveal2 key={i} delay={(i%3)+1} className="bg-[var(--ink)] p-5 sm:p-6 md:p-8 min-h-[200px] md:min-h-[220px] flex flex-col justify-between hover:bg-[var(--ink-2)] transition">
+              <Reveal2 key={i} delay={(i%3)+1} className="bg-[var(--surface)] p-5 sm:p-6 md:p-8 min-h-[200px] md:min-h-[220px] flex flex-col justify-between hover:bg-[var(--surface-muted)] transition">
                 <div className="flex items-center justify-between">
                   <div className="kicker">{k.k}</div>
                   <div className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{k.unit}</div>
@@ -238,7 +238,7 @@ function BenchmarkBand(){
   ];
 
   return (
-    <section className="relative border-y border-[var(--rule)] bg-[var(--ink-2)] py-10 md:py-12 overflow-hidden">
+    <section className="relative border-y border-[var(--rule)] bg-[var(--canvas)] py-10 md:py-12 overflow-hidden">
       <div className="max-w-[1360px] mx-auto px-6 md:px-10">
         <div className="mb-6 flex items-center gap-4">
           <div className="kicker">{en ? 'VS INDUSTRY' : '对比行业均值'}</div>
@@ -247,7 +247,7 @@ function BenchmarkBand(){
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px" style={{background:'var(--rule)'}}>
           {benchmarks.map((b, i) => (
-            <div key={i} className="bg-[var(--ink-2)] p-5 md:p-6 hover:bg-[var(--ink)] transition">
+            <div key={i} className="bg-[var(--canvas)] p-5 md:p-6 hover:bg-[var(--surface)] transition">
               <div className="font-mono text-[10px] uppercase tracking-[.18em] text-[var(--bone-dim)]">{b.label}</div>
               <div className="mt-3 font-display font-black tnum leading-none" style={{fontSize:'clamp(24px,3.5vw,38px)', color: b.tone}}>{b.value}</div>
               <div className="mt-2 font-mono text-[10px] text-[var(--bone-dim)]">{b.sub}</div>
@@ -409,7 +409,7 @@ function WinnersSection(){
           })}
         </div>
         {benchmarkCards.length > 0 && (
-          <Reveal2 delay={4} className="mt-8 ring-soft overflow-hidden" style={{background:"linear-gradient(135deg, rgba(111,183,193,0.08), rgba(255,122,69,0.05) 48%, rgba(237,232,225,0.018))"}}>
+          <Reveal2 delay={4} className="mt-8 ring-soft overflow-hidden" style={{background:"linear-gradient(135deg, rgba(111,183,193,0.08), rgba(8,116,140,0.05) 48%, rgba(237,232,225,0.018))"}}>
             <div className="grid lg:grid-cols-[0.9fr_1.6fr]">
               <div className="p-6 md:p-8 border-b lg:border-b-0 lg:border-r border-[var(--rule)]">
                 <div className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{t("win.compare.eyebrow")}</div>
@@ -428,7 +428,7 @@ function WinnersSection(){
                   const color = isLighthouse ? "var(--teal)" : "var(--ember-soft)";
                   const width = Math.max(4, Math.min(100, card.width));
                   return (
-                    <div key={card.key} className="group rounded-[18px] p-5 min-h-[190px] flex flex-col justify-between transition hover:-translate-y-0.5" style={{border:"1px solid var(--rule)", background:isLighthouse?"rgba(111,183,193,0.055)":"rgba(255,122,69,0.045)"}}>
+                    <div key={card.key} className="group rounded-[18px] p-5 min-h-[190px] flex flex-col justify-between transition hover:-translate-y-0.5" style={{border:"1px solid var(--rule)", background:isLighthouse?"rgba(111,183,193,0.055)":"rgba(8,116,140,0.035)"}}>
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="font-mono text-[10px] tracking-[0.2em] uppercase" style={{color}}>{card.label}</div>
@@ -562,7 +562,7 @@ function StarCard({s, idx}){
             <p className="mt-4 font-cn text-[17px] md:text-[19px] leading-[1.75] text-[var(--bone)] font-light">{tpl2(t("stars."+s.key+".story"), s.vars)}</p>
             <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-px rule-t rule-b" style={{background:"var(--rule)"}}>
               {s.stats.map((st,si)=>(
-                <div key={si} className="bg-[var(--ink)] p-4 md:p-5">
+                <div key={si} className="bg-[var(--surface)] p-4 md:p-5">
                   <div className="kicker text-[10px]">{st.k}</div>
                   <div className={`mt-2 font-display font-bold tnum ${st.hl?glow:""}`} style={{fontSize:"clamp(22px, 2.4vw, 34px)", color: st.hl?color:"var(--bone)", letterSpacing:"-0.02em",lineHeight:1}}>{st.v}</div>
                   <div className="mt-1 font-mono text-[10px] tracking-[0.18em] text-[var(--bone-dim)] uppercase">{st.u}</div>
@@ -592,7 +592,7 @@ function PersonalIPSection(){
   return (
     <section id="ip" className="relative py-28 md:py-36 overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1px]" style={{background:"var(--rule-strong)"}}/>
-      <div className="absolute inset-0 pointer-events-none" style={{background:"radial-gradient(ellipse 60% 40% at 85% 10%, rgba(255,122,69,0.08), transparent 60%)"}}/>
+      <div className="absolute inset-0 pointer-events-none" style={{background:"radial-gradient(ellipse 60% 40% at 85% 10%, rgba(8,116,140,0.08), transparent 60%)"}}/>
       <div className="max-w-[1360px] mx-auto px-6 md:px-10 relative">
         <Reveal2 className="grid md:grid-cols-12 gap-8 items-end mb-16 md:mb-20">
           <div className="md:col-span-2 kicker">{t("ip.kicker")}</div>
@@ -627,9 +627,9 @@ function IPCard({ caseData, index, t }){
   const toneColor = tone === "ember" ? "var(--ember)" : "var(--teal)";
   const n = String(index+1).padStart(2,"0");
   return (
-    <div className="relative overflow-hidden group" style={{border:"1px solid var(--rule-strong)", background:"linear-gradient(180deg, var(--ink-2), var(--ink))"}}>
+    <div className="relative overflow-hidden group" style={{border:"1px solid var(--rule-strong)", background:"linear-gradient(180deg, var(--surface-muted), var(--surface))"}}>
       {/* Portrait slot — placeholder with diagonal hatching */}
-      <div className="relative aspect-[4/3] overflow-hidden" style={{background:"var(--ink-3)"}}>
+      <div className="relative aspect-[4/3] overflow-hidden" style={{background:"var(--surface-muted)"}}>
         <div className="absolute inset-0 opacity-60" style={{backgroundImage:"repeating-linear-gradient(135deg, rgba(237,232,225,0.05) 0 2px, transparent 2px 14px)"}}/>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">

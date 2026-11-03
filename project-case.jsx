@@ -93,8 +93,8 @@ function ProjectAvatar({ name, logo, size = "h-14 w-14" }) {
   const hue = [...String(name || '')].reduce((sum, char) => (sum + char.charCodeAt(0)) % 360, 0);
   const src = logo ? (logo.startsWith('/') || logo.startsWith('http') ? logo : `/${logo}`) : '';
   const initials = String(name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase();
-  return <div className={`${size} relative shrink-0 overflow-hidden rounded-xl border border-white/10`} style={{ background: `linear-gradient(145deg, hsl(${hue} 48% 35% / .9), rgba(13,15,18,.96))` }}>
-    {src && !failed ? <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} /> : <span className="flex h-full w-full items-center justify-center font-mono text-sm font-bold text-white/90">{initials || '?'}</span>}
+  return <div className={`${size} relative shrink-0 overflow-hidden rounded-xl border border-[var(--rule)]`} style={{ background: `linear-gradient(145deg, hsl(${hue} 38% 88%), hsl(${hue} 48% 82%))` }}>
+    {src && !failed ? <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} /> : <span className="flex h-full w-full items-center justify-center font-mono text-sm font-semibold text-[var(--accent)]">{initials || '?'}</span>}
   </div>;
 }
 
@@ -126,22 +126,22 @@ function TweetPreview({ tweet, english }) {
   return <article className="min-w-0 overflow-hidden rounded-[3px] border border-[var(--rule)] bg-[rgba(237,232,225,.035)] p-4 transition hover:border-[rgba(111,183,193,.55)]">
     <div ref={embedRef} className="min-w-0" />
     {!embedded && <><div className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-2"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black text-sm font-bold text-white">𝕏</div><div className="min-w-0"><div className="truncate text-sm font-semibold text-white">@{tweet.username || 'creator'}</div><div className="mono text-[10px] uppercase tracking-[.12em] text-[var(--bone-dim)]">{english ? 'Top post by reach' : '按曝光排序的头部推文'}</div></div></div>
-      <a href={url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[var(--teal)] transition hover:text-white" aria-label={english ? 'Open post on X' : '在 X 打开推文'}>↗</a>
+      <div className="flex min-w-0 items-center gap-2"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-white">𝕏</div><div className="min-w-0"><div className="truncate text-sm font-semibold text-[var(--ink)]">@{tweet.username || 'creator'}</div><div className="mono text-[10px] uppercase tracking-[.12em] text-[var(--bone-dim)]">{english ? 'Top post by reach' : '按曝光排序的头部推文'}</div></div></div>
+      <a href={url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[var(--teal)] transition hover:text-[var(--ink)]" aria-label={english ? 'Open post on X' : '在 X 打开推文'}>↗</a>
     </div>
     <p className="mt-4 min-h-[3.25rem] break-words text-sm leading-6 text-[var(--bone-dim)]">{tweet.text || (english ? 'Preview this public post on X.' : '打开 X 预览这条公开推文。')}</p>
     <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--rule)] pt-3 mono text-[10px] uppercase tracking-[.1em] text-[var(--bone-dim)]"><span>{formatNumber(tweet.views)} {english ? 'views' : '曝光'}</span><span>{formatNumber(tweet.likes)} {english ? 'likes' : '赞'}</span><span>{formatNumber(tweet.retweets)} {english ? 'reposts' : '转发'}</span></div></>}
-    {embedded && <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 block text-center mono text-[10px] uppercase text-[var(--teal)] hover:text-white">{english ? 'Open on X ↗' : '在 X 打开 ↗'}</a>}
+    {embedded && <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 block text-center mono text-[10px] uppercase text-[var(--teal)] hover:text-[var(--ink)]">{english ? 'Open on X ↗' : '在 X 打开 ↗'}</a>}
   </article>;
 }
 
 function PlacementPanel({ item, index, copy, english, lang }) {
   const [open, setOpen] = useState(index === 0);
   const topTweets = Array.isArray(item.topTweets) ? item.topTweets.slice(0, 3) : [];
-  return <div className="border border-[var(--rule)] bg-white/[.02]">
-    <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)} className="flex w-full flex-wrap items-center justify-between gap-4 p-4 text-left transition hover:bg-white/[.03] sm:p-5">
-      <div className="flex min-w-0 items-center gap-4"><span className="mono text-xs font-bold text-[var(--ember-soft)]">{String(index + 1).padStart(2, '0')}</span><div><div className="font-semibold text-white">{english ? `${copy.placement} ${index + 1}` : `${copy.placement} ${index + 1} 次投放`}</div><div className="mt-1 text-xs text-[var(--bone-dim)]">{dateLabel(item.createdAt, lang)} · {formatNumber(item.impressions)} {english ? 'views' : '曝光'}</div></div></div>
-      <div className="flex items-center gap-4"><div className="text-right"><div className="mono text-[10px] uppercase text-[var(--bone-dim)]">{copy.placementBudget}</div><div className="mt-1 mono text-sm font-semibold text-white">{formatNumber(item.budget)} USDC</div></div><span className="text-[var(--ember-soft)]">{open ? '−' : '+'}</span></div>
+  return <div className="border border-[var(--rule)] bg-[var(--surface-muted)]">
+    <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)} className="flex w-full flex-wrap items-center justify-between gap-4 p-4 text-left transition hover:bg-[var(--surface-muted)] sm:p-5">
+      <div className="flex min-w-0 items-center gap-4"><span className="mono text-xs font-bold text-[var(--ember-soft)]">{String(index + 1).padStart(2, '0')}</span><div><div className="font-semibold text-[var(--ink)]">{english ? `${copy.placement} ${index + 1}` : `${copy.placement} ${index + 1} 次投放`}</div><div className="mt-1 text-xs text-[var(--bone-dim)]">{dateLabel(item.createdAt, lang)} · {formatNumber(item.impressions)} {english ? 'views' : '曝光'}</div></div></div>
+      <div className="flex items-center gap-4"><div className="text-right"><div className="mono text-[10px] uppercase text-[var(--bone-dim)]">{copy.placementBudget}</div><div className="mt-1 mono text-sm font-semibold text-[var(--ink)]">{formatNumber(item.budget)} USDC</div></div><span className="text-[var(--ember-soft)]">{open ? '−' : '+'}</span></div>
     </button>
     {open && <div className="border-t border-[var(--rule)] p-4 sm:p-5"><div className="mb-4 mono text-[10px] uppercase tracking-[.15em] text-[var(--bone-dim)]">{copy.topPosts} · {english ? 'ranked by views' : '按曝光排名'}</div>{topTweets.length ? <div className="grid items-start gap-3 lg:grid-cols-3">{topTweets.map(tweet => <TweetPreview key={tweet.id} tweet={tweet} english={english} />)}</div> : <div className="border border-dashed border-[var(--rule-strong)] p-5 text-sm text-[var(--bone-dim)]">{english ? 'Post previews will appear after the next source sync.' : '下次源数据同步后会显示推文预览。'}</div>}</div>}
   </div>;
@@ -190,10 +190,10 @@ function CircleIcon({ children }) {
 
 function PlaceholderArt({ large = false, label = "项目主视觉 / 方案展示" }) {
   return (
-    <div className={`relative overflow-hidden rounded-[2px] border border-[var(--rule-strong)] bg-[var(--ink-2)] ${large ? "min-h-[260px] md:min-h-[320px]" : "min-h-[150px]"}`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_20%,rgba(111,183,193,.18),transparent_28%),linear-gradient(145deg,rgba(255,122,69,.18),rgba(30,50,58,.28)_46%,rgba(7,8,10,.78))]" />
-      <div className="absolute inset-x-0 bottom-0 h-2/3 opacity-80"><div className="absolute bottom-0 h-[58%] w-full bg-[linear-gradient(155deg,transparent_0_12%,rgba(24,55,70,.82)_13%_35%,transparent_36%),linear-gradient(25deg,transparent_0_18%,rgba(58,90,103,.62)_19%_44%,transparent_45%),linear-gradient(165deg,transparent_0_28%,rgba(10,28,40,.88)_29%_72%,transparent_73%)]" /></div>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center"><div className="font-mono text-[12px] uppercase tracking-[.22em] text-[var(--bone)]">LIGHTHOUSE</div><div className="mt-2 font-cn text-sm text-[var(--bone-dim)]">{label}</div></div>
+    <div className={`relative overflow-hidden rounded-[2px] border border-[var(--rule-strong)] bg-[var(--surface-muted)] ${large ? "min-h-[260px] md:min-h-[320px]" : "min-h-[150px]"}`}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_20%,rgba(8,116,140,.14),transparent_32%),linear-gradient(145deg,rgba(8,116,140,.08),rgba(8,116,140,.04)_46%,rgba(185,220,229,.10))]" />
+      <div className="absolute inset-x-0 bottom-0 h-2/3 opacity-80"><div className="absolute bottom-0 h-[58%] w-full bg-[linear-gradient(155deg,transparent_0_12%,rgba(8,116,140,.10)_13%_35%,transparent_36%),linear-gradient(25deg,transparent_0_18%,rgba(8,116,140,.08)_19%_44%,transparent_45%),linear-gradient(165deg,transparent_0_28%,rgba(185,220,229,.14)_29%_72%,transparent_73%)]" /></div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center"><div className="font-mono text-[12px] uppercase tracking-[.22em] text-[var(--accent)]">LIGHTHOUSE</div><div className="mt-2 font-cn text-sm text-[var(--bone-dim)]">{label}</div></div>
     </div>
   );
 }
@@ -249,7 +249,7 @@ function MetricDelta({ before, after, label, format }) {
   const delta = before > 0 ? ((after - before) / before * 100) : (after > 0 ? 100 : 0);
   const positive = delta >= 0;
   return (
-    <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+    <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
       <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{label}</div>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div>
@@ -258,7 +258,7 @@ function MetricDelta({ before, after, label, format }) {
         </div>
         <div>
           <div className="font-mono text-[9px] uppercase tracking-[.14em] text-[var(--ember-soft)]">After</div>
-          <div className="mt-1 break-words font-mono text-lg font-semibold text-white">{fmtFn(after)}</div>
+          <div className="mt-1 break-words font-mono text-lg font-semibold text-[var(--ink)]">{fmtFn(after)}</div>
         </div>
       </div>
       {before > 0 && (
@@ -377,41 +377,41 @@ function BeforeAfterSection({ slug, english, preloaded, project }) {
 
       {hasCampaignData && (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+          <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
             <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.campaignPeriod}</div>
-            <div className="mt-2 font-mono text-sm text-white">{c.start ? c.start.slice(0, 10) : '—'}</div>
+            <div className="mt-2 font-mono text-sm text-[var(--ink)]">{c.start ? c.start.slice(0, 10) : '—'}</div>
             <div className="font-mono text-xs text-[var(--bone-dim)]">{c.end ? '→ ' + c.end.slice(0, 10) : ''}</div>
           </div>
-          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+          <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
             <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.campaigns}</div>
             <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--ember-soft)]">{formatNumber(c.count || 0)}</div>
           </div>
-          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+          <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
             <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.budget}</div>
-            <div className="mt-2 break-words font-mono text-2xl font-bold text-white">{formatNumber(c.consumed_budget || 0, 2)}</div>
+            <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--ink)]">{formatNumber(c.consumed_budget || 0, 2)}</div>
             <div className="mt-1 font-mono text-[10px] text-[var(--bone-dim)]">USDC</div>
           </div>
-          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+          <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
             <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.duringViews}</div>
             <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--teal)]">{formatNumber(c.during_views || 0)}</div>
           </div>
-          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+          <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
             <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.duringEngagement}</div>
-            <div className="mt-2 break-words font-mono text-2xl font-bold text-white">{formatNumber(c.during_engagement || 0)}</div>
+            <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--ink)]">{formatNumber(c.during_engagement || 0)}</div>
           </div>
-          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+          <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
             <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.peakViews}</div>
             <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--amber)]">{formatNumber(c.peak_views || 0)}</div>
           </div>
           {c.insights?.cpm != null && (
-            <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+            <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
               <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.cpm}</div>
               <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--ember-soft)]">{c.insights.cpm}</div>
               <div className="mt-1 font-mono text-[10px] text-[var(--bone-dim)]">USDC</div>
             </div>
           )}
           {c.insights?.er != null && (
-            <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+            <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
               <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.er}</div>
               <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--teal)]">{c.insights.er}%</div>
             </div>
@@ -420,7 +420,7 @@ function BeforeAfterSection({ slug, english, preloaded, project }) {
       )}
 
       {tsValues.length >= 2 && (
-        <div className="mt-6 border border-[var(--rule)] bg-white/[.02] p-4">
+        <div className="mt-6 border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
           <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.timeSeries}</div>
           <div className="mt-3 overflow-x-auto">
             <Sparkline values={tsValues} width={Math.min(720, Math.max(240, tsValues.length * 12))} height={64} color="var(--teal)" />
@@ -430,26 +430,26 @@ function BeforeAfterSection({ slug, english, preloaded, project }) {
 
       {hasSocialData && (
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+          <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
             <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.socialAuthors}</div>
             <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--ember-soft)]">{formatNumber(social.author_count || 0)}</div>
             <div className="mt-1 font-mono text-[10px] text-[var(--bone-dim)]">@{d.twitter_handle || '—'}</div>
           </div>
-          <div className="border border-[var(--rule)] bg-white/[.02] p-4">
+          <div className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
             <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.socialViews}</div>
-            <div className="mt-2 break-words font-mono text-2xl font-bold text-white">{formatNumber(social.viewer_count || 0)}</div>
+            <div className="mt-2 break-words font-mono text-2xl font-bold text-[var(--ink)]">{formatNumber(social.viewer_count || 0)}</div>
             <div className="mt-1 font-mono text-[10px] text-[var(--bone-dim)]">{copy.socialNote}</div>
           </div>
         </div>
       )}
 
       {hasTokenData ? (
-        <div className="mt-6 border border-[var(--rule)] bg-white/[.02] p-4">
+        <div className="mt-6 border border-[var(--rule)] bg-[var(--surface-muted)] p-4">
           <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--ember-soft)]">{copy.token} · {d.token_symbol}</div>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.tokenPrice}</div>
-              <div className="mt-1 break-words font-mono text-xl font-bold text-white">${formatNumber(token.price_usd || 0, 4)}</div>
+              <div className="mt-1 break-words font-mono text-xl font-bold text-[var(--ink)]">${formatNumber(token.price_usd || 0, 4)}</div>
             </div>
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.tokenVolume}</div>
@@ -562,18 +562,18 @@ function ProjectCasePage() {
   ];
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--ink)] text-[var(--bone)]">
+    <div className="min-h-screen overflow-x-hidden bg-[var(--canvas)] text-[var(--ink)]">
       <LighthouseNav lang={lang} onLanguageChange={setLang} active="library" />
       <main className="mx-auto max-w-[1200px] min-w-0 px-4 pb-20 pt-8 sm:px-5 sm:pt-10">
         <section className="grid gap-5 lg:grid-cols-[1.1fr_.9fr] lg:items-stretch">
           <GlassCard className="relative min-w-0 overflow-hidden p-5 sm:p-7 md:p-10">
-            <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,122,69,.24),transparent_64%)]" />
+            <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(8,116,140,.14),transparent_64%)]" />
             <div className="relative">
               <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] uppercase tracking-[.2em] text-[var(--bone-dim)]"><span>{mockData.eyebrow}</span><span className="h-px w-10 bg-[var(--rule-strong)]" /><span>{mockData.volume}</span></div>
               <div className="mt-7 flex min-w-0 flex-wrap items-center gap-4"><ProjectAvatar name={pageTitle} logo={project.logo} /><h1 className="min-w-0 max-w-full break-words font-display text-[clamp(34px,6vw,68px)] font-black leading-[1]" style={{ overflowWrap: 'anywhere' }}>{pageTitle}</h1></div>
               <h2 className="mt-7 max-w-3xl break-words font-cn text-[clamp(25px,4vw,48px)] leading-tight" style={{ overflowWrap: 'anywhere' }}><span className="text-[var(--ember)]">{dataCase ? copy.hero1 : localizedField(page, 'hero_line_1', '把项目叙事转化为可复盘增长', english ? 'Turn the project narrative into measurable growth' : false)}</span><br /><span className="text-[var(--ember)]">{dataCase ? copy.hero2 : localizedField(page, 'hero_line_2', '用数据验证 Web3 注意力效率', english ? 'Measure Web3 attention with clear performance data' : false)}</span></h2>
               <p className="mt-7 max-w-2xl break-words font-cn text-[15px] leading-7 text-[var(--bone-dim)] sm:text-base sm:leading-8">{dataCase ? copy.summary : localizedField(page, 'summary', mockData.summary, english ? `${pageTitle} is a Lighthouse Web3 attention campaign. This case study brings the campaign strategy, creator content and measurable results together for a clear performance review.` : false)}</p>
-              <div className="mt-7 flex flex-wrap gap-2">{tags.map(tag => <span key={tag} className="rounded-full border border-[var(--rule-strong)] bg-white/[.035] px-3 py-1 text-xs text-[var(--bone-dim)]">{tag}</span>)}</div>
+              <div className="mt-7 flex flex-wrap gap-2">{tags.map(tag => <span key={tag} className="rounded-full border border-[var(--rule-strong)] bg-[var(--surface-muted)] px-3 py-1 text-xs text-[var(--bone-dim)]">{tag}</span>)}</div>
             </div>
           </GlassCard>
           <HeroVisual />
@@ -582,29 +582,29 @@ function ProjectCasePage() {
         <section className="mt-4 grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-5">{stats.map(item => <GlassCard key={item.label} className="min-w-0 p-4 sm:p-6"><div className={`break-words font-mono text-[clamp(18px,4.5vw,36px)] font-semibold leading-tight ${item.tone}`}>{item.value}</div><div className="mt-3 break-words font-mono text-[10px] uppercase leading-5 text-[var(--bone-dim)] sm:text-[11px]">{item.label}</div></GlassCard>)}</section>
 
         <section className="mt-4 grid gap-4 lg:grid-cols-[.95fr_1.45fr]">
-          <GlassCard className="min-w-0 p-5 sm:p-7"><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{copy.overview}</div><div className="mt-6 grid gap-4">{overview.map(item => <div key={item.label} className="min-w-0 border-b border-[var(--rule)] pb-4 last:border-0 last:pb-0"><div className="font-mono text-[11px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.label}</div><div className="mt-2 break-words text-sm leading-6 text-white" style={{ overflowWrap: 'anywhere' }}>{item.value}</div></div>)}</div></GlassCard>
-          <GlassCard className="min-w-0 p-5 sm:p-7"><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{copy.outcomes}</div><div className="mt-6 grid gap-3 sm:grid-cols-2">{outcomes.map(item => <div key={item} className="break-words border border-[var(--rule)] bg-white/[.025] p-4 text-sm leading-6 text-slate-300" style={{ overflowWrap: 'anywhere' }}>{item}</div>)}</div></GlassCard>
+          <GlassCard className="min-w-0 p-5 sm:p-7"><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{copy.overview}</div><div className="mt-6 grid gap-4">{overview.map(item => <div key={item.label} className="min-w-0 border-b border-[var(--rule)] pb-4 last:border-0 last:pb-0"><div className="font-mono text-[11px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.label}</div><div className="mt-2 break-words text-sm leading-6 text-[var(--ink)]" style={{ overflowWrap: 'anywhere' }}>{item.value}</div></div>)}</div></GlassCard>
+          <GlassCard className="min-w-0 p-5 sm:p-7"><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{copy.outcomes}</div><div className="mt-6 grid gap-3 sm:grid-cols-2">{outcomes.map(item => <div key={item} className="break-words border border-[var(--rule)] bg-[var(--surface-muted)] p-4 text-sm leading-6 text-[var(--bone-dim)]" style={{ overflowWrap: 'anywhere' }}>{item}</div>)}</div></GlassCard>
         </section>
 
         {challenges.length > 0 && <section className="mt-4 grid gap-4 lg:grid-cols-2">
-          <GlassCard className="min-w-0 p-5 sm:p-7"><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{copy.challenge}</div><h2 className="mt-3 break-words text-2xl font-bold">{copy.challengeTitle}</h2><p className="mt-4 break-words text-sm leading-7 text-slate-400">{localizedField(page, 'challenge_intro', copy.challengeIntro, english)}</p><div className="mt-6 grid gap-3">{challenges.map((item, index) => <div key={item} className="flex min-w-0 gap-3 border border-[var(--rule)] bg-white/[.025] p-4 text-sm leading-6 text-slate-300"><CircleIcon>{index + 1}</CircleIcon><span className="min-w-0 break-words" style={{ overflowWrap: 'anywhere' }}>{item}</span></div>)}</div></GlassCard>
-          <GlassCard className="min-w-0 p-5 sm:p-7"><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{copy.solution}</div><h2 className="mt-3 break-words text-2xl font-bold">{copy.solutionTitle}</h2><p className="mt-4 break-words text-sm leading-7 text-slate-400">{localizedField(page, 'solution_intro', copy.solutionIntro, english)}</p><div className="mt-6 grid gap-3 sm:grid-cols-2">{solution.map((item, index) => <div key={item.title} className="min-w-0 border border-[var(--rule)] bg-[rgba(237,232,225,.025)] p-5 transition hover:border-[rgba(255,122,69,.34)] hover:bg-[rgba(237,232,225,.04)]"><CircleIcon>{["✓", "◆", "⚑", "◉"][index]}</CircleIcon><h3 className="mt-5 break-words font-semibold text-white">{item.title}</h3><p className="mt-3 break-words text-xs leading-6 text-slate-400">{item.desc}</p></div>)}</div></GlassCard>
+          <GlassCard className="min-w-0 p-5 sm:p-7"><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{copy.challenge}</div><h2 className="mt-3 break-words text-2xl font-bold">{copy.challengeTitle}</h2><p className="mt-4 break-words text-sm leading-7 text-[var(--bone-dim)]">{localizedField(page, 'challenge_intro', copy.challengeIntro, english)}</p><div className="mt-6 grid gap-3">{challenges.map((item, index) => <div key={item} className="flex min-w-0 gap-3 border border-[var(--rule)] bg-[var(--surface-muted)] p-4 text-sm leading-6 text-[var(--bone-dim)]"><CircleIcon>{index + 1}</CircleIcon><span className="min-w-0 break-words" style={{ overflowWrap: 'anywhere' }}>{item}</span></div>)}</div></GlassCard>
+          <GlassCard className="min-w-0 p-5 sm:p-7"><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{copy.solution}</div><h2 className="mt-3 break-words text-2xl font-bold">{copy.solutionTitle}</h2><p className="mt-4 break-words text-sm leading-7 text-[var(--bone-dim)]">{localizedField(page, 'solution_intro', copy.solutionIntro, english)}</p><div className="mt-6 grid gap-3 sm:grid-cols-2">{solution.map((item, index) => <div key={item.title} className="min-w-0 border border-[var(--rule)] bg-[var(--surface-muted)] p-5 transition hover:border-[var(--accent-border)] hover:bg-[rgba(8,116,140,.04)]"><CircleIcon>{["✓", "◆", "⚑", "◉"][index]}</CircleIcon><h3 className="mt-5 break-words font-semibold text-[var(--ink)]">{item.title}</h3><p className="mt-3 break-words text-xs leading-6 text-[var(--bone-dim)]">{item.desc}</p></div>)}</div></GlassCard>
         </section>}
 
-        {!dataCase && <GlassCard className="mt-4 min-w-0 p-5 sm:p-7"><div className="flex min-w-0 flex-col gap-5 md:flex-row md:items-center md:justify-between"><h2 className="break-words text-2xl font-bold">{copy.showcase}</h2><div className="flex flex-wrap gap-2">{showcaseFilters.map((item, index) => <button key={item} className={`border px-3 py-2 font-mono text-[10px] uppercase transition sm:px-4 ${index === 0 ? "border-[rgba(255,122,69,.56)] bg-[rgba(255,122,69,.22)] text-[var(--bone)]" : "border-[var(--rule-strong)] bg-[rgba(237,232,225,.03)] text-[var(--bone-dim)] hover:border-[rgba(255,122,69,.35)]"}`}>{item}</button>)}</div></div><div className="mt-7 grid gap-3 lg:grid-cols-[1.1fr_1.6fr]"><PlaceholderArt large label={showcaseLabels[0] || (english ? 'Campaign visual' : '项目主视觉 / 设计展示')} /><div className="grid gap-3 sm:grid-cols-2">{showcaseLabels.slice(1, 5).map(label => <PlaceholderArt key={label} label={label} />)}</div></div></GlassCard>}
+        {!dataCase && <GlassCard className="mt-4 min-w-0 p-5 sm:p-7"><div className="flex min-w-0 flex-col gap-5 md:flex-row md:items-center md:justify-between"><h2 className="break-words text-2xl font-bold">{copy.showcase}</h2><div className="flex flex-wrap gap-2">{showcaseFilters.map((item, index) => <button key={item} className={`border px-3 py-2 font-mono text-[10px] uppercase transition sm:px-4 ${index === 0 ? "border-[var(--accent)] bg-[rgba(8,116,140,.12)] text-[var(--ink)]" : "border-[var(--rule-strong)] bg-[rgba(237,232,225,.03)] text-[var(--bone-dim)] hover:border-[var(--accent-border)]"}`}>{item}</button>)}</div></div><div className="mt-7 grid gap-3 lg:grid-cols-[1.1fr_1.6fr]"><PlaceholderArt large label={showcaseLabels[0] || (english ? 'Campaign visual' : '项目主视觉 / 设计展示')} /><div className="grid gap-3 sm:grid-cols-2">{showcaseLabels.slice(1, 5).map(label => <PlaceholderArt key={label} label={label} />)}</div></div></GlassCard>}
 
-        {dataCase && <GlassCard className="mt-4 min-w-0 p-5 sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">Evidence layer</div><h2 className="mt-3 break-words text-2xl font-bold">{copy.evidence}</h2></div><div className="mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.privacy}</div></div><div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[{k:'Likes',v:dataProject.likes},{k:'Replies',v:dataProject.replies},{k:'Reposts',v:dataProject.retweets},{k:'Quotes',v:dataProject.quotes}].map(item => <div key={item.k} className="border border-[var(--rule)] bg-white/[.025] p-4"><div className="mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.k}</div><div className="mt-3 display break-words text-2xl font-bold text-white">{formatNumber(item.v)}</div></div>)}</div><div className="mt-7 grid gap-4 sm:grid-cols-2">{interactionMix.map(item => { const share = interactionTotal > 0 ? item.value / interactionTotal * 100 : 0; return <div key={item.label}><div className="flex items-center justify-between gap-3 mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]"><span>{item.label}</span><span>{share.toFixed(1)}%</span></div><div className="mt-2 h-1.5 overflow-hidden bg-white/[.08]"><div className="h-full" style={{ width: `${Math.min(100, share)}%`, background: item.tone }} /></div></div>; })}</div><div className="mt-6 border-t border-[var(--rule)] pt-5 text-sm leading-7 text-[var(--bone-dim)]">{copy.evidenceNote}</div></GlassCard>}
+        {dataCase && <GlassCard className="mt-4 min-w-0 p-5 sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">Evidence layer</div><h2 className="mt-3 break-words text-2xl font-bold">{copy.evidence}</h2></div><div className="mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]">{copy.privacy}</div></div><div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[{k:'Likes',v:dataProject.likes},{k:'Replies',v:dataProject.replies},{k:'Reposts',v:dataProject.retweets},{k:'Quotes',v:dataProject.quotes}].map(item => <div key={item.k} className="border border-[var(--rule)] bg-[var(--surface-muted)] p-4"><div className="mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.k}</div><div className="mt-3 display break-words text-2xl font-bold text-[var(--ink)]">{formatNumber(item.v)}</div></div>)}</div><div className="mt-7 grid gap-4 sm:grid-cols-2">{interactionMix.map(item => { const share = interactionTotal > 0 ? item.value / interactionTotal * 100 : 0; return <div key={item.label}><div className="flex items-center justify-between gap-3 mono text-[10px] uppercase tracking-[.14em] text-[var(--bone-dim)]"><span>{item.label}</span><span>{share.toFixed(1)}%</span></div><div className="mt-2 h-1.5 overflow-hidden bg-[var(--surface-muted)]"><div className="h-full" style={{ width: `${Math.min(100, share)}%`, background: item.tone }} /></div></div>; })}</div><div className="mt-6 border-t border-[var(--rule)] pt-5 text-sm leading-7 text-[var(--bone-dim)]">{copy.evidenceNote}</div></GlassCard>}
 
-        {dataCase && <GlassCard className="mt-4 min-w-0 p-5 sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{english ? `TOP POSTS BY PLACEMENT · ${copy.sourceRecordsLabel}` : '每次投放的头部推文 · 来源记录'}</div><h2 className="mt-3 text-2xl font-bold">{copy.source}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--bone-dim)]">{english ? 'Open a placement to preview its three highest-reach public posts.' : '展开每次投放，即可预览该次投放曝光最高的三条公开推文。'}</p></div><a href={`/cases?project=${encodeURIComponent(dataProject.slug || '')}`} className="mono text-[10px] uppercase tracking-[.14em] text-[var(--ember-soft)] hover:text-white">{copy.all}</a></div><div className="mt-6 grid gap-3">{dataCases.map((item, index) => <PlacementPanel key={item.id} item={item} index={index} copy={copy} english={english} lang={lang} />)}</div></GlassCard>}
+        {dataCase && <GlassCard className="mt-4 min-w-0 p-5 sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><div className="font-mono text-[11px] uppercase tracking-[.2em] text-[var(--ember-soft)]">{english ? `TOP POSTS BY PLACEMENT · ${copy.sourceRecordsLabel}` : '每次投放的头部推文 · 来源记录'}</div><h2 className="mt-3 text-2xl font-bold">{copy.source}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--bone-dim)]">{english ? 'Open a placement to preview its three highest-reach public posts.' : '展开每次投放，即可预览该次投放曝光最高的三条公开推文。'}</p></div><a href={`/cases?project=${encodeURIComponent(dataProject.slug || '')}`} className="mono text-[10px] uppercase tracking-[.14em] text-[var(--ember-soft)] hover:text-[var(--ink)]">{copy.all}</a></div><div className="mt-6 grid gap-3">{dataCases.map((item, index) => <PlacementPanel key={item.id} item={item} index={index} copy={copy} english={english} lang={lang} />)}</div></GlassCard>}
 
         {!dataCase && <section className="mt-4 grid gap-4 lg:grid-cols-[.95fr_1.45fr]">
-          <GlassCard className="min-w-0 p-5 sm:p-7"><h2 className="text-2xl font-bold">{copy.testimonial}</h2><p className="mt-6 break-words text-[15px] leading-8 text-slate-300">“{localizedField(page, 'testimonial', mockData.testimonial, english ? englishCaseCopy.testimonial : false)}”</p><div className="mt-7 flex min-w-0 items-center gap-4"><div className="h-14 w-14 shrink-0 rounded-full border border-white/15 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,.55),rgba(80,120,125,.25)_38%,rgba(10,20,24,.9))]" /><div className="min-w-0"><div className="break-words font-semibold text-white">{pageField(page, 'testimonial_name', mockData.client.name)}</div><div className="mt-1 break-words text-sm text-slate-400">{localizedField(page, 'testimonial_role', mockData.client.role, english ? 'Campaign Review' : false)}</div></div></div></GlassCard>
-          <GlassCard className="relative min-w-0 overflow-hidden p-5 sm:p-7"><h2 className="text-2xl font-bold">{copy.tweet}</h2><div className="relative mt-7 flex min-h-[150px] min-w-0 items-center justify-center border border-dashed border-[var(--rule-strong)] bg-[rgba(237,232,225,.025)] p-5"><div className="absolute right-10 top-1/2 -translate-y-1/2 font-mono text-[150px] font-bold leading-none text-white/[.045]">X</div><div className="relative min-w-0 max-w-full text-center"><div className="break-words text-lg text-slate-300">{localizedField(page, 'tweet_title', copy.tweetTitle, english)}</div><div className="mt-2 break-words text-sm text-slate-500">{localizedField(page, 'tweet_note', copy.tweetNote, english)}</div>{page.tweet_url && <a className="mt-4 inline-flex max-w-full break-all text-sm text-[var(--ember-soft)] hover:underline" href={page.tweet_url} target="_blank" rel="noopener noreferrer">{page.tweet_url}</a>}</div></div></GlassCard>
+          <GlassCard className="min-w-0 p-5 sm:p-7"><h2 className="text-2xl font-bold">{copy.testimonial}</h2><p className="mt-6 break-words text-[15px] leading-8 text-[var(--bone-dim)]">“{localizedField(page, 'testimonial', mockData.testimonial, english ? englishCaseCopy.testimonial : false)}”</p><div className="mt-7 flex min-w-0 items-center gap-4"><div className="h-14 w-14 shrink-0 rounded-full border border-white/15 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,.55),rgba(80,120,125,.25)_38%,rgba(10,20,24,.9))]" /><div className="min-w-0"><div className="break-words font-semibold text-[var(--ink)]">{pageField(page, 'testimonial_name', mockData.client.name)}</div><div className="mt-1 break-words text-sm text-[var(--bone-dim)]">{localizedField(page, 'testimonial_role', mockData.client.role, english ? 'Campaign Review' : false)}</div></div></div></GlassCard>
+          <GlassCard className="relative min-w-0 overflow-hidden p-5 sm:p-7"><h2 className="text-2xl font-bold">{copy.tweet}</h2><div className="relative mt-7 flex min-h-[150px] min-w-0 items-center justify-center border border-dashed border-[var(--rule-strong)] bg-[var(--surface-muted)] p-5"><div className="absolute right-10 top-1/2 -translate-y-1/2 font-mono text-[150px] font-bold leading-none text-[var(--ink)]/[.045]">X</div><div className="relative min-w-0 max-w-full text-center"><div className="break-words text-lg text-[var(--bone-dim)]">{localizedField(page, 'tweet_title', copy.tweetTitle, english)}</div><div className="mt-2 break-words text-sm text-[var(--subtle,#687587)]">{localizedField(page, 'tweet_note', copy.tweetNote, english)}</div>{page.tweet_url && <a className="mt-4 inline-flex max-w-full break-all text-sm text-[var(--ember-soft)] hover:underline" href={page.tweet_url} target="_blank" rel="noopener noreferrer">{page.tweet_url}</a>}</div></div></GlassCard>
         </section>}
 
         <BeforeAfterSection slug={project.slug || slugFromPath()} english={english} preloaded={project.enrichment} project={project} />
 
-        <section id="cta" className="mt-5 overflow-hidden border border-[var(--rule-strong)] bg-[linear-gradient(110deg,rgba(111,183,193,.20),rgba(13,15,18,.88)_52%,rgba(255,122,69,.22))] p-5 shadow-[0_24px_80px_rgba(0,0,0,.32)] sm:p-8 md:p-10"><div className="flex min-w-0 flex-col gap-6 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><h2 className="break-words text-[clamp(26px,4vw,40px)] font-black leading-tight" style={{ overflowWrap: 'anywhere' }}>{localizedField(page, 'cta_title', copy.cta, english).split('\n').map((line, index) => <React.Fragment key={`${index}-${line}`}>{index > 0 && <br />}{line}</React.Fragment>)}</h2><p className="mt-3 break-words text-sm leading-6 text-slate-300">{localizedField(page, 'cta_note', copy.ctaNote, english)}</p></div><a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center justify-center border border-[rgba(255,122,69,.56)] bg-[rgba(255,122,69,.22)] px-5 py-4 font-mono text-[10px] uppercase text-[var(--bone)] shadow-[0_14px_36px_rgba(255,122,69,.18)] transition hover:brightness-110">{copy.ctaButton}</a></div></section>
+        <section id="cta" className="mt-5 overflow-hidden border border-[var(--accent-border)] bg-[linear-gradient(110deg,rgba(8,116,140,.08),rgba(245,246,248,.95)_52%,rgba(8,116,140,.06))] p-5 shadow-[0_24px_80px_rgba(0,0,0,.04)] sm:p-8 md:p-10"><div className="flex min-w-0 flex-col gap-6 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><h2 className="break-words text-[clamp(26px,4vw,40px)] font-black leading-tight text-[var(--ink)]" style={{ overflowWrap: 'anywhere' }}>{localizedField(page, 'cta_title', copy.cta, english).split('\n').map((line, index) => <React.Fragment key={`${index}-${line}`}>{index > 0 && <br />}{line}</React.Fragment>)}</h2><p className="mt-3 break-words text-sm leading-6 text-[var(--bone-dim)]">{localizedField(page, 'cta_note', copy.ctaNote, english)}</p></div><a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center justify-center border border-[var(--accent)] bg-[rgba(8,116,140,.08)] px-5 py-4 font-mono text-[10px] uppercase text-[var(--ink)] shadow-[0_14px_36px_rgba(8,116,140,.10)] transition hover:brightness-110">{copy.ctaButton}</a></div></section>
       </main>
     </div>
   );

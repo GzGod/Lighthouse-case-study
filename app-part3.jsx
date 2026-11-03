@@ -34,9 +34,9 @@ function PublicDataSection() {
         </Reveal3>
         {state === 'ready' ? <>
           <div className="mt-12 grid gap-px border-y border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-5">
-            {[[copy.projects, format(counts.projects), copy.projectsNote], [copy.placements, format(counts.placements || counts.cases), copy.casesNote], [copy.reach, format(metrics.impressions), copy.reachNote], [copy.engagement, format(metrics.engagements), copy.engagementNote], [copy.cpm, Number(metrics.bySource?.campaign?.cpm || metrics.cpm || 0).toFixed(2), copy.cpmNote]].map(([label, value, note], index) => <div key={label} className="bg-[var(--ink)] p-6 md:p-7"><div className="kicker text-[10px]">{label}</div><div className={`mt-3 font-display text-3xl font-bold tnum ${index === 3 ? 'text-[var(--teal)]' : index === 4 ? 'text-[var(--ember-soft)]' : 'text-[var(--bone)]'}`}>{value}</div><div className="mt-2 text-xs leading-5 text-[var(--bone-dim)]">{note}</div></div>)}
+            {[[copy.projects, format(counts.projects), copy.projectsNote], [copy.placements, format(counts.placements || counts.cases), copy.casesNote], [copy.reach, format(metrics.impressions), copy.reachNote], [copy.engagement, format(metrics.engagements), copy.engagementNote], [copy.cpm, Number(metrics.bySource?.campaign?.cpm || metrics.cpm || 0).toFixed(2), copy.cpmNote]].map(([label, value, note], index) => <div key={label} className="bg-[var(--surface)] p-6 md:p-7"><div className="kicker text-[10px]">{label}</div><div className={`mt-3 font-display text-3xl font-bold tnum ${index === 3 ? 'text-[var(--teal)]' : index === 4 ? 'text-[var(--ember-soft)]' : 'text-[var(--bone)]'}`}>{value}</div><div className="mt-2 text-xs leading-5 text-[var(--bone-dim)]">{note}</div></div>)}
           </div>
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--rule)] pb-5 mono text-[10px] uppercase tracking-[.15em] text-[var(--bone-dim)]"><span>{counts.campaignCases || 0} campaign{counts.legacyCases ? ` · ${counts.legacyCases} legacy` : ''}</span><span>{copy.snapshot} {summary.meta?.generatedAt ? new Date(summary.meta.generatedAt).toLocaleDateString(lang === 'en' ? 'en-CA' : 'zh-CN') : '—'}</span><a href="/cases" className="text-[var(--ember-soft)] transition hover:text-white">{copy.library}</a></div>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--rule)] pb-5 mono text-[10px] uppercase tracking-[.15em] text-[var(--bone-dim)]"><span>{counts.campaignCases || 0} campaign{counts.legacyCases ? ` · ${counts.legacyCases} legacy` : ''}</span><span>{copy.snapshot} {summary.meta?.generatedAt ? new Date(summary.meta.generatedAt).toLocaleDateString(lang === 'en' ? 'en-CA' : 'zh-CN') : '—'}</span><a href="/cases" className="text-[var(--ember-soft)] transition hover:text-[var(--ink)]">{copy.library}</a></div>
         </> : <div className="mt-12 flex flex-col gap-5 border border-dashed border-[var(--rule-strong)] bg-[rgba(237,232,225,.02)] p-7 md:flex-row md:items-center md:justify-between"><div><div className="kicker text-[var(--ember-soft)]">SNAPSHOT PENDING</div><div className="mt-3 font-display text-2xl font-bold">{copy.pending}</div><p className="mt-2 max-w-xl text-sm leading-6 text-[var(--bone-dim)]">{copy.pendingNote}</p></div><a href="/cases" className="btn-bone inline-flex shrink-0 items-center justify-center px-4 py-3 mono text-[10px] uppercase tracking-[.16em] transition hover:text-[var(--ember)]">{copy.view}</a></div>}
       </div>
     </section>
@@ -53,21 +53,21 @@ function FeaturedProjectsSection() {
   const number = value => Number(value || 0).toLocaleString('en-US');
 
   return (
-    <section className="relative border-y border-[var(--rule)] bg-[var(--ink-2)] py-10 md:py-12">
+    <section className="relative border-y border-[var(--rule)] bg-[var(--canvas)] py-10 md:py-12">
       <div className="mx-auto max-w-[1360px] px-5 sm:px-6 md:px-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="kicker text-[var(--ember-soft)]">{hasPublicSnapshot ? (english ? 'PROJECT SIGNAL · PUBLIC SNAPSHOT' : '项目实绩 · 公开快照') : (english ? 'PROJECT SIGNAL · CAMPAIGN BASELINE' : '项目实绩 · 活动基准')}</div>
-            <h2 className="mt-2 font-display text-xl font-bold text-white sm:text-2xl">{english ? 'Projects, with their results.' : '项目头像与真实结果，一眼可见。'}</h2>
+            <h2 className="mt-2 font-display text-xl font-bold text-[var(--ink)] sm:text-2xl">{english ? 'Projects, with their results.' : '项目头像与真实结果，一眼可见。'}</h2>
           </div>
-          <a href="/cases" className="whitespace-nowrap font-mono text-[10px] uppercase text-[var(--ember-soft)] transition hover:text-white">{english ? 'Explore all cases ↗' : '浏览全部案例 ↗'}</a>
+          <a href="/cases" className="whitespace-nowrap font-mono text-[10px] uppercase text-[var(--ember-soft)] transition hover:text-[var(--ink)]">{english ? 'Explore all cases ↗' : '浏览全部案例 ↗'}</a>
         </div>
         <div className="mt-6 grid gap-px border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-3">
           {projects.map(project => (
-            <a key={project.slug} href={`/${hasPublicSnapshot ? 'cases' : 'projects'}/${encodeURIComponent(project.slug)}`} className="group flex min-w-0 items-center gap-4 bg-[var(--ink-2)] p-4 transition hover:bg-[var(--ink-3)] sm:p-5">
+            <a key={project.slug} href={`/${hasPublicSnapshot ? 'cases' : 'projects'}/${encodeURIComponent(project.slug)}`} className="group flex min-w-0 items-center gap-4 bg-[var(--canvas)] p-4 transition hover:bg-[var(--surface-muted)] sm:p-5">
               <ProjectSignalAvatar name={project.name} logo={project.logo} />
               <div className="min-w-0 flex-1">
-                <div className="truncate font-display text-base font-semibold text-white transition group-hover:text-[var(--ember-soft)]">{project.name}</div>
+                <div className="truncate font-display text-base font-semibold text-[var(--ink)] transition group-hover:text-[var(--ember-soft)]">{project.name}</div>
                 <div className="mt-1 font-mono text-[10px] uppercase text-[var(--bone-dim)]">{hasPublicSnapshot ? `${number(project.placements ?? project.cases)} ${english ? 'placements' : '次投放'}` : `${number(project.tweets)} ${english ? 'posts in baseline' : '条基准内容'}`}</div>
               </div>
               <div className="shrink-0 text-right">
@@ -87,8 +87,8 @@ function ProjectSignalAvatar({ name, logo }) {
   const hue = [...String(name || '?')].reduce((sum, char) => (sum + char.charCodeAt(0)) % 360, 0);
   const src = logo ? (logo.startsWith('/') || logo.startsWith('http') ? logo : `/${logo}`) : '';
   const initials = String(name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase();
-  return <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/10" style={{ background: `linear-gradient(145deg, hsl(${hue} 48% 35% / .9), rgba(13,15,18,.96))` }}>
-    {src && !failed ? <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} /> : <span className="flex h-full w-full items-center justify-center font-mono text-xs font-bold text-white/90">{initials || '?'}</span>}
+  return <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-[var(--rule)]" style={{ background: `linear-gradient(145deg, hsl(${hue} 38% 88%), hsl(${hue} 48% 82%))` }}>
+    {src && !failed ? <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} /> : <span className="flex h-full w-full items-center justify-center font-mono text-xs font-semibold text-[var(--accent)]">{initials || '?'}</span>}
   </div>;
 }
 
@@ -196,11 +196,11 @@ function MatrixSection(){
               <tbody>
                 {rows.map((r,i)=>{
                   return (
-                    <tr key={r.slug || r.name} className="rule-t hover:bg-[var(--ink-2)] transition">
+                    <tr key={r.slug || r.name} className="rule-t hover:bg-[var(--surface-muted)] transition">
                       <td className="py-4 pr-4 font-mono text-[12px] text-[var(--bone-dim)]">{String(i+1).padStart(2,"0")}</td>
                       <td className="py-4 pr-4 font-cn text-[16px]" style={{color:"var(--bone)"}}>
                         <a href={projectCaseHref(r)} className="group flex items-center gap-3">
-                          {r.logo ? <img src={r.logo} alt="" className="w-[24px] h-[24px] rounded object-cover flex-shrink-0" style={{background:"var(--ink-2)"}}/> : <span className="w-[24px] h-[24px] rounded bg-[var(--ink-2)] flex-shrink-0"/>}
+                          {r.logo ? <img src={r.logo} alt="" className="w-[24px] h-[24px] rounded object-cover flex-shrink-0" style={{background:"var(--surface-muted)"}}/> : <span className="w-[24px] h-[24px] rounded bg-[var(--canvas)] flex-shrink-0"/>}
                           <span className="transition group-hover:text-[var(--ember-soft)]">{r.name}</span>
                         </a>
                       </td>
@@ -246,7 +246,7 @@ function ScatterChart({rows, setHovered, tr, ds}){
     if(!active || !payload || !payload.length) return null;
     const d = payload[0].payload;
     return (
-      <div className="p-4 font-mono text-[11px]" style={{background:"var(--ink)", border:"1px solid var(--rule-strong)", minWidth:220}}>
+      <div className="p-4 font-mono text-[11px]" style={{background:"var(--surface)", border:"1px solid var(--rule-strong)", minWidth:220}}>
         <div className="font-cn font-bold text-[14px] mb-2" style={{color:"var(--teal)"}}>{d.name}</div>
         <div className="flex justify-between py-0.5"><span className="text-[var(--bone-dim)]">{tr("matrix.tip.budget")}</span><span className="tnum">{d.budget.toLocaleString()} USDC</span></div>
         <div className="flex justify-between py-0.5"><span className="text-[var(--bone-dim)]">{tr("matrix.tip.imp")}</span><span className="tnum">{d.imp.toLocaleString()}</span></div>
@@ -349,7 +349,7 @@ function RoiEstimatorSection(){
   const ind = data?.industry;
 
   return (
-    <section id="roi-estimator" className="relative py-24 md:py-32 overflow-hidden border-y border-[var(--rule)] bg-[var(--ink-2)]">
+    <section id="roi-estimator" className="relative py-24 md:py-32 overflow-hidden border-y border-[var(--rule)] bg-[var(--canvas)]">
       <div className="max-w-[1360px] mx-auto px-6 md:px-10 relative">
         <Reveal3 className="grid md:grid-cols-12 gap-8 items-end mb-12">
           <div className="md:col-span-2 kicker">{copy.kicker}</div>
@@ -363,7 +363,7 @@ function RoiEstimatorSection(){
 
         <Reveal3 delay={1}>
           <div className="grid lg:grid-cols-[.8fr_1.2fr] gap-6">
-            <div className="border border-[var(--rule)] bg-[var(--ink)] p-6 md:p-8">
+            <div className="border border-[var(--rule)] bg-[var(--surface)] p-6 md:p-8">
               <label className="font-mono text-[10px] uppercase tracking-[.2em] text-[var(--bone-dim)]">{copy.budget}</label>
               <div className="mt-3 font-display font-black tnum text-[44px] md:text-[56px] leading-none text-[var(--ember-soft)]">
                 {fmt(budget)}<span className="text-[20px] text-[var(--bone-dim)] ml-2">USDC</span>
@@ -386,7 +386,7 @@ function RoiEstimatorSection(){
                   <button
                     key={preset}
                     onClick={() => setBudget(preset)}
-                    className={`font-mono text-[11px] uppercase tracking-[.12em] px-3 py-2 border transition ${budget === preset ? 'border-[var(--ember)] bg-[rgba(255,122,69,.18)] text-[var(--bone)]' : 'border-[var(--rule-strong)] text-[var(--bone-dim)] hover:border-[var(--ember-soft)]'}`}
+                    className={`font-mono text-[11px] uppercase tracking-[.12em] px-3 py-2 border transition ${budget === preset ? 'border-[var(--accent)] bg-[rgba(8,116,140,.12)] text-[var(--ink)]' : 'border-[var(--rule-strong)] text-[var(--bone-dim)] hover:border-[var(--ember-soft)]'}`}
                   >
                     {fmt(preset)}
                   </button>
@@ -399,7 +399,7 @@ function RoiEstimatorSection(){
               )}
             </div>
 
-            <div className="border border-[var(--rule)] bg-[var(--ink)] p-6 md:p-8">
+            <div className="border border-[var(--rule)] bg-[var(--surface)] p-6 md:p-8">
               {loading ? (
                 <div className="font-mono text-xs text-[var(--bone-dim)]">…</div>
               ) : !lh ? (
@@ -407,15 +407,15 @@ function RoiEstimatorSection(){
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-px" style={{background:'var(--rule)'}}>
-                    <div className="bg-[var(--ink)] p-5">
+                    <div className="bg-[var(--surface)] p-5">
                       <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.est_impressions}</div>
                       <div className="mt-2 font-display font-bold tnum text-[28px] md:text-[32px] text-[var(--teal)]">{fmt(lh.est_impressions)}</div>
                     </div>
-                    <div className="bg-[var(--ink)] p-5">
+                    <div className="bg-[var(--surface)] p-5">
                       <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.est_engagement}</div>
-                      <div className="mt-2 font-display font-bold tnum text-[28px] md:text-[32px] text-white">{fmt(lh.est_engagement)}</div>
+                      <div className="mt-2 font-display font-bold tnum text-[28px] md:text-[32px] text-[var(--ink)]">{fmt(lh.est_engagement)}</div>
                     </div>
-                    <div className="bg-[var(--ink)] p-5">
+                    <div className="bg-[var(--surface)] p-5">
                       <div className="font-mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{copy.est_tweets}</div>
                       <div className="mt-2 font-display font-bold tnum text-[28px] md:text-[32px] text-[var(--ember-soft)]">{fmt(lh.est_tweets)}</div>
                     </div>
@@ -444,7 +444,7 @@ function RoiEstimatorSection(){
 
                   {data.lighthouse_advantage && (
                     <div className="mt-5 flex flex-wrap gap-3 font-mono text-[11px]">
-                      <span className="px-3 py-1.5 border border-[var(--ember)] bg-[rgba(255,122,69,.12)] text-[var(--ember-soft)] uppercase tracking-[.14em]">
+                      <span className="px-3 py-1.5 border border-[var(--accent)] bg-[rgba(8,116,140,.10)] text-[var(--accent)] uppercase tracking-[.14em]">
                         {data.lighthouse_advantage.impressions_multiplier}× {copy.advantage} {english ? 'reach' : '曝光'}
                       </span>
                       <span className="px-3 py-1.5 border border-[var(--teal)] bg-[rgba(111,183,193,.10)] text-[var(--teal)] uppercase tracking-[.14em]">
@@ -484,7 +484,7 @@ function WhyCta(){
           </Reveal3>
           <div className="mt-16 grid md:grid-cols-2 lg:grid-cols-3 gap-px rule-t rule-b" style={{background:"var(--rule)"}}>
             {whys.map((w,i)=>(
-              <Reveal3 key={w.n} delay={(i%3)+1} className="bg-[var(--ink)] p-7 md:p-9 min-h-[240px] flex flex-col justify-between hover:bg-[var(--ink-2)] transition group">
+              <Reveal3 key={w.n} delay={(i%3)+1} className="bg-[var(--surface)] p-7 md:p-9 min-h-[240px] flex flex-col justify-between hover:bg-[var(--surface-muted)] transition group">
                 <div className="flex items-baseline justify-between">
                   <span className="font-mono text-[var(--ember)] text-[12px] tracking-[0.22em]">{w.n}</span>
                   <span className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{t("why.principle")}</span>
@@ -503,9 +503,8 @@ function WhyCta(){
 
       <section id="cta" className="relative overflow-hidden">
         <div className="relative min-h-[640px] sm:h-[72vh] sm:min-h-[560px] flex items-center justify-center py-24 sm:py-0">
-          <div className="absolute inset-0" style={{backgroundImage:"url(assets/ember-portal.png)", backgroundSize:"cover", backgroundPosition:"center"}}/>
-          <div className="absolute inset-0" style={{background:"radial-gradient(ellipse at center, rgba(7,8,10,0.3) 0%, rgba(7,8,10,0.7) 60%, var(--ink) 100%)"}}/>
-          <div className="absolute inset-0 grid-bg opacity-30"/>
+          <div className="absolute inset-0" style={{background:"linear-gradient(135deg, #f0f9fb 0%, #e8f4f8 50%, #f5f6f8 100%)"}}/>
+          <div className="absolute inset-0 grid-bg opacity-10"/>
           <Reveal3 className="relative max-w-[1100px] mx-auto px-6 md:px-10 text-center">
             <div className="kicker mb-6">{t("cta.kicker")}</div>
             <h2 className="font-display font-black leading-[1.02]" style={{fontSize:"clamp(36px, 6vw, 88px)", letterSpacing:"-0.015em"}}>
@@ -571,7 +570,7 @@ function Page(){
       <button
         type="button"
         onClick={() => setMode("dashboard")}
-        className={`rounded-full px-4 py-2 text-[0px] font-semibold transition ${isDashboard ? "bg-slate-950 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"}`}
+        className={`rounded-full px-4 py-2 text-[0px] font-semibold transition ${isDashboard ? "bg-slate-950 text-[var(--ink)]" : "text-[var(--ink)]/70 hover:bg-white/10 hover:text-[var(--ink)]"}`}
       >
         <span className="text-[12px]">Workspace</span>
         浅色看板
