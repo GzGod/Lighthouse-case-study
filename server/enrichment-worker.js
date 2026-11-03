@@ -507,35 +507,39 @@ async function runEnrichment(cmsPool) {
     if (meta.coingecko) await new Promise(r => setTimeout(r, 1300));
   }
 
-  // ─── Resolve anonymous campaigns via cross-validation ────────────────────
-  try {
-    // Build a reverse-lookup: twitter handle → slug, symbol/hashtag → slug
-    const handleToSlug = {};
-    const symbolToSlug = {};
-    for (const [slug, meta] of Object.entries(PROJECT_META)) {
-      if (meta.handle) handleToSlug[meta.handle.toLowerCase()] = slug;
-      if (meta.symbol) symbolToSlug[meta.symbol.toLowerCase()] = slug;
-    }
-    const nameToSlug = {};
-    for (const [slug, name] of Object.entries(SLUG_TO_NAME)) {
-      nameToSlug[name.toLowerCase()] = slug;
-    }
-    const knownProjects = Object.entries(PROJECT_META).map(([slug, meta]) => ({
-      slug, name: SLUG_TO_NAME[slug] || slug, symbol: meta.symbol || null, handle: meta.handle || null,
-    }));
+  console.log('[enrichment] Main slug loop complete.');
+}
 
-    console.log('[enrichment] Starting anonymous campaign resolution...');
-    const anonCampaigns = await fetchAnonymousCampaignStats(sourcePool);
-    console.log(`[enrichment] ${anonCampaigns.length} anonymous campaigns to resolve`);
+// ─── Standalone anonymous campaign resolution ─────────────────────────────
+// Runs separately so CoinGecko rate-limiting in runEnrichment doesn't block it.
+async function resolveAnonymousCampaigns(cmsPool) {
+  const sourcePool = getSourcePool();
+  console.log('[enrichment] resolveAnonymousCampaigns starting...');
 
-    for (const row of anonCampaigns) {
+  const handleToSlug = {};
+  const symbolToSlug = {};
+  for (const [slug, meta] of Object.entries(PROJECT_META)) {
+    if (meta.handle) handleToSlug[meta.handle.toLowerCase()] = slug;
+    if (meta.symbol) symbolToSlug[meta.symbol.toLowerCase()] = slug;
+  }
+  const nameToSlug = {};
+  for (const [slug, name] of Object.entries(SLUG_TO_NAME)) {
+    nameToSlug[name.toLowerCase()] = slug;
+  }
+  const knownProjects = Object.entries(PROJECT_META).map(([slug, meta]) => ({
+    slug, name: SLUG_TO_NAME[slug] || slug, symbol: meta.symbol || null, handle: meta.handle || null,
+  }));
+
+  const anonCampaigns = await fetchAnonymousCampaignStats(sourcePool);
+  console.log(`[enrichment] resolveAnonymousCampaigns: ${anonCampaigns.length} campaigns to process`);
+
+  let resolved = 0, pending = 0;
+  for (const row of anonCampaigns) {
     const campaignId = String(row.id);
     let resolvedSlug = null;
     let resolvedName = null;
     let resolvedBy = 'pending';
 
-    // 1. Direct signals from campaign record fields
-    // pg returns quoted aliases with case preserved, so use the exact alias
     const targetHandle = String(row.tweetAuthorHandle || row.targetUsername || '').toLowerCase().replace(/^@/, '');
     const reqMentionsRaw = row.requiredMentions;
     const reqHashtagsRaw = row.requiredHashtags;
@@ -544,13 +548,9 @@ async function runEnrichment(cmsPool) {
     const reqHashtags = Array.isArray(reqHashtagsRaw) ? reqHashtagsRaw
       : (typeof reqHashtagsRaw === 'string' ? JSON.parse(reqHashtagsRaw || '[]') : []);
 
-    // Check targetUsername / tweetAuthorHandle against known handles
     if (targetHandle && handleToSlug[targetHandle]) {
-      resolvedSlug = handleToSlug[targetHandle];
-      resolvedBy = 'targetUsername';
+      resolvedSlug = handleToSlug[targetHandle]; resolvedBy = 'targetHandle';
     }
-
-    // Check requiredMentions (e.g. ["@KaminoFinance"])
     if (!resolvedSlug) {
       for (const m of reqMentions) {
         const h = String(m).toLowerCase().replace(/^@/, '');
@@ -558,8 +558,6 @@ async function runEnrichment(cmsPool) {
         if (nameToSlug[h])   { resolvedSlug = nameToSlug[h];   resolvedBy = 'requiredMentions'; break; }
       }
     }
-
-    // Check requiredHashtags against symbol names
     if (!resolvedSlug) {
       for (const tag of reqHashtags) {
         const t = String(tag).toLowerCase().replace(/^#/, '');
@@ -567,103 +565,59 @@ async function runEnrichment(cmsPool) {
         if (nameToSlug[t])   { resolvedSlug = nameToSlug[t];   resolvedBy = 'requiredHashtags'; break; }
       }
     }
-
-    // 2. Fallback: scan tweet text for @mentions / #hashtags / domains / keywords
     if (!resolvedSlug && sourcePool) {
-      const signals = await inferProjectFromTweets(sourcePool, row.id, knownProjects);
+      const signals = await inferProjectFromTweets(sourcePool, row.id, knownProjects).catch(() => null);
       if (signals) {
-        // keyword match wins first (most specific)
-        if (signals.keywordSlug && !resolvedSlug) {
-          resolvedSlug = signals.keywordSlug;
-          resolvedBy = 'tweetKeyword';
+        if (signals.keywordSlug) { resolvedSlug = signals.keywordSlug; resolvedBy = 'tweetKeyword'; }
+        if (!resolvedSlug) for (const m of signals.mentions) {
+          if (handleToSlug[m]) { resolvedSlug = handleToSlug[m]; resolvedBy = 'tweetMentions'; break; }
+          if (nameToSlug[m])   { resolvedSlug = nameToSlug[m];   resolvedBy = 'tweetMentions'; break; }
         }
-        if (!resolvedSlug) {
-          for (const m of signals.mentions) {
-            if (handleToSlug[m]) { resolvedSlug = handleToSlug[m]; resolvedBy = 'tweetMentions'; break; }
-            if (nameToSlug[m])   { resolvedSlug = nameToSlug[m];   resolvedBy = 'tweetMentions'; break; }
-          }
+        if (!resolvedSlug) for (const t of signals.hashtags) {
+          if (symbolToSlug[t]) { resolvedSlug = symbolToSlug[t]; resolvedBy = 'tweetHashtags'; break; }
+          if (nameToSlug[t])   { resolvedSlug = nameToSlug[t];   resolvedBy = 'tweetHashtags'; break; }
         }
-        if (!resolvedSlug) {
-          for (const t of signals.hashtags) {
-            if (symbolToSlug[t]) { resolvedSlug = symbolToSlug[t]; resolvedBy = 'tweetHashtags'; break; }
-            if (nameToSlug[t])   { resolvedSlug = nameToSlug[t];   resolvedBy = 'tweetHashtags'; break; }
+        if (!resolvedSlug) for (const d of signals.domains) {
+          for (const [slug, meta] of Object.entries(PROJECT_META)) {
+            if (meta.handle && d.includes(meta.handle.toLowerCase())) { resolvedSlug = slug; resolvedBy = 'tweetDomain'; break; }
           }
-        }
-        if (!resolvedSlug) {
-          for (const d of signals.domains) {
-            for (const [slug, meta] of Object.entries(PROJECT_META)) {
-              if (meta.handle && d.includes(meta.handle.toLowerCase())) { resolvedSlug = slug; resolvedBy = 'tweetDomain'; break; }
-            }
-            if (resolvedSlug) break;
-          }
+          if (resolvedSlug) break;
         }
       }
     }
 
+    const signals = JSON.stringify({ targetHandle, reqMentions, reqHashtags });
     if (resolvedSlug) {
       resolvedName = SLUG_TO_NAME[resolvedSlug] || resolvedSlug;
-      console.log(`[enrichment] anon campaign ${campaignId} → ${resolvedSlug} (via ${resolvedBy})`);
-      // Merge budget/metrics into existing project_enrichment row if present
-      await cmsPool.query(`
-        UPDATE project_enrichment SET
-          campaign_count = campaign_count + 1,
-          total_budget   = total_budget   + $2,
-          consumed_budget = consumed_budget + $3,
-          during_views   = during_views   + $4,
-          during_engagement = during_engagement + $5,
-          enriched_at    = NOW()
-        WHERE slug = $1
-      `, [resolvedSlug, Number(row.totalBudget) || 0, Number(row.consumedBudget) || 0,
-          Number(row.total_views) || 0, Number(row.total_engagement) || 0]);
-      // Record as resolved in pending table for audit trail
+      resolved++;
       await cmsPool.query(`
         INSERT INTO pending_campaign_names
           (campaign_id, total_budget, consumed_budget, total_views, total_engagement,
-           participant_count, created_at_source, signals,
-           resolved_slug, resolved_name, resolved_by, resolved_at, updated_at)
+           participant_count, created_at_source, signals, resolved_slug, resolved_name, resolved_by, resolved_at, updated_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())
         ON CONFLICT (campaign_id) DO UPDATE SET
-          resolved_slug = EXCLUDED.resolved_slug,
-          resolved_name = EXCLUDED.resolved_name,
-          resolved_by   = EXCLUDED.resolved_by,
-          resolved_at   = NOW(),
-          updated_at    = NOW()
-      `, [
-        campaignId, Number(row.totalBudget) || 0, Number(row.consumedBudget) || 0,
-        Number(row.total_views) || 0, Number(row.total_engagement) || 0,
-        Number(row.participant_count) || 0, row.createdAt || null,
-        JSON.stringify({ targetHandle, reqMentions, reqHashtags }),
-        resolvedSlug, resolvedName, resolvedBy,
-      ]);
+          resolved_slug=EXCLUDED.resolved_slug, resolved_name=EXCLUDED.resolved_name,
+          resolved_by=EXCLUDED.resolved_by, resolved_at=NOW(), updated_at=NOW()
+      `, [campaignId, Number(row.totalBudget)||0, Number(row.consumedBudget)||0,
+          Number(row.total_views)||0, Number(row.total_engagement)||0,
+          Number(row.participant_count)||0, row.createdAt||null, signals,
+          resolvedSlug, resolvedName, resolvedBy]).catch(e => console.warn('[enrichment] INSERT resolved error:', e.message));
     } else {
-      // Store unresolved for manual labelling
-      console.log(`[enrichment] anon campaign ${campaignId} unresolved → pending`);
+      pending++;
       await cmsPool.query(`
         INSERT INTO pending_campaign_names
           (campaign_id, total_budget, consumed_budget, total_views, total_engagement,
-           participant_count, created_at_source, signals,
-           resolved_slug, resolved_name, resolved_by, updated_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NULL,NULL,'pending',NOW())
+           participant_count, created_at_source, signals, resolved_by, updated_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',NOW())
         ON CONFLICT (campaign_id) DO UPDATE SET
-          total_views      = EXCLUDED.total_views,
-          total_engagement = EXCLUDED.total_engagement,
-          signals          = EXCLUDED.signals,
-          updated_at       = NOW()
-          -- do not overwrite a resolved_slug if admin already set it
-        WHERE pending_campaign_names.resolved_by = 'pending'
-      `, [
-        campaignId, Number(row.totalBudget) || 0, Number(row.consumedBudget) || 0,
-        Number(row.total_views) || 0, Number(row.total_engagement) || 0,
-        Number(row.participant_count) || 0, row.createdAt || null,
-        JSON.stringify({ targetHandle, reqMentions, reqHashtags }),
-      ]);
+          signals=EXCLUDED.signals, updated_at=NOW()
+        WHERE pending_campaign_names.resolved_by='pending'
+      `, [campaignId, Number(row.totalBudget)||0, Number(row.consumedBudget)||0,
+          Number(row.total_views)||0, Number(row.total_engagement)||0,
+          Number(row.participant_count)||0, row.createdAt||null, signals]).catch(e => console.warn('[enrichment] INSERT pending error:', e.message));
     }
-    }
-
-    console.log('[enrichment] Run complete.');
-  } catch (anonErr) {
-    console.error('[enrichment] Anonymous resolution error:', anonErr.message);
   }
+  console.log(`[enrichment] resolveAnonymousCampaigns done: ${resolved} resolved, ${pending} pending`);
 }
 
 // ─── Schedule ────────────────────────────────────────────────────────────────
@@ -674,6 +628,14 @@ function startEnrichmentSchedule(cmsPool) {
   setInterval(() => {
     runEnrichment(cmsPool).catch(e => console.error('[enrichment] Error:', e.message));
   }, 6 * 60 * 60 * 1000);
+  // Run anonymous campaign resolution separately, 5 min after startup then every 2h
+  // (kept separate so CoinGecko rate limiting in the main loop doesn't block it)
+  setTimeout(() => {
+    resolveAnonymousCampaigns(cmsPool).catch(e => console.error('[enrichment] Anon resolve error:', e.message));
+    setInterval(() => {
+      resolveAnonymousCampaigns(cmsPool).catch(e => console.error('[enrichment] Anon resolve error:', e.message));
+    }, 2 * 60 * 60 * 1000);
+  }, 5 * 60 * 1000);
 }
 
-module.exports = { startEnrichmentSchedule, runEnrichment };
+module.exports = { startEnrichmentSchedule, runEnrichment, resolveAnonymousCampaigns };
