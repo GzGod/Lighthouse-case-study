@@ -52,6 +52,15 @@ function fetchJson(url, opts = {}) {
 // ─── Project metadata: handles, coingecko ids, token symbols ─────────────────
 // All CoinGecko IDs and symbols verified via CoinGecko search API + DexScreener
 // "coingecko: null" = not listed on CoinGecko; dex-only or no TGE
+const SLUG_TO_NAME = {
+  'surf': 'Surf', 'zetachain': 'ZetaChain', 'kaio': 'KAIO',
+  'hashkey-exchange': 'HashKey Exchange', 'portals': 'Portals',
+  'zkverify': 'zkVerify', 'sonicsvm': 'SonicSVM', 'puffpaw': 'Puffpaw',
+  'allora': 'Allora', 'maiga': 'Maiga', 'yei-finance': 'Yei Finance',
+  'kamino': 'Kamino', 'fight-id': 'Fight.ID', 'sentient': 'Sentient',
+  'ff': 'FF', 'lit-protocol': 'Lit Protocol', 'heyelsa': 'HeyElsa',
+};
+
 const PROJECT_META = {
   'surf':             { handle: 'surfaihq',        coingecko: null,              symbol: null,      chain: null },
   'zetachain':        { handle: 'zetachain',        coingecko: 'zetachain',       symbol: 'ZETA',    chain: 'zeta' },
@@ -403,15 +412,7 @@ async function runEnrichment(cmsPool) {
   `);
 
   const slugs = Object.keys(PROJECT_META);
-  // Map slug → project name as stored in unified_campaigns
-  const SLUG_TO_NAME = {
-    'surf': 'Surf', 'zetachain': 'ZetaChain', 'kaio': 'KAIO',
-    'hashkey-exchange': 'HashKey Exchange', 'portals': 'Portals',
-    'zkverify': 'zkVerify', 'sonicsvm': 'SonicSVM', 'puffpaw': 'Puffpaw',
-    'allora': 'Allora', 'maiga': 'Maiga', 'yei-finance': 'Yei Finance',
-    'kamino': 'Kamino', 'fight-id': 'Fight.ID', 'sentient': 'Sentient',
-    'ff': 'FF', 'lit-protocol': 'Lit Protocol', 'heyelsa': 'HeyElsa',
-  };
+  // Map slug → project name as stored in unified_campaigns — defined at module scope
 
   for (const slug of slugs) {
     const meta = PROJECT_META[slug];
