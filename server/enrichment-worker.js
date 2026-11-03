@@ -261,7 +261,7 @@ async function fetchAnonymousCampaignStats(sourcePool) {
     const ucp = new Set(ucpCols.map(r => r.column_name));
 
     const opt = (name) => uc.has(name) ? `c."${name}"` : 'NULL';
-    const optJson = (name) => uc.has(name) ? `c."${name}"` : `'[]'`;
+    const optJson = (name) => uc.has(name) ? `to_json(c."${name}")::jsonb` : `'[]'::jsonb`;
     // Participant columns — use COALESCE in case they're missing
     const pViews = ucp.has('views') ? 'p.views' : '0';
     const pLikes = ucp.has('likes') ? 'p.likes' : '0';
