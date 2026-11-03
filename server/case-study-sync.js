@@ -383,20 +383,18 @@ async function readSourceRows() {
   if (needTweets.length) {
     const campaignIds = [...new Set(needTweets.map(r => String(r.campaignId)))];
     const { rows: tweetRows } = await pool.query(`
-      SELECT
+      SELECT DISTINCT ON (ucp."campaignId", krt.tweet_url)
         ucp."campaignId",
         krt.tweet_url,
-        krt.tweet_text AS text,
-        krt.views,
-        krt.likes,
-        krt.replies,
-        krt.retweets
+        krt.tweet_text AS text
       FROM unified_campaign_participants ucp
       JOIN kol_raw_tweets krt ON krt.kol_id = ucp."userId"
       WHERE ucp."campaignId" = ANY($1::bigint[])
         AND krt.tweet_url IS NOT NULL
         AND krt.tweet_url ~ '^https://(www\\.)?(x|twitter)\\.com/[a-zA-Z0-9_]+/status/\\d+'
-      ORDER BY ucp."campaignId", COALESCE(krt.views, 0) DESC
+        AND krt.tweet_text IS NOT NULL
+        AND LENGTH(krt.tweet_text) > 10
+      ORDER BY ucp."campaignId", krt.tweet_url
     `, [campaignIds.map(Number).filter(Boolean)]);
     // Group by campaignId, take top 3 per campaign (by views, fallback to likes)
     const byCampaign = new Map();
