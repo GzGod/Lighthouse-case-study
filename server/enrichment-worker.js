@@ -195,8 +195,9 @@ async function fetchSocialVolume(sourcePool, handle) {
 
 // ─── Source DB: infer project name from KOL tweet content (cross-validation) ─
 // For campaigns with no projectName, scan KOL tweets for @mentions, hashtags,
-// and URLs to find which project they were actually promoting.
-async function inferProjectFromTweets(sourcePool, campaignId) {
+// URLs, and plain-text project name / token symbol keywords.
+// knownProjects: array of { name, symbol, handle, slug }
+async function inferProjectFromTweets(sourcePool, campaignId, knownProjects = []) {
   if (!sourcePool || !campaignId) return null;
   try {
     const { rows } = await sourcePool.query(`
@@ -206,14 +207,31 @@ async function inferProjectFromTweets(sourcePool, campaignId) {
       WHERE ucp."campaignId" = $1
         AND krt.tweet_text IS NOT NULL
         AND LENGTH(krt.tweet_text) > 20
-      LIMIT 20
+      LIMIT 30
     `, [campaignId]);
     if (!rows.length) return null;
     const fullText = rows.map(r => r.tweet_text).join(' ');
+    const lower = fullText.toLowerCase();
+
     const mentions = [...new Set((fullText.match(/@(\w+)/g) || []).map(m => m.slice(1).toLowerCase()))].slice(0, 10);
     const hashtags = [...new Set((fullText.match(/#(\w+)/g) || []).map(h => h.slice(1).toLowerCase()))].slice(0, 10);
     const domains  = [...new Set((fullText.match(/https?:\/\/[^\s]+/g) || []).map(u => { try { return new URL(u).hostname.replace('www.', ''); } catch { return null; } }).filter(Boolean))].slice(0, 5);
-    return { mentions, hashtags, domains };
+
+    // Keyword match: project name / token symbol in tweet text
+    // Returns slug of first project whose name or symbol appears verbatim (word-boundary)
+    let keywordSlug = null;
+    for (const p of knownProjects) {
+      const terms = [p.name, p.symbol].filter(Boolean).map(t => t.toLowerCase());
+      for (const term of terms) {
+        if (term.length < 3) continue;
+        // Simple word-boundary check: surrounded by non-alphanumeric or start/end
+        const re = new RegExp(`(?:^|[^a-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:[^a-z0-9]|$)`);
+        if (re.test(lower)) { keywordSlug = p.slug; break; }
+      }
+      if (keywordSlug) break;
+    }
+
+    return { mentions, hashtags, domains, keywordSlug };
   } catch { return null; }
 }
 
@@ -482,6 +500,14 @@ async function runEnrichment(cmsPool) {
     nameToSlug[name.toLowerCase()] = slug;
   }
 
+  // Build knownProjects list for keyword matching in tweet text
+  const knownProjects = Object.entries(PROJECT_META).map(([slug, meta]) => ({
+    slug,
+    name: SLUG_TO_NAME[slug] || slug,
+    symbol: meta.symbol || null,
+    handle: meta.handle || null,
+  }));
+
   const anonCampaigns = await fetchAnonymousCampaignStats(sourcePool);
   console.log(`[enrichment] ${anonCampaigns.length} anonymous campaigns to resolve`);
 
@@ -522,13 +548,20 @@ async function runEnrichment(cmsPool) {
       }
     }
 
-    // 2. Fallback: scan tweet text for @mentions / #hashtags / domains
+    // 2. Fallback: scan tweet text for @mentions / #hashtags / domains / keywords
     if (!resolvedSlug && sourcePool) {
-      const signals = await inferProjectFromTweets(sourcePool, row.id);
+      const signals = await inferProjectFromTweets(sourcePool, row.id, knownProjects);
       if (signals) {
-        for (const m of signals.mentions) {
-          if (handleToSlug[m]) { resolvedSlug = handleToSlug[m]; resolvedBy = 'tweetMentions'; break; }
-          if (nameToSlug[m])   { resolvedSlug = nameToSlug[m];   resolvedBy = 'tweetMentions'; break; }
+        // keyword match wins first (most specific)
+        if (signals.keywordSlug && !resolvedSlug) {
+          resolvedSlug = signals.keywordSlug;
+          resolvedBy = 'tweetKeyword';
+        }
+        if (!resolvedSlug) {
+          for (const m of signals.mentions) {
+            if (handleToSlug[m]) { resolvedSlug = handleToSlug[m]; resolvedBy = 'tweetMentions'; break; }
+            if (nameToSlug[m])   { resolvedSlug = nameToSlug[m];   resolvedBy = 'tweetMentions'; break; }
+          }
         }
         if (!resolvedSlug) {
           for (const t of signals.hashtags) {
@@ -538,7 +571,6 @@ async function runEnrichment(cmsPool) {
         }
         if (!resolvedSlug) {
           for (const d of signals.domains) {
-            // match domain against project handles/names loosely
             for (const [slug, meta] of Object.entries(PROJECT_META)) {
               if (meta.handle && d.includes(meta.handle.toLowerCase())) { resolvedSlug = slug; resolvedBy = 'tweetDomain'; break; }
             }

@@ -361,6 +361,58 @@ async function readSourceRows() {
     WHERE ca."isShow" = TRUE
     ORDER BY ca."createdAt" DESC NULLS LAST, ca.id ASC
   `);
+
+  // Fallback: for campaign rows with no tweetsData, fetch top tweets by views
+  // from kol_raw_tweets joined to unified_campaign_participants. Picks the three
+  // highest-view public posts for each placement so the detail page can show
+  // "top posts by reach" even when the cases table didn't bundle them.
+  const needTweets = rows.filter(row =>
+    row.source === 'campaign' && row.campaignId && !row.tweetsData
+  );
+  if (needTweets.length) {
+    const campaignIds = [...new Set(needTweets.map(r => String(r.campaignId)))];
+    const { rows: tweetRows } = await pool.query(`
+      SELECT
+        ucp."campaignId",
+        krt.tweet_url,
+        krt.tweet_text AS text,
+        krt.views,
+        krt.likes,
+        krt.replies,
+        krt.retweets
+      FROM unified_campaign_participants ucp
+      JOIN kol_raw_tweets krt ON krt.kol_id = ucp."userId"
+      WHERE ucp."campaignId" = ANY($1::bigint[])
+        AND krt.tweet_url IS NOT NULL
+        AND krt.tweet_url ~ '^https://(www\\.)?(x|twitter)\\.com/[a-zA-Z0-9_]+/status/\\d+'
+        AND COALESCE(krt.views, 0) > 0
+      ORDER BY ucp."campaignId", krt.views DESC
+    `, [campaignIds.map(Number).filter(Boolean)]);
+    // Group by campaignId, take top 3 per campaign
+    const byCampaign = new Map();
+    for (const t of tweetRows) {
+      const cid = String(t.campaignId);
+      if (!byCampaign.has(cid)) byCampaign.set(cid, []);
+      const arr = byCampaign.get(cid);
+      if (arr.length < 3) arr.push(t);
+    }
+    // Attach to rows, shaped like tweetsData entries
+    for (const row of needTweets) {
+      const cid = String(row.campaignId);
+      const tweets = byCampaign.get(cid) || [];
+      if (tweets.length) {
+        row.tweetsData = tweets.map(t => ({
+          tweetUrl: t.tweet_url,
+          text: t.text,
+          views: Number(t.views || 0),
+          likes: Number(t.likes || 0),
+          replies: Number(t.replies || 0),
+          retweets: Number(t.retweets || 0),
+        }));
+      }
+    }
+  }
+
   return rows;
 }
 
