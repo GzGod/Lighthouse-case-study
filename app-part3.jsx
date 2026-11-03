@@ -386,7 +386,7 @@ function RoiEstimatorSection(){
                   <button
                     key={preset}
                     onClick={() => setBudget(preset)}
-                    className={`font-mono text-[11px] uppercase tracking-[.12em] px-3 py-2 border transition ${budget === preset ? 'border-[var(--accent)] bg-[rgba(8,116,140,.12)] text-[var(--ink)]' : 'border-[var(--rule-strong)] text-[var(--bone-dim)] hover:border-[var(--ember-soft)]'}`}
+                    className={`font-mono text-[11px] uppercase tracking-[.12em] px-3 py-2 border transition ${budget === preset ? 'border-[var(--accent)] bg-[rgba(29,111,218,.12)] text-[var(--ink)]' : 'border-[var(--rule-strong)] text-[var(--bone-dim)] hover:border-[var(--ember-soft)]'}`}
                   >
                     {fmt(preset)}
                   </button>
@@ -444,7 +444,7 @@ function RoiEstimatorSection(){
 
                   {data.lighthouse_advantage && (
                     <div className="mt-5 flex flex-wrap gap-3 font-mono text-[11px]">
-                      <span className="px-3 py-1.5 border border-[var(--accent)] bg-[rgba(8,116,140,.10)] text-[var(--accent)] uppercase tracking-[.14em]">
+                      <span className="px-3 py-1.5 border border-[var(--accent)] bg-[rgba(29,111,218,.10)] text-[var(--accent)] uppercase tracking-[.14em]">
                         {data.lighthouse_advantage.impressions_multiplier}× {copy.advantage} {english ? 'reach' : '曝光'}
                       </span>
                       <span className="px-3 py-1.5 border border-[var(--teal)] bg-[rgba(111,183,193,.10)] text-[var(--teal)] uppercase tracking-[.14em]">

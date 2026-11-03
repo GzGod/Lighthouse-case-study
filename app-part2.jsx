@@ -409,7 +409,7 @@ function WinnersSection(){
           })}
         </div>
         {benchmarkCards.length > 0 && (
-          <Reveal2 delay={4} className="mt-8 ring-soft overflow-hidden" style={{background:"linear-gradient(135deg, rgba(111,183,193,0.08), rgba(8,116,140,0.05) 48%, rgba(237,232,225,0.018))"}}>
+          <Reveal2 delay={4} className="mt-8 ring-soft overflow-hidden" style={{background:"linear-gradient(135deg, rgba(29,111,218,0.08), rgba(29,111,218,0.05) 48%, rgba(240,247,255,0.018))"}}>
             <div className="grid lg:grid-cols-[0.9fr_1.6fr]">
               <div className="p-6 md:p-8 border-b lg:border-b-0 lg:border-r border-[var(--rule)]">
                 <div className="font-mono text-[10px] tracking-[0.22em] text-[var(--bone-dim)] uppercase">{t("win.compare.eyebrow")}</div>
@@ -428,7 +428,7 @@ function WinnersSection(){
                   const color = isLighthouse ? "var(--teal)" : "var(--ember-soft)";
                   const width = Math.max(4, Math.min(100, card.width));
                   return (
-                    <div key={card.key} className="group rounded-[18px] p-5 min-h-[190px] flex flex-col justify-between transition hover:-translate-y-0.5" style={{border:"1px solid var(--rule)", background:isLighthouse?"rgba(111,183,193,0.055)":"rgba(8,116,140,0.035)"}}>
+                    <div key={card.key} className="group rounded-[18px] p-5 min-h-[190px] flex flex-col justify-between transition hover:-translate-y-0.5" style={{border:"1px solid var(--rule)", background:isLighthouse?"rgba(29,111,218,0.055)":"rgba(29,111,218,0.025)"}}>
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="font-mono text-[10px] tracking-[0.2em] uppercase" style={{color}}>{card.label}</div>
@@ -592,7 +592,7 @@ function PersonalIPSection(){
   return (
     <section id="ip" className="relative py-28 md:py-36 overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1px]" style={{background:"var(--rule-strong)"}}/>
-      <div className="absolute inset-0 pointer-events-none" style={{background:"radial-gradient(ellipse 60% 40% at 85% 10%, rgba(8,116,140,0.08), transparent 60%)"}}/>
+      <div className="absolute inset-0 pointer-events-none" style={{background:"radial-gradient(ellipse 60% 40% at 85% 10%, rgba(29,111,218,0.08), transparent 60%)"}}/>
       <div className="max-w-[1360px] mx-auto px-6 md:px-10 relative">
         <Reveal2 className="grid md:grid-cols-12 gap-8 items-end mb-16 md:mb-20">
           <div className="md:col-span-2 kicker">{t("ip.kicker")}</div>
