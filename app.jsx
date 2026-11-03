@@ -331,17 +331,17 @@ function AboutSection(){
             <p className="mt-7 max-w-3xl font-cn text-[17px] leading-[1.75] text-[var(--bone-dim)]">{t("about.p")}</p>
           </div>
         </Reveal>
-        <div className="mt-20 grid md:grid-cols-2 lg:grid-cols-4 gap-px rule-t rule-b" style={{background:"var(--rule)"}}>
+        <div className="mt-20 grid md:grid-cols-2 lg:grid-cols-4 gap-px rule-t rule-b" style={{background:"var(--border)"}}>
           {caps.map((c,i)=>(
-            <Reveal key={c.n} delay={i+1} className="bg-[var(--ink)] p-7 md:p-8 min-h-[260px] flex flex-col justify-between hover:bg-[var(--ink-2)] transition group">
+            <Reveal key={c.n} delay={i+1} className="bg-[var(--surface)] p-7 md:p-8 min-h-[260px] flex flex-col justify-between hover:bg-[var(--surface-muted)] transition group">
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-[var(--ember)] text-[12px] tracking-[0.2em]">{c.n}</span>
+                  <span className="font-mono text-[var(--accent)] text-[12px] tracking-[0.2em]">{c.n}</span>
                   <span className="font-mono text-[10px] text-[var(--bone-dim)] tracking-[0.2em] uppercase">{t("about."+c.key+".en")}</span>
                 </div>
-                <div className="mt-8 font-display text-[26px] md:text-[30px] font-bold leading-tight">{t("about."+c.key+".t")}</div>
+                <div className="mt-8 font-display text-[26px] md:text-[30px] font-bold leading-tight text-[var(--ink)]">{t("about."+c.key+".t")}</div>
               </div>
-              <p className="mt-6 font-cn text-[14px] leading-[1.7] text-[var(--bone-dim)] group-hover:text-[var(--bone)] transition">{t("about."+c.key+".d")}</p>
+              <p className="mt-6 font-cn text-[14px] leading-[1.7] text-[var(--bone-dim)] group-hover:text-[var(--secondary)] transition">{t("about."+c.key+".d")}</p>
             </Reveal>
           ))}
         </div>

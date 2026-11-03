@@ -14,7 +14,7 @@ const useLighthouseLanguage = window.useLighthouseLanguage;
 const LighthouseNav = window.LighthouseNav;
 const copyByLanguage = {
   zh: {
-    title: <>可验证的案例，<span className="text-[var(--ember)]">不止一张成绩单。</span></>,
+    title: <>可验证的案例，<span className="text-[var(--accent)]">不止一张成绩单。</span></>,
     intro: '把公开案例里的预算、曝光和互动放到同一套口径里。身份信息不公开，指标保留上下文，方便快速判断一个传播动作到底交付了什么。',
     cases: '公开案例', projects: '项目数', placements: '投放次数', reach: '累计曝光', engagement: '总互动', synced: '已同步',
     coverage: '覆盖周期', sourceUpdated: '源库更新', privacy: '匿名聚合 · 不含作者身份',
@@ -23,7 +23,7 @@ const copyByLanguage = {
     verified: '完整指标', partial: '部分指标', projectBudget: '项目总预算', placementBudget: '本次投放预算', participants: '参与人次', projectAggregate: '已按项目汇总', placementLabel: count => `${nf.format(count)} 次投放`, placementOption: count => `${nf.format(count)} 次`, publicRecord: '公开聚合记录', results: (page, pages, total) => `第 ${page} / ${pages} 页 · ${nf.format(total)} 条结果`, anonymous: '作者与推文地址已匿名化', back: '返回首页 ↗',
   },
   en: {
-    title: <>Cases with context, <span className="text-[var(--ember)]">beyond a scorecard.</span></>,
+    title: <>Cases with context, <span className="text-[var(--accent)]">beyond a scorecard.</span></>,
     intro: 'Compare budget, reach, and engagement across public cases. Identity details stay private while the metrics keep their context, so you can see what each campaign delivered.',
     cases: 'Public cases', projects: 'Projects', placements: 'Placements', reach: 'Total reach', engagement: 'Engagement', synced: 'synced',
     coverage: 'Coverage', sourceUpdated: 'Source updated', privacy: 'Aggregated · identities hidden',
@@ -42,8 +42,8 @@ function ProjectAvatar({ name, logo, size = 'h-11 w-11' }) {
   const [failed, setFailed] = useState(false);
   const hue = [...String(name || '')].reduce((sum, char) => (sum + char.charCodeAt(0)) % 360, 0);
   const src = logo ? (logo.startsWith('/') || logo.startsWith('http') ? logo : `/${logo}`) : '';
-  return <div className={`${size} relative shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[var(--ink-2)]`} style={{ background: `linear-gradient(145deg, hsl(${hue} 48% 35% / .9), rgba(13,15,18,.96))` }}>
-    {src && !failed ? <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} /> : <span className="flex h-full w-full items-center justify-center font-mono text-[11px] font-bold tracking-[.08em] text-white/90">{initialsFor(name)}</span>}
+  return <div className={`${size} relative shrink-0 overflow-hidden rounded-xl border border-[var(--border)]`} style={{ background: `linear-gradient(145deg, hsl(${hue} 55% 90%), hsl(${hue} 45% 82%))` }}>
+    {src && !failed ? <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} /> : <span className="flex h-full w-full items-center justify-center font-mono text-[11px] font-bold tracking-[.08em] text-[var(--ink)]/70">{initialsFor(name)}</span>}
   </div>;
 }
 
@@ -52,7 +52,7 @@ function Metric({ label, value, tone = 'text-[var(--bone)]', note }) {
 }
 
 function EmptyState({ message, detail, lang = 'zh' }) {
-  return <div className="border border-dashed border-[var(--rule-strong)] bg-[rgba(237,232,225,.025)] px-6 py-16 text-center"><div className="mono text-xs uppercase tracking-[.18em] text-[var(--ember-soft)]">{lang === 'en' ? 'DATA SNAPSHOT' : '数据快照'}</div><div className="mt-4 display text-2xl font-semibold">{message}</div><p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-[var(--bone-dim)]">{detail}</p></div>;
+  return <div className="border border-dashed border-[var(--border)] bg-[var(--surface-muted)] px-6 py-16 text-center rounded-2xl"><div className="mono text-xs uppercase tracking-[.18em] text-[var(--accent)]">{lang === 'en' ? 'DATA SNAPSHOT' : '数据快照'}</div><div className="mt-4 display text-2xl font-semibold text-[var(--ink)]">{message}</div><p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-[var(--bone-dim)]">{detail}</p></div>;
 }
 
 function projectLabel(item, copy) {
@@ -75,8 +75,8 @@ function projectCard(item) {
 
 function CaseCard({ item, copy }) {
   const name = projectLabel(item, copy);
-  return <a href={`/cases/${encodeURIComponent(item.projectSlug)}`} className="group block border border-[var(--rule)] bg-[rgba(13,15,18,.74)] p-5 transition hover:-translate-y-0.5 hover:border-[rgba(255,122,69,.55)] hover:bg-[rgba(21,24,29,.9)]">
-    <div className="flex items-start justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><ProjectAvatar name={name} logo={item.logo} /><div className="min-w-0"><div className="mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.source === 'mixed' ? 'MIXED' : item.source === 'campaign' ? 'CAMPAIGN' : 'LEGACY'} · {item.dataQuality === 'complete' ? copy.verified : copy.partial}</div><h3 className="display mt-3 truncate text-lg font-bold text-white transition group-hover:text-[var(--ember-soft)]">{name}</h3></div></div><div className="flex shrink-0 items-center gap-2"><span className="rounded-full border border-[rgba(255,122,69,.34)] bg-[rgba(255,122,69,.08)] px-2.5 py-1 font-mono text-[10px] font-medium tracking-[.04em] text-[var(--ember-soft)]">{copy.placementLabel(item.placements || 1)}</span><span className="mono text-xs text-[var(--bone-dim)]">↗</span></div></div>
+  return <a href={`/cases/${encodeURIComponent(item.projectSlug)}`} className="group block border border-[var(--border)] bg-[var(--surface)] rounded-2xl p-5 transition hover:-translate-y-0.5 hover:border-[var(--accent)] hover:shadow-[0_4px_20px_rgba(29,111,218,.10)]">
+    <div className="flex items-start justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><ProjectAvatar name={name} logo={item.logo} /><div className="min-w-0"><div className="mono text-[10px] uppercase tracking-[.16em] text-[var(--bone-dim)]">{item.source === 'mixed' ? 'MIXED' : item.source === 'campaign' ? 'CAMPAIGN' : 'LEGACY'} · {item.dataQuality === 'complete' ? copy.verified : copy.partial}</div><h3 className="display mt-3 truncate text-lg font-bold text-[var(--ink)] transition group-hover:text-[var(--accent)]">{name}</h3></div></div><div className="flex shrink-0 items-center gap-2"><span className="rounded-full border border-[var(--accent-border)] bg-[rgba(29,111,218,.08)] px-2.5 py-1 font-mono text-[10px] font-medium tracking-[.04em] text-[var(--accent)]">{copy.placementLabel(item.placements || 1)}</span><span className="mono text-xs text-[var(--bone-dim)]">↗</span></div></div>
     <div className="mt-5 grid grid-cols-2 gap-y-4 border-t border-[var(--rule)] pt-4 sm:grid-cols-4"><Metric label={copy.reach} value={compact(item.impressions)} /><Metric label={copy.engagement} value={compact(item.engagements)} tone="text-[var(--teal)]" /><Metric label="CPM" value={item.cpm ? item.cpm.toFixed(2) : '—'} /><Metric label={copy.projectBudget} value={item.projectBudget ? compact(item.projectBudget) : '—'} /></div>
     <div className="mt-5 flex items-center justify-between gap-3 mono text-[10px] tracking-[.12em] text-[var(--bone-dim)]"><span>{dateLabel(item.createdAt, copy === copyByLanguage.en ? 'en' : 'zh')}</span><span>{item.placementBudget ? `${copy.placementBudget} · ${compact(item.placementBudget)} USDC` : copy.projectAggregate}</span></div>
   </a>;
@@ -128,8 +128,8 @@ function App() {
     <main className="mx-auto max-w-[1320px] px-5 pb-24 pt-14 md:px-8 md:pt-16">
       <section className="grid gap-10 border-b border-[var(--rule)] pb-14 lg:grid-cols-[1.1fr_.9fr] lg:items-end">
         <div>
-          <div className="mono text-[11px] uppercase tracking-[.18em] text-[var(--ember-soft)]">PUBLIC CASE LIBRARY · V1</div>
-          <h1 className="display mt-5 max-w-3xl break-words text-4xl font-bold leading-[1.04] text-white sm:text-5xl md:text-6xl">{copy.title}</h1>
+          <div className="mono text-[11px] uppercase tracking-[.18em] text-[var(--accent)]">PUBLIC CASE LIBRARY · V1</div>
+          <h1 className="display mt-5 max-w-3xl break-words text-4xl font-bold leading-[1.04] text-[var(--ink)] sm:text-5xl md:text-6xl">{copy.title}</h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-[var(--bone-dim)]">{copy.intro}</p>
         </div>
         <div className="grid grid-cols-2 gap-x-6 gap-y-7 border-t border-[var(--rule)] pt-6 sm:grid-cols-3 lg:grid-cols-5 lg:border-t-0 lg:pt-0">
@@ -137,7 +137,7 @@ function App() {
           <Metric label={copy.placements} value={summary ? nf.format(summary.meta?.counts?.placements || summary.meta?.counts?.cases || 0) : '—'} />
           <Metric label={copy.reach} value={summary ? compact(metrics.impressions) : '—'} />
           <Metric label={copy.engagement} value={summary ? compact(metrics.engagements) : '—'} tone="text-[var(--teal)]" />
-          <Metric label="Campaign CPM" value={summary ? (metrics.bySource?.campaign?.cpm || metrics.cpm || 0).toFixed(2) : '—'} tone="text-[var(--ember-soft)]" />
+          <Metric label="Campaign CPM" value={summary ? (metrics.bySource?.campaign?.cpm || metrics.cpm || 0).toFixed(2) : '—'} tone="text-[var(--accent)]" />
         </div>
       </section>
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-b border-[var(--rule)] py-4 mono text-[10px] uppercase text-[var(--bone-dim)]">
@@ -151,12 +151,12 @@ function App() {
         {status === 'ready' && <>
           <div className="flex flex-col gap-4 border-y border-[var(--rule)] py-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap gap-2">
-              {[['', copy.all], ['campaign', 'Campaign']].map(([value, label]) => <button key={value} onClick={() => update('source', value)} className={`mono border px-3 py-2 text-[10px] uppercase transition ${filters.source === value ? 'border-[var(--ember)] bg-[rgba(255,122,69,.12)] text-white' : 'border-[var(--rule-strong)] text-[var(--bone-dim)] hover:text-white'}`}>{label}</button>)}
+              {[['', copy.all], ['campaign', 'Campaign']].map(([value, label]) => <button key={value} onClick={() => update('source', value)} className={`mono border px-3 py-2 text-[10px] uppercase transition ${filters.source === value ? 'border-[var(--accent)] bg-[rgba(29,111,218,.10)] text-[var(--accent)]' : 'border-[var(--border)] text-[var(--bone-dim)] hover:text-[var(--ink)] hover:border-[var(--rule-strong)]'}`}>{label}</button>)}
             </div>
             <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:flex">
-              <input value={filters.search} onChange={e => update('search', e.target.value)} placeholder={copy.search} className="min-w-0 border border-[var(--rule-strong)] bg-[var(--ink-2)] px-3 py-2 text-sm text-white outline-none placeholder:text-[var(--bone-dim)] focus:border-[var(--ember)]" />
-              <select value={filters.project} onChange={e => update('project', e.target.value)} className="min-w-0 border border-[var(--rule-strong)] bg-[var(--ink-2)] px-3 py-2 text-sm text-white outline-none"><option value="">{copy.allProjects}</option>{projects.map(item => <option key={item.slug} value={item.slug}>{item.name} · {copy.placementOption(item.placements || item.cases || 0)}</option>)}</select>
-              <select value={`${filters.sort}:${filters.direction}`} onChange={e => { const [sort, direction] = e.target.value.split(':'); setFilters(prev => ({ ...prev, sort, direction, page: 1 })); }} className="min-w-0 border border-[var(--rule-strong)] bg-[var(--ink-2)] px-3 py-2 text-sm text-white outline-none sm:col-span-2 xl:col-span-1">
+              <input value={filters.search} onChange={e => update('search', e.target.value)} placeholder={copy.search} className="min-w-0 border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--bone-dim)] focus:border-[var(--accent)] rounded-lg" />
+              <select value={filters.project} onChange={e => update('project', e.target.value)} className="min-w-0 border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--ink)] outline-none rounded-lg"><option value="">{copy.allProjects}</option>{projects.map(item => <option key={item.slug} value={item.slug}>{item.name} · {copy.placementOption(item.placements || item.cases || 0)}</option>)}</select>
+              <select value={`${filters.sort}:${filters.direction}`} onChange={e => { const [sort, direction] = e.target.value.split(':'); setFilters(prev => ({ ...prev, sort, direction, page: 1 })); }} className="min-w-0 border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--ink)] outline-none rounded-lg sm:col-span-2 xl:col-span-1">
                 <option value="impressions:desc">{copy.highestReach}</option><option value="engagements:desc">{copy.highestEngagement}</option><option value="cpm:asc">{copy.lowestCpm}</option><option value="cpe:asc">{copy.lowestCpe}</option><option value="createdAt:desc">{copy.latest}</option>
               </select>
             </div>
@@ -166,7 +166,7 @@ function App() {
             <span>{copy.results(pageInfo.page, pageInfo.totalPages, pageInfo.total)}</span>
             <div className="flex gap-2"><button aria-label="Previous page" disabled={pageInfo.page <= 1} onClick={() => update('page', pageInfo.page - 1)} className="h-10 w-10 border border-[var(--rule-strong)] disabled:cursor-not-allowed disabled:opacity-30">←</button><button aria-label="Next page" disabled={pageInfo.page >= pageInfo.totalPages} onClick={() => update('page', pageInfo.page + 1)} className="h-10 w-10 border border-[var(--rule-strong)] disabled:cursor-not-allowed disabled:opacity-30">→</button></div>
           </div>
-          <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 mono text-[10px] uppercase text-[var(--bone-dim)]"><span>Snapshot {dateLabel(summary.meta?.generatedAt, lang)}</span><span>{copy.anonymous}</span><a href="/" className="text-[var(--ember-soft)] hover:text-white">{copy.back}</a></div>
+          <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 mono text-[10px] uppercase text-[var(--bone-dim)]"><span>Snapshot {dateLabel(summary.meta?.generatedAt, lang)}</span><span>{copy.anonymous}</span><a href="/" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{copy.back}</a></div>
         </>}
       </section>
     </main>
