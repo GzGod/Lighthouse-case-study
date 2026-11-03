@@ -126,7 +126,9 @@ function publicTopTweets(value) {
         retweets: number(tweet.retweets),
       };
     })
-    .filter(Boolean)
+    .filter(t => t !== null)
+    // Drop entries with no metrics AND no text — these are unsynced placeholders
+    .filter(t => t.views > 0 || t.likes > 0 || t.text.length > 0)
     .sort((a, b) => b.views - a.views)
     .slice(0, 3);
 }
