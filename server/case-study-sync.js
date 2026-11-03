@@ -388,7 +388,7 @@ async function readSourceRows() {
         krt.tweet_url,
         krt.tweet_text AS text
       FROM unified_campaign_participants ucp
-      JOIN kol_raw_tweets krt ON krt.kol_id = ucp."userId"
+      JOIN kol_raw_tweets krt ON krt.kol_id = ucp."userId"::text
       WHERE ucp."campaignId" = ANY($1::bigint[])
         AND krt.tweet_url IS NOT NULL
         AND krt.tweet_url ~ '^https://(www\\.)?(x|twitter)\\.com/[a-zA-Z0-9_]+/status/\\d+'
