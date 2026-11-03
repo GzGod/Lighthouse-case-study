@@ -21,6 +21,48 @@ module.exports = function mount(pool) {
     }
   });
 
+  // GET /api/enrichment/debug-anon — probe anonymous campaigns in source DB
+  router.get('/debug-anon', authMiddleware, async (req, res) => {
+    try {
+      const { Pool } = require('pg');
+      const cs = process.env.LIGHTHOUSE_SOURCE_DATABASE_URL || process.env.SOURCE_DATABASE_URL || '';
+      if (!cs) return res.json({ error: 'no source DB URL', sourceConnected: false });
+      const normalized = cs.replace(/([?&])sslmode=[^&]+&?/i, '$1').replace(/[?&]$/, '');
+      const srcPool = new Pool({ connectionString: normalized, ssl: { rejectUnauthorized: false }, max: 1 });
+
+      // Check which columns exist on unified_campaigns
+      const { rows: colRows } = await srcPool.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='unified_campaigns'
+        ORDER BY column_name
+      `);
+      const cols = colRows.map(r => r.column_name);
+
+      // Check status values used
+      const { rows: statusRows } = await srcPool.query(`
+        SELECT status, COUNT(*) FROM unified_campaigns GROUP BY status ORDER BY count DESC LIMIT 10
+      `);
+
+      // Count anonymous campaigns
+      const hasStatus = cols.includes('status');
+      const hasProjName = cols.includes('projectName');
+      const hasConsumed = cols.includes('consumedBudget');
+      const countQuery = `
+        SELECT COUNT(*) as total
+        FROM unified_campaigns c
+        WHERE ${hasStatus ? "c.status = 'ENDED'" : 'TRUE'}
+          AND ${hasProjName ? `(c."projectName" IS NULL OR c."projectName" = '')` : 'TRUE'}
+          AND ${hasConsumed ? 'COALESCE(c."consumedBudget"::numeric, 0) > 0' : 'TRUE'}
+      `;
+      const { rows: countRows } = await srcPool.query(countQuery);
+
+      await srcPool.end();
+      res.json({ cols, statusValues: statusRows, anonCount: countRows[0]?.total, hasStatus, hasProjName, hasConsumed });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   router.get('/projects/:slug/enrichment', async (req, res) => {
     const slug = req.params.slug;
     try {
