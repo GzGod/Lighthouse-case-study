@@ -239,33 +239,44 @@ async function inferProjectFromTweets(sourcePool, campaignId, knownProjects = []
 async function fetchAnonymousCampaignStats(sourcePool) {
   if (!sourcePool) return [];
   try {
+    // Check which optional columns exist before querying — source DB schema
+    // may not have all fields like targetUsername, requiredMentions, etc.
+    const { rows: colRows } = await sourcePool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='unified_campaigns'
+    `);
+    const cols = new Set(colRows.map(r => r.column_name));
+    const opt = (name) => cols.has(name) ? `"${name}"` : 'NULL';
+    const optJson = (name) => cols.has(name) ? `"${name}"` : `'[]'`;
+
     const { rows } = await sourcePool.query(`
       SELECT
         c.id,
-        c."totalBudget",
-        c."consumedBudget",
-        c.type,
-        c."createdAt",
-        c."tweetAuthorHandle",
-        c."requiredHashtags",
-        c."requiredMentions",
-        c."targetUsername",
+        ${opt('totalBudget')}     AS "totalBudget",
+        ${opt('consumedBudget')}  AS "consumedBudget",
+        ${opt('type')}            AS type,
+        ${opt('createdAt')}       AS "createdAt",
+        ${opt('tweetAuthorHandle')} AS "tweetAuthorHandle",
+        ${optJson('requiredHashtags')}::jsonb AS "requiredHashtags",
+        ${optJson('requiredMentions')}::jsonb AS "requiredMentions",
+        ${opt('targetUsername')}  AS "targetUsername",
         COUNT(p.id) as participant_count,
         COALESCE(SUM(p.views), 0) as total_views,
         COALESCE(SUM(p.likes + p.retweets + p.replies), 0) as total_engagement
       FROM unified_campaigns c
       LEFT JOIN unified_campaign_participants p ON c.id = p."campaignId"
       WHERE c.status = 'ENDED'
-        AND (c."projectName" IS NULL OR c."projectName" = '')
-        AND c."consumedBudget" > 0
+        AND (${opt('projectName')} IS NULL OR ${opt('projectName')} = '')
+        AND COALESCE(${opt('consumedBudget')}::numeric, 0) > 0
       GROUP BY c.id
       HAVING COALESCE(SUM(p.views), 0) > 1000
       ORDER BY total_views DESC
-      LIMIT 30
+      LIMIT 50
     `);
+    console.log(`[enrichment] anonymous campaigns found: ${rows.length}`);
     return rows;
   } catch (e) {
-    console.warn(`[enrichment] anonymous campaigns: ${e.message}`);
+    console.warn(`[enrichment] anonymous campaigns query failed: ${e.message}`);
     return [];
   }
 }
