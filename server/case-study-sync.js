@@ -24,9 +24,12 @@ function withFallbackTopTweets(payload) {
       ...payload.meta,
       privacy: 'Project metrics are aggregated; only the three highest-reach public X posts for each placement are linked on project detail pages.',
     },
-    cases: payload.cases.map(item => item.topTweets?.length ? item : {
-      ...item,
-      topTweets: fallbackTopTweets[item.id] || [],
+    cases: payload.cases.map(item => {
+      if (item.topTweets?.length) return item;
+      const fallback = (fallbackTopTweets[item.id] || [])
+        // Drop unsynced placeholder tweets (URL but no views/likes/text)
+        .filter(t => Number(t.views) > 0 || Number(t.likes) > 0 || String(t.text || '').trim().length > 0);
+      return { ...item, topTweets: fallback };
     }),
   };
 }
