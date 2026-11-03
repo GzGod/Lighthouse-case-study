@@ -382,42 +382,43 @@ async function readSourceRows() {
   );
   if (needTweets.length) {
     const campaignIds = [...new Set(needTweets.map(r => String(r.campaignId)))];
-    const { rows: tweetRows } = await pool.query(`
-      SELECT DISTINCT ON (ucp."campaignId", krt.tweet_url)
-        ucp."campaignId",
-        krt.tweet_url,
-        krt.tweet_text AS text
-      FROM unified_campaign_participants ucp
-      JOIN kol_raw_tweets krt ON krt.kol_id::text = ucp."userId"::text
-      WHERE ucp."campaignId" = ANY($1::bigint[])
-        AND krt.tweet_url IS NOT NULL
-        AND krt.tweet_url ~ '^https://(www\\.)?(x|twitter)\\.com/[a-zA-Z0-9_]+/status/\\d+'
-        AND krt.tweet_text IS NOT NULL
-        AND LENGTH(krt.tweet_text) > 10
-      ORDER BY ucp."campaignId", krt.tweet_url
-    `, [campaignIds.map(Number).filter(Boolean)]);
-    // Group by campaignId, take top 3 per campaign (by views, fallback to likes)
-    const byCampaign = new Map();
-    for (const t of tweetRows) {
-      const cid = String(t.campaignId);
-      if (!byCampaign.has(cid)) byCampaign.set(cid, []);
-      const arr = byCampaign.get(cid);
-      if (arr.length < 3) arr.push(t);
-    }
-    // Attach to rows, shaped like tweetsData entries
-    for (const row of needTweets) {
-      const cid = String(row.campaignId);
-      const tweets = byCampaign.get(cid) || [];
-      if (tweets.length) {
-        row.tweetsData = tweets.map(t => ({
-          tweetUrl: t.tweet_url,
-          text: t.text,
-          views: Number(t.views || 0),
-          likes: Number(t.likes || 0),
-          replies: Number(t.replies || 0),
-          retweets: Number(t.retweets || 0),
-        }));
+    try {
+      const { rows: tweetRows } = await pool.query(`
+        SELECT DISTINCT ON (ucp."campaignId", krt.tweet_url)
+          ucp."campaignId",
+          krt.tweet_url,
+          krt.tweet_text AS text
+        FROM unified_campaign_participants ucp
+        JOIN kol_raw_tweets krt ON krt.kol_id::text = ucp."userId"::text
+        WHERE ucp."campaignId" = ANY($1::bigint[])
+          AND krt.tweet_url IS NOT NULL
+          AND krt.tweet_url ~ '^https://(www\\.)?(x|twitter)\\.com/[a-zA-Z0-9_]+/status/\\d+'
+          AND krt.tweet_text IS NOT NULL
+          AND LENGTH(krt.tweet_text) > 10
+        ORDER BY ucp."campaignId", krt.tweet_url
+      `, [campaignIds.map(Number).filter(Boolean)]);
+      // Group by campaignId, take top 3 per campaign
+      const byCampaign = new Map();
+      for (const t of tweetRows) {
+        const cid = String(t.campaignId);
+        if (!byCampaign.has(cid)) byCampaign.set(cid, []);
+        const arr = byCampaign.get(cid);
+        if (arr.length < 3) arr.push(t);
       }
+      // Attach to rows, shaped like tweetsData entries
+      for (const row of needTweets) {
+        const cid = String(row.campaignId);
+        const tweets = byCampaign.get(cid) || [];
+        if (tweets.length) {
+          row.tweetsData = tweets.map(t => ({
+            tweetUrl: t.tweet_url,
+            text: t.text,
+            views: 0, likes: 0, replies: 0, retweets: 0,
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn(`[sync] kol_raw_tweets fallback skipped: ${e.message}`);
     }
   }
 
