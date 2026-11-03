@@ -13,9 +13,10 @@ module.exports = function mount(pool) {
   // POST /api/enrichment/run — manual trigger for the enrichment worker
   router.post('/run', authMiddleware, async (req, res) => {
     try {
-      const { runEnrichment } = require('../enrichment-worker');
-      res.json({ ok: true, message: 'Enrichment started in background' });
+      const { runEnrichment, resolveAnonymousCampaigns } = require('../enrichment-worker');
+      res.json({ ok: true, message: 'Enrichment and anon resolution started in background' });
       runEnrichment(pool).catch(e => console.error('[enrichment] manual run error:', e.message));
+      resolveAnonymousCampaigns(pool).catch(e => console.error('[enrichment] anon resolve error:', e.message));
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
