@@ -181,11 +181,11 @@ function useProject() {
 }
 
 function GlassCard({ children, className = "" }) {
-  return <div className={`case-glass rounded-[3px] border border-[var(--rule-strong)] bg-[rgba(13,15,18,.72)] shadow-[0_24px_80px_rgba(0,0,0,.28)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[rgba(255,122,69,.42)] hover:bg-[rgba(21,24,29,.82)] ${className}`}>{children}</div>;
+  return <div className={`case-glass rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_3px_rgba(0,0,0,.04),0_8px_24px_rgba(0,0,0,.04)] transition duration-300 hover:border-[var(--accent-border)] hover:shadow-[0_2px_8px_rgba(0,0,0,.06),0_12px_32px_rgba(8,116,140,.06)] ${className}`}>{children}</div>;
 }
 
 function CircleIcon({ children }) {
-  return <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[rgba(255,122,69,.36)] bg-[rgba(255,122,69,.08)] text-[var(--ember-soft)]">{children}</span>;
+  return <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--accent-border)] bg-[rgba(8,116,140,.06)] text-[var(--accent)] font-mono text-sm">{children}</span>;
 }
 
 function PlaceholderArt({ large = false, label = "项目主视觉 / 方案展示" }) {
