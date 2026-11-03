@@ -233,6 +233,7 @@ function Sidebar({ page, setPage, onLogout }) {
     { key: 'case-study', label: '公开案例数据' },
     { key: 'ip-cases', label: 'IP 案例' },
     { key: 'images', label: '图片库' },
+    { key: 'pending', label: '匿名活动认领' },
   ];
   return <aside className="cms-sidebar">
     <h2>LIGHTHOUSE</h2>
@@ -1199,6 +1200,142 @@ function ImagesPage() {
   </div>;
 }
 
+/* ── Pending Campaigns (manual labelling for anonymous campaigns) ── */
+function PendingCampaignsPage() {
+  const [data, setData] = useState({ pending: [], resolved: [] });
+  const [slugs, setSlugs] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    Promise.all([
+      api('/admin/pending-campaigns'),
+      api('/admin/pending-campaigns/known-slugs'),
+    ]).then(([d, s]) => {
+      setData(d || { pending: [], resolved: [] });
+      setSlugs(s || {});
+      setError('');
+    }).catch(e => setError(e.message)).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const resolve = (row, slug) => {
+    setBusy(row.id);
+    api(`/admin/pending-campaigns/${row.id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ slug, name: slugs[slug] || slug }),
+    }).then(() => load()).catch(e => setError(e.message)).finally(() => setBusy(null));
+  };
+
+  const discard = (row) => {
+    if (!confirm('Discard this campaign? It will be removed from the pending list.')) return;
+    setBusy(row.id);
+    api(`/admin/pending-campaigns/${row.id}`, { method: 'DELETE' })
+      .then(() => load()).catch(e => setError(e.message)).finally(() => setBusy(null));
+  };
+
+  const nf = new Intl.NumberFormat('en-US');
+  const fmt = (n) => nf.format(Math.round(Number(n || 0)));
+
+  return <div>
+    <h2>匿名活动认领</h2>
+    <p style={{color:'#888',fontSize:13,marginTop:4,marginBottom:16}}>
+      以下活动在源库里没有 projectName，已通过 KOL 推文的 @mentions、#hashtags、目标用户名交叉验证尝试匹配。
+      无法自动匹配的留在这里，你可以手动指定是哪个项目。
+    </p>
+
+    {error && <div className="alert alert-error">{error}</div>}
+    {loading && <div className="alert">加载中…</div>}
+
+    {!loading && data.pending.length === 0 && !data.resolved.length && (
+      <div className="alert">暂无匿名活动</div>
+    )}
+
+    {data.pending.length > 0 && <>
+      <h3 style={{marginTop:0}}>待认领 ({data.pending.length})</h3>
+      <div style={{display:'grid',gap:12,marginBottom:24}}>
+        {data.pending.map(row => {
+          const sig = row.signals || {};
+          return <div key={row.id} className="card" style={{padding:16}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+              <div style={{minWidth:0,flex:1}}>
+                <div style={{fontFamily:'monospace',fontSize:11,color:'#888',marginBottom:4}}>
+                  campaign #{row.campaign_id} · {row.created_at_source ? new Date(row.created_at_source).toLocaleDateString('zh-CN') : '—'}
+                </div>
+                <div style={{display:'flex',gap:16,flexWrap:'wrap',fontSize:13,marginTop:8}}>
+                  <span>预算 <b>{fmt(row.total_budget)}</b> USDC</span>
+                  <span>消耗 <b>{fmt(row.consumed_budget)}</b> USDC</span>
+                  <span>曝光 <b>{fmt(row.total_views)}</b></span>
+                  <span>互动 <b>{fmt(row.total_engagement)}</b></span>
+                  <span>参与 <b>{fmt(row.participant_count)}</b></span>
+                </div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:10,fontSize:12}}>
+                  {sig.targetHandle && <span className="tag">@target: {sig.targetHandle}</span>}
+                  {(sig.reqMentions || []).map((m,i) => <span key={i} className="tag">@{m}</span>)}
+                  {(sig.reqHashtags || []).map((h,i) => <span key={'h'+i} className="tag">#{h}</span>)}
+                </div>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'stretch',minWidth:240}}>
+                <select
+                  id={`sel-${row.id}`}
+                  defaultValue=""
+                  className="form-control"
+                  style={{width:'100%'}}
+                  onChange={(e) => e.target.dataset.slug = e.target.value}
+                >
+                  <option value="" disabled>选择项目…</option>
+                  {Object.entries(slugs).map(([slug, name]) =>
+                    <option key={slug} value={slug}>{name} ({slug})</option>
+                  )}
+                </select>
+                <div style={{display:'flex',gap:6}}>
+                  <button className="btn btn-primary" style={{flex:1}} disabled={busy === row.id}
+                    onClick={() => {
+                      const sel = document.getElementById(`sel-${row.id}`);
+                      if (!sel || !sel.value) { setError('请先选择项目'); return; }
+                      resolve(row, sel.value);
+                    }}>
+                    {busy === row.id ? '认领中…' : '认领'}
+                  </button>
+                  <button className="btn btn-ghost" disabled={busy === row.id}
+                    onClick={() => discard(row)}>丢弃</button>
+                </div>
+              </div>
+            </div>
+          </div>;
+        })}
+      </div>
+    </>}
+
+    {data.resolved.length > 0 && <>
+      <h3 style={{marginTop:24}}>已认领 ({data.resolved.length})</h3>
+      <div style={{display:'grid',gap:8,marginBottom:24}}>
+        {data.resolved.map(row => {
+          const sig = row.signals || {};
+          return <div key={row.id} className="card" style={{padding:12,opacity:0.85}}>
+            <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center',flexWrap:'wrap'}}>
+              <div style={{fontSize:13}}>
+                <b>{row.resolved_name}</b>{' '}
+                <span style={{color:'#888',fontFamily:'monospace',fontSize:11}}>
+                  ← campaign #{row.campaign_id} · via {row.resolved_by}
+                </span>
+              </div>
+              <div style={{display:'flex',gap:12,fontSize:12,color:'#666'}}>
+                <span>曝光 {fmt(row.total_views)}</span>
+                <span>互动 {fmt(row.total_engagement)}</span>
+                {row.resolved_at && <span>{new Date(row.resolved_at).toLocaleDateString('zh-CN')}</span>}
+              </div>
+            </div>
+          </div>;
+        })}
+      </div>
+    </>}
+  </div>;
+}
+
 /* ── App Shell ── */
 function AdminApp() {
   const [authed, setAuthed] = useState(!!localStorage.getItem('cms-token'));
@@ -1208,7 +1345,7 @@ function AdminApp() {
 
   if (!authed) return <LoginPage onLogin={() => setAuthed(true)} />;
 
-  const pages = { 'i18n': I18nPage, 'projects': ProjectsPage, 'case-study': CaseStudySyncPage, 'ip-cases': IPCasesPage, 'images': ImagesPage };
+  const pages = { 'i18n': I18nPage, 'projects': ProjectsPage, 'case-study': CaseStudySyncPage, 'ip-cases': IPCasesPage, 'images': ImagesPage, 'pending': PendingCampaignsPage };
   const PageComp = pages[page] || I18nPage;
 
   return <div className="cms-layout">
