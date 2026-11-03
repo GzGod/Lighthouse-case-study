@@ -45,13 +45,57 @@ module.exports = function mount(pool) {
   // POST /api/enrichment/debug-anon-run — directly run anon resolution and INSERT into pending_campaign_names
   router.post('/debug-anon-run', authMiddleware, async (req, res) => {
     try {
+      // First: test fetchAnonymousCampaignStats directly
+      const { Pool } = require('pg');
+      const cs = process.env.LIGHTHOUSE_SOURCE_DATABASE_URL || process.env.SOURCE_DATABASE_URL || '';
+      const normalized = cs.replace(/([?&])sslmode=[^&]+&?/i, '$1').replace(/[?&]$/, '');
+      const srcPool = new Pool({ connectionString: normalized, ssl: { rejectUnauthorized: false }, max: 1 });
+
+      // Run the exact same query as fetchAnonymousCampaignStats
+      const { rows: ucCols } = await srcPool.query(`SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='unified_campaigns'`);
+      const uc = new Set(ucCols.map(r => r.column_name));
+      const { rows: ucpCols } = await srcPool.query(`SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='unified_campaign_participants'`);
+      const ucp = new Set(ucpCols.map(r => r.column_name));
+
+      const opt = (name) => uc.has(name) ? `c."${name}"` : 'NULL';
+      const optJson = (name) => uc.has(name) ? `c."${name}"` : `'[]'`;
+      const pViews = ucp.has('views') ? 'p.views' : '0';
+      const pId = ucp.has('id') ? 'p.id' : 'NULL';
+
+      let queryResult = null;
+      let queryError = null;
+      try {
+        const { rows } = await srcPool.query(`
+          SELECT c.id, ${opt('totalBudget')} AS "totalBudget", ${opt('consumedBudget')} AS "consumedBudget",
+                 ${opt('tweetAuthorHandle')} AS "tweetAuthorHandle",
+                 ${optJson('requiredHashtags')}::jsonb AS "requiredHashtags",
+                 ${optJson('requiredMentions')}::jsonb AS "requiredMentions",
+                 ${opt('targetUsername')} AS "targetUsername",
+                 COUNT(${pId}) as participant_count,
+                 COALESCE(SUM(${pViews}), 0) as total_views
+          FROM unified_campaigns c
+          LEFT JOIN unified_campaign_participants p ON c.id = p."campaignId"
+          WHERE c.status = 'ENDED'
+            AND (${opt('projectName')} IS NULL OR ${opt('projectName')} = '')
+            AND COALESCE(${opt('consumedBudget')}::numeric, 0) > 0
+          GROUP BY c.id
+          ORDER BY total_views DESC NULLS LAST
+          LIMIT 10
+        `);
+        queryResult = rows.length;
+      } catch (qe) {
+        queryError = qe.message;
+      }
+
+      await srcPool.end();
+
+      // Then run resolveAnonymousCampaigns
       const { resolveAnonymousCampaigns } = require('../enrichment-worker');
-      // Run inline (not background) so we can see errors
       await resolveAnonymousCampaigns(pool);
-      // Then check what landed
       const { rows: total } = await pool.query(`SELECT COUNT(*) FROM pending_campaign_names`);
       const { rows: byStatus } = await pool.query(`SELECT resolved_by, COUNT(*) FROM pending_campaign_names GROUP BY resolved_by`);
-      res.json({ ok: true, total: total[0]?.count, byStatus });
+
+      res.json({ directQueryCount: queryResult, queryError, uc_has_consumedBudget: uc.has('consumedBudget'), total: total[0]?.count, byStatus });
     } catch (e) { res.status(500).json({ error: e.message, stack: e.stack?.slice(0, 800) }); }
   });
 
