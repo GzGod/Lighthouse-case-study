@@ -239,15 +239,26 @@ async function inferProjectFromTweets(sourcePool, campaignId, knownProjects = []
 async function fetchAnonymousCampaignStats(sourcePool) {
   if (!sourcePool) return [];
   try {
-    // Check which optional columns exist before querying — source DB schema
-    // may not have all fields like targetUsername, requiredMentions, etc.
-    const { rows: colRows } = await sourcePool.query(`
+    // Check which optional columns exist on both tables before querying
+    const { rows: ucCols } = await sourcePool.query(`
       SELECT column_name FROM information_schema.columns
       WHERE table_schema='public' AND table_name='unified_campaigns'
     `);
-    const cols = new Set(colRows.map(r => r.column_name));
-    const opt = (name) => cols.has(name) ? `"${name}"` : 'NULL';
-    const optJson = (name) => cols.has(name) ? `"${name}"` : `'[]'`;
+    const uc = new Set(ucCols.map(r => r.column_name));
+    const { rows: ucpCols } = await sourcePool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='unified_campaign_participants'
+    `);
+    const ucp = new Set(ucpCols.map(r => r.column_name));
+
+    const opt = (name) => uc.has(name) ? `c."${name}"` : 'NULL';
+    const optJson = (name) => uc.has(name) ? `c."${name}"` : `'[]'`;
+    // Participant columns — use COALESCE in case they're missing
+    const pViews = ucp.has('views') ? 'p.views' : '0';
+    const pLikes = ucp.has('likes') ? 'p.likes' : '0';
+    const pRetweets = ucp.has('retweets') ? 'p.retweets' : '0';
+    const pReplies = ucp.has('replies') ? 'p.replies' : '0';
+    const pId = ucp.has('id') ? 'p.id' : 'NULL';
 
     const { rows } = await sourcePool.query(`
       SELECT
@@ -260,18 +271,17 @@ async function fetchAnonymousCampaignStats(sourcePool) {
         ${optJson('requiredHashtags')}::jsonb AS "requiredHashtags",
         ${optJson('requiredMentions')}::jsonb AS "requiredMentions",
         ${opt('targetUsername')}  AS "targetUsername",
-        COUNT(p.id) as participant_count,
-        COALESCE(SUM(p.views), 0) as total_views,
-        COALESCE(SUM(p.likes + p.retweets + p.replies), 0) as total_engagement
+        COUNT(${pId}) as participant_count,
+        COALESCE(SUM(${pViews}), 0) as total_views,
+        COALESCE(SUM(${pLikes} + ${pRetweets} + ${pReplies}), 0) as total_engagement
       FROM unified_campaigns c
       LEFT JOIN unified_campaign_participants p ON c.id = p."campaignId"
       WHERE c.status = 'ENDED'
         AND (${opt('projectName')} IS NULL OR ${opt('projectName')} = '')
         AND COALESCE(${opt('consumedBudget')}::numeric, 0) > 0
       GROUP BY c.id
-      HAVING COALESCE(SUM(p.views), 0) > 1000
-      ORDER BY total_views DESC
-      LIMIT 50
+      ORDER BY total_views DESC NULLS LAST
+      LIMIT 100
     `);
     console.log(`[enrichment] anonymous campaigns found: ${rows.length}`);
     return rows;
