@@ -553,6 +553,33 @@ async function syncCaseStudy(cmsPool) {
   if (syncPromise) return syncPromise;
   syncPromise = (async () => {
     const rows = await readSourceRows();
+
+    // Apply resolved names from pending_campaign_names (auto + manual) so
+    // anonymous campaigns show their real project name in the snapshot
+    // instead of "Public campaign <hash>".
+    let resolvedMap = new Map();
+    try {
+      const { rows: resolvedRows } = await cmsPool.query(`
+        SELECT campaign_id, resolved_name, resolved_slug
+        FROM pending_campaign_names
+        WHERE resolved_by IS DISTINCT FROM 'pending'
+          AND resolved_name IS NOT NULL
+      `);
+      for (const r of resolvedRows) {
+        resolvedMap.set(String(r.campaign_id), { name: r.resolved_name, slug: r.resolved_slug });
+      }
+    } catch (e) {
+      console.warn(`[sync] resolved names lookup skipped: ${e.message}`);
+    }
+    if (resolvedMap.size) {
+      for (const row of rows) {
+        const cid = String(row.campaignId || '');
+        if (cid && resolvedMap.has(cid) && !cleanProjectName(row.projectName)) {
+          row.projectName = resolvedMap.get(cid).name;
+        }
+      }
+    }
+
     const payload = await enrichProjectLogos(buildSnapshot(rows));
     const client = await cmsPool.connect();
     try {
