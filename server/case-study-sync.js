@@ -367,12 +367,18 @@ async function readSourceRows() {
     ORDER BY ca."createdAt" DESC NULLS LAST, ca.id ASC
   `);
 
-  // Fallback: for campaign rows with no tweetsData, fetch top tweets by views
-  // from kol_raw_tweets joined to unified_campaign_participants. Picks the three
-  // highest-view public posts for each placement so the detail page can show
-  // "top posts by reach" even when the cases table didn't bundle them.
+  // Fallback: for campaign rows with no tweetsData (or tweetsData with no valid
+  // tweets), fetch top tweets from kol_raw_tweets joined to
+  // unified_campaign_participants. Picks the three highest-view public posts
+  // for each placement so the detail page can show "top posts by reach" even
+  // when the cases table didn't bundle them.
+  const hasValidTweets = (td) => {
+    if (!td) return false;
+    if (!Array.isArray(td)) return false;
+    return td.some(t => Number(t?.views) > 0 || Number(t?.likes) > 0 || String(t?.text || '').trim().length > 0);
+  };
   const needTweets = rows.filter(row =>
-    row.source === 'campaign' && row.campaignId && !row.tweetsData
+    row.source === 'campaign' && row.campaignId && !hasValidTweets(row.tweetsData)
   );
   if (needTweets.length) {
     const campaignIds = [...new Set(needTweets.map(r => String(r.campaignId)))];
@@ -390,10 +396,9 @@ async function readSourceRows() {
       WHERE ucp."campaignId" = ANY($1::bigint[])
         AND krt.tweet_url IS NOT NULL
         AND krt.tweet_url ~ '^https://(www\\.)?(x|twitter)\\.com/[a-zA-Z0-9_]+/status/\\d+'
-        AND COALESCE(krt.views, 0) > 0
-      ORDER BY ucp."campaignId", krt.views DESC
+      ORDER BY ucp."campaignId", COALESCE(krt.views, 0) DESC
     `, [campaignIds.map(Number).filter(Boolean)]);
-    // Group by campaignId, take top 3 per campaign
+    // Group by campaignId, take top 3 per campaign (by views, fallback to likes)
     const byCampaign = new Map();
     for (const t of tweetRows) {
       const cid = String(t.campaignId);
