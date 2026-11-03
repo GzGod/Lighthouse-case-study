@@ -22,6 +22,32 @@ module.exports = function mount(pool) {
   });
 
   // GET /api/enrichment/debug-anon — probe anonymous campaigns in source DB
+  // GET /api/enrichment/debug-pending — check pending_campaign_names table state
+  router.get('/debug-pending', authMiddleware, async (req, res) => {
+    try {
+      // Check table exists
+      const { rows: tableCheck } = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema='public' AND table_name='pending_campaign_names'
+        ) as exists
+      `);
+      const tableExists = tableCheck[0]?.exists;
+      if (!tableExists) return res.json({ tableExists: false });
+
+      const { rows: counts } = await pool.query(
+        `SELECT resolved_by, COUNT(*) FROM pending_campaign_names GROUP BY resolved_by`);
+      const { rows: total } = await pool.query(`SELECT COUNT(*) FROM pending_campaign_names`);
+      const { rows: sample } = await pool.query(
+        `SELECT * FROM pending_campaign_names LIMIT 5`);
+
+      res.json({ tableExists: true, total: total[0]?.count, byStatus: counts, sample });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+
   router.get('/debug-anon', authMiddleware, async (req, res) => {
     try {
       const { Pool } = require('pg');
