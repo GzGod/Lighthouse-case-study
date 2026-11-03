@@ -526,9 +526,9 @@ async function runEnrichment(cmsPool) {
 
     console.log('[enrichment] Starting anonymous campaign resolution...');
     const anonCampaigns = await fetchAnonymousCampaignStats(sourcePool);
-  console.log(`[enrichment] ${anonCampaigns.length} anonymous campaigns to resolve`);
+    console.log(`[enrichment] ${anonCampaigns.length} anonymous campaigns to resolve`);
 
-  for (const row of anonCampaigns) {
+    for (const row of anonCampaigns) {
     const campaignId = String(row.id);
     let resolvedSlug = null;
     let resolvedName = null;
@@ -658,9 +658,9 @@ async function runEnrichment(cmsPool) {
         JSON.stringify({ targetHandle, reqMentions, reqHashtags }),
       ]);
     }
-  }
+    }
 
-  console.log('[enrichment] Run complete.');
+    console.log('[enrichment] Run complete.');
   } catch (anonErr) {
     console.error('[enrichment] Anonymous resolution error:', anonErr.message);
   }
