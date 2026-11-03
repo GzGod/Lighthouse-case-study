@@ -162,6 +162,22 @@ async function initDB() {
       enriched_at TIMESTAMPTZ DEFAULT NOW(),
       enrichment_errors JSONB DEFAULT '{}'
     );
+    CREATE TABLE IF NOT EXISTS pending_campaign_names (
+      id BIGSERIAL PRIMARY KEY,
+      campaign_id TEXT NOT NULL UNIQUE,
+      total_budget NUMERIC DEFAULT 0,
+      consumed_budget NUMERIC DEFAULT 0,
+      total_views BIGINT DEFAULT 0,
+      total_engagement BIGINT DEFAULT 0,
+      participant_count INTEGER DEFAULT 0,
+      created_at_source TIMESTAMPTZ,
+      signals JSONB DEFAULT '{}'::jsonb,
+      resolved_slug TEXT,
+      resolved_name TEXT,
+      resolved_by TEXT DEFAULT 'pending',
+      resolved_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
     CREATE TABLE IF NOT EXISTS ip_cases (
       id SERIAL PRIMARY KEY,
       slug TEXT UNIQUE NOT NULL,

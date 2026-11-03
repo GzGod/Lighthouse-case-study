@@ -76,6 +76,7 @@ async function start() {
   app.use('/api/case-study', require('./routes/case-study'));
   app.use('/api/enrichment', require('./routes/enrichment')(pool));
   app.use('/api/upload', require('./routes/upload')(pool));
+  app.use('/api/admin', require('./routes/admin')(pool));
 
   // Serve static files
   const staticRoot = path.join(__dirname, '..');
