@@ -7,8 +7,20 @@
 
 const express = require('express');
 const router = express.Router();
+const { authMiddleware } = require('../auth');
 
 module.exports = function mount(pool) {
+  // POST /api/enrichment/run — manual trigger for the enrichment worker
+  router.post('/run', authMiddleware, async (req, res) => {
+    try {
+      const { runEnrichment } = require('../enrichment-worker');
+      res.json({ ok: true, message: 'Enrichment started in background' });
+      runEnrichment(pool).catch(e => console.error('[enrichment] manual run error:', e.message));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   router.get('/projects/:slug/enrichment', async (req, res) => {
     const slug = req.params.slug;
     try {
