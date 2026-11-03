@@ -30,34 +30,34 @@ module.exports = function mount(pool) {
       const normalized = cs.replace(/([?&])sslmode=[^&]+&?/i, '$1').replace(/[?&]$/, '');
       const srcPool = new Pool({ connectionString: normalized, ssl: { rejectUnauthorized: false }, max: 1 });
 
-      // Check which columns exist on unified_campaigns
-      const { rows: colRows } = await srcPool.query(`
+      // Check columns on both tables
+      const { rows: ucCols } = await srcPool.query(`
         SELECT column_name FROM information_schema.columns
-        WHERE table_schema='public' AND table_name='unified_campaigns'
-        ORDER BY column_name
-      `);
-      const cols = colRows.map(r => r.column_name);
+        WHERE table_schema='public' AND table_name='unified_campaigns' ORDER BY column_name`);
+      const { rows: ucpCols } = await srcPool.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='unified_campaign_participants' ORDER BY column_name`);
 
-      // Check status values used
-      const { rows: statusRows } = await srcPool.query(`
-        SELECT status, COUNT(*) FROM unified_campaigns GROUP BY status ORDER BY count DESC LIMIT 10
+      const uc = ucCols.map(r => r.column_name);
+      const ucp = ucpCols.map(r => r.column_name);
+
+      // Sample 3 anonymous campaigns with their signals
+      const { rows: sample } = await srcPool.query(`
+        SELECT id, "projectName", "tweetAuthorHandle", "requiredHashtags", "requiredMentions", "targetUsername",
+               "consumedBudget", "totalBudget", status
+        FROM unified_campaigns
+        WHERE status = 'ENDED'
+          AND ("projectName" IS NULL OR "projectName" = '')
+          AND COALESCE("consumedBudget"::numeric, 0) > 0
+        LIMIT 5
       `);
 
-      // Count anonymous campaigns
-      const hasStatus = cols.includes('status');
-      const hasProjName = cols.includes('projectName');
-      const hasConsumed = cols.includes('consumedBudget');
-      const countQuery = `
-        SELECT COUNT(*) as total
-        FROM unified_campaigns c
-        WHERE ${hasStatus ? "c.status = 'ENDED'" : 'TRUE'}
-          AND ${hasProjName ? `(c."projectName" IS NULL OR c."projectName" = '')` : 'TRUE'}
-          AND ${hasConsumed ? 'COALESCE(c."consumedBudget"::numeric, 0) > 0' : 'TRUE'}
-      `;
-      const { rows: countRows } = await srcPool.query(countQuery);
+      // Count status values
+      const { rows: statusRows } = await srcPool.query(
+        `SELECT status, COUNT(*) FROM unified_campaigns GROUP BY status ORDER BY count DESC LIMIT 8`);
 
       await srcPool.end();
-      res.json({ cols, statusValues: statusRows, anonCount: countRows[0]?.total, hasStatus, hasProjName, hasConsumed });
+      res.json({ uc_cols: uc, ucp_cols: ucp, statusValues: statusRows, anonSample: sample });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
