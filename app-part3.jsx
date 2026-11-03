@@ -4,9 +4,10 @@ const { KpiSection, BenchmarkBand, PersonalIPSection, ImageDivider } = window.Ap
 const { Nav, Footer, Hero, AboutSection } = window.App_Part1;
 const R = window.Recharts;
 
-function projectCaseHref(project) {
+function projectCaseHref(project, hasSnapshot = false) {
   const slug = String(project?.slug || '').trim();
-  return slug ? `/projects/${encodeURIComponent(slug)}` : '#';
+  if (!slug) return '#';
+  return `/${hasSnapshot ? 'cases' : 'projects'}/${encodeURIComponent(slug)}`;
 }
 
 function PublicDataSection() {
@@ -199,7 +200,7 @@ function MatrixSection(){
                     <tr key={r.slug || r.name} className="rule-t hover:bg-[var(--surface-muted)] transition">
                       <td className="py-4 pr-4 font-mono text-[12px] text-[var(--bone-dim)]">{String(i+1).padStart(2,"0")}</td>
                       <td className="py-4 pr-4 font-cn text-[16px]" style={{color:"var(--bone)"}}>
-                        <a href={projectCaseHref(r)} className="group flex items-center gap-3">
+                        <a href={projectCaseHref(r, Boolean(publicSummary?.projects?.length))} className="group flex items-center gap-3">
                           {r.logo ? <img src={r.logo} alt="" className="w-[24px] h-[24px] rounded object-cover flex-shrink-0" style={{background:"var(--surface-muted)"}}/> : <span className="w-[24px] h-[24px] rounded bg-[var(--canvas)] flex-shrink-0"/>}
                           <span className="transition group-hover:text-[var(--ember-soft)]">{r.name}</span>
                         </a>
