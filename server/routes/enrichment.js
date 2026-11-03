@@ -45,50 +45,14 @@ module.exports = function mount(pool) {
   // POST /api/enrichment/debug-anon-run — directly run anon resolution and INSERT into pending_campaign_names
   router.post('/debug-anon-run', authMiddleware, async (req, res) => {
     try {
-      const { Pool } = require('pg');
-      const cs = process.env.LIGHTHOUSE_SOURCE_DATABASE_URL || process.env.SOURCE_DATABASE_URL || '';
-      if (!cs) return res.json({ error: 'no source DB' });
-      const normalized = cs.replace(/([?&])sslmode=[^&]+&?/i, '$1').replace(/[?&]$/, '');
-      const srcPool = new Pool({ connectionString: normalized, ssl: { rejectUnauthorized: false }, max: 1 });
-
-      // Get 5 anon campaigns
-      const { rows: anonRows } = await srcPool.query(`
-        SELECT c.id, c."tweetAuthorHandle", c."requiredMentions", c."requiredHashtags",
-               c."targetUsername", c."totalBudget", c."consumedBudget", c."createdAt"
-        FROM unified_campaigns c
-        WHERE c.status = 'ENDED'
-          AND (c."projectName" IS NULL OR c."projectName" = '')
-          AND COALESCE(c."consumedBudget"::numeric, 0) > 0
-        ORDER BY c."createdAt" DESC NULLS LAST
-        LIMIT 5
-      `);
-
-      // Try to INSERT each into pending_campaign_names
-      const results = [];
-      for (const row of anonRows) {
-        try {
-          await pool.query(`
-            INSERT INTO pending_campaign_names
-              (campaign_id, total_budget, consumed_budget, total_views, total_engagement,
-               participant_count, created_at_source, signals, resolved_by, updated_at)
-            VALUES ($1,$2,$3,0,0,0,$4,$5,'pending',NOW())
-            ON CONFLICT (campaign_id) DO UPDATE SET updated_at = NOW()
-          `, [
-            String(row.id),
-            Number(row.totalBudget) || 0,
-            Number(row.consumedBudget) || 0,
-            row.createdAt || null,
-            JSON.stringify({ tweetAuthorHandle: row.tweetAuthorHandle, requiredMentions: row.requiredMentions, requiredHashtags: row.requiredHashtags, targetUsername: row.targetUsername }),
-          ]);
-          results.push({ id: row.id, ok: true });
-        } catch (insertErr) {
-          results.push({ id: row.id, ok: false, error: insertErr.message });
-        }
-      }
-
-      await srcPool.end();
-      res.json({ anonCount: anonRows.length, results });
-    } catch (e) { res.status(500).json({ error: e.message, stack: e.stack?.slice(0, 500) }); }
+      const { resolveAnonymousCampaigns } = require('../enrichment-worker');
+      // Run inline (not background) so we can see errors
+      await resolveAnonymousCampaigns(pool);
+      // Then check what landed
+      const { rows: total } = await pool.query(`SELECT COUNT(*) FROM pending_campaign_names`);
+      const { rows: byStatus } = await pool.query(`SELECT resolved_by, COUNT(*) FROM pending_campaign_names GROUP BY resolved_by`);
+      res.json({ ok: true, total: total[0]?.count, byStatus });
+    } catch (e) { res.status(500).json({ error: e.message, stack: e.stack?.slice(0, 800) }); }
   });
 
 
