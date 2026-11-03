@@ -539,11 +539,14 @@ async function runEnrichment(cmsPool) {
     let resolvedBy = 'pending';
 
     // 1. Direct signals from campaign record fields
-    const targetHandle = (row.tweetauthorhandle || row.targetusername || '').toLowerCase().replace(/^@/, '');
-    const reqMentions = Array.isArray(row.requiredmentions) ? row.requiredmentions
-      : (typeof row.requiredmentions === 'string' ? JSON.parse(row.requiredmentions || '[]') : []);
-    const reqHashtags = Array.isArray(row.requiredhashtags) ? row.requiredhashtags
-      : (typeof row.requiredhashtags === 'string' ? JSON.parse(row.requiredhashtags || '[]') : []);
+    // pg returns quoted aliases with case preserved, so use the exact alias
+    const targetHandle = String(row.tweetAuthorHandle || row.targetUsername || '').toLowerCase().replace(/^@/, '');
+    const reqMentionsRaw = row.requiredMentions;
+    const reqHashtagsRaw = row.requiredHashtags;
+    const reqMentions = Array.isArray(reqMentionsRaw) ? reqMentionsRaw
+      : (typeof reqMentionsRaw === 'string' ? JSON.parse(reqMentionsRaw || '[]') : []);
+    const reqHashtags = Array.isArray(reqHashtagsRaw) ? reqHashtagsRaw
+      : (typeof reqHashtagsRaw === 'string' ? JSON.parse(reqHashtagsRaw || '[]') : []);
 
     // Check targetUsername / tweetAuthorHandle against known handles
     if (targetHandle && handleToSlug[targetHandle]) {
@@ -614,8 +617,8 @@ async function runEnrichment(cmsPool) {
           during_engagement = during_engagement + $5,
           enriched_at    = NOW()
         WHERE slug = $1
-      `, [resolvedSlug, row.totalbudget || 0, row.consumedbudget || 0,
-          row.total_views || 0, row.total_engagement || 0]);
+      `, [resolvedSlug, Number(row.totalBudget) || 0, Number(row.consumedBudget) || 0,
+          Number(row.total_views) || 0, Number(row.total_engagement) || 0]);
       // Record as resolved in pending table for audit trail
       await cmsPool.query(`
         INSERT INTO pending_campaign_names
@@ -630,9 +633,9 @@ async function runEnrichment(cmsPool) {
           resolved_at   = NOW(),
           updated_at    = NOW()
       `, [
-        campaignId, row.totalbudget || 0, row.consumedbudget || 0,
-        row.total_views || 0, row.total_engagement || 0,
-        row.participant_count || 0, row.createdat || null,
+        campaignId, Number(row.totalBudget) || 0, Number(row.consumedBudget) || 0,
+        Number(row.total_views) || 0, Number(row.total_engagement) || 0,
+        Number(row.participant_count) || 0, row.createdAt || null,
         JSON.stringify({ targetHandle, reqMentions, reqHashtags }),
         resolvedSlug, resolvedName, resolvedBy,
       ]);
@@ -653,9 +656,9 @@ async function runEnrichment(cmsPool) {
           -- do not overwrite a resolved_slug if admin already set it
         WHERE pending_campaign_names.resolved_by = 'pending'
       `, [
-        campaignId, row.totalbudget || 0, row.consumedbudget || 0,
-        row.total_views || 0, row.total_engagement || 0,
-        row.participant_count || 0, row.createdat || null,
+        campaignId, Number(row.totalBudget) || 0, Number(row.consumedBudget) || 0,
+        Number(row.total_views) || 0, Number(row.total_engagement) || 0,
+        Number(row.participant_count) || 0, row.createdAt || null,
         JSON.stringify({ targetHandle, reqMentions, reqHashtags }),
       ]);
     }
