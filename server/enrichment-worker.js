@@ -203,7 +203,7 @@ async function inferProjectFromTweets(sourcePool, campaignId, knownProjects = []
     const { rows } = await sourcePool.query(`
       SELECT krt.tweet_text
       FROM unified_campaign_participants ucp
-      JOIN kol_raw_tweets krt ON krt.kol_id = ucp."userId"
+      JOIN kol_raw_tweets krt ON krt.kol_id::text = ucp."userId"::text
       WHERE ucp."campaignId" = $1
         AND krt.tweet_text IS NOT NULL
         AND LENGTH(krt.tweet_text) > 20
