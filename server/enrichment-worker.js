@@ -508,28 +508,24 @@ async function runEnrichment(cmsPool) {
   }
 
   // ─── Resolve anonymous campaigns via cross-validation ────────────────────
-  // Build a reverse-lookup: twitter handle → slug, symbol/hashtag → slug
-  const handleToSlug = {};
-  const symbolToSlug = {};
-  for (const [slug, meta] of Object.entries(PROJECT_META)) {
-    if (meta.handle) handleToSlug[meta.handle.toLowerCase()] = slug;
-    if (meta.symbol) symbolToSlug[meta.symbol.toLowerCase()] = slug;
-  }
-  // Also map project names → slug via SLUG_TO_NAME
-  const nameToSlug = {};
-  for (const [slug, name] of Object.entries(SLUG_TO_NAME)) {
-    nameToSlug[name.toLowerCase()] = slug;
-  }
+  try {
+    // Build a reverse-lookup: twitter handle → slug, symbol/hashtag → slug
+    const handleToSlug = {};
+    const symbolToSlug = {};
+    for (const [slug, meta] of Object.entries(PROJECT_META)) {
+      if (meta.handle) handleToSlug[meta.handle.toLowerCase()] = slug;
+      if (meta.symbol) symbolToSlug[meta.symbol.toLowerCase()] = slug;
+    }
+    const nameToSlug = {};
+    for (const [slug, name] of Object.entries(SLUG_TO_NAME)) {
+      nameToSlug[name.toLowerCase()] = slug;
+    }
+    const knownProjects = Object.entries(PROJECT_META).map(([slug, meta]) => ({
+      slug, name: SLUG_TO_NAME[slug] || slug, symbol: meta.symbol || null, handle: meta.handle || null,
+    }));
 
-  // Build knownProjects list for keyword matching in tweet text
-  const knownProjects = Object.entries(PROJECT_META).map(([slug, meta]) => ({
-    slug,
-    name: SLUG_TO_NAME[slug] || slug,
-    symbol: meta.symbol || null,
-    handle: meta.handle || null,
-  }));
-
-  const anonCampaigns = await fetchAnonymousCampaignStats(sourcePool);
+    console.log('[enrichment] Starting anonymous campaign resolution...');
+    const anonCampaigns = await fetchAnonymousCampaignStats(sourcePool);
   console.log(`[enrichment] ${anonCampaigns.length} anonymous campaigns to resolve`);
 
   for (const row of anonCampaigns) {
@@ -665,6 +661,9 @@ async function runEnrichment(cmsPool) {
   }
 
   console.log('[enrichment] Run complete.');
+  } catch (anonErr) {
+    console.error('[enrichment] Anonymous resolution error:', anonErr.message);
+  }
 }
 
 // ─── Schedule ────────────────────────────────────────────────────────────────
