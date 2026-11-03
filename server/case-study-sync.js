@@ -27,8 +27,9 @@ function withFallbackTopTweets(payload) {
     cases: payload.cases.map(item => {
       if (item.topTweets?.length) return item;
       const fallback = (fallbackTopTweets[item.id] || [])
-        // Drop unsynced placeholder tweets (URL but no views/likes/text)
-        .filter(t => Number(t.views) > 0 || Number(t.likes) > 0 || String(t.text || '').trim().length > 0);
+        // Only drop entries with no usable URL — the X embed widget loads
+        // views/text itself, so zero-metric entries with a valid URL are fine.
+        .filter(t => t.url && t.id);
       return { ...item, topTweets: fallback };
     }),
   };
@@ -130,8 +131,9 @@ function publicTopTweets(value) {
       };
     })
     .filter(t => t !== null)
-    // Drop entries with no metrics AND no text — these are unsynced placeholders
-    .filter(t => t.views > 0 || t.likes > 0 || t.text.length > 0)
+    // Keep entries with a valid tweet URL — the X embed widget loads
+    // views/text itself, so zero-metric entries are still renderable.
+    .filter(t => t.url && t.id)
     .sort((a, b) => b.views - a.views)
     .slice(0, 3);
 }
