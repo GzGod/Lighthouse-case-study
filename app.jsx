@@ -248,8 +248,7 @@ function Hero(){
   return (
     <section id="top" className="relative min-h-[calc(100svh-98px)] md:min-h-[calc(100vh-98px)] flex flex-col overflow-hidden">
       <div className="absolute inset-0 hero-img"/>
-      <div className="absolute inset-0" style={{background:"linear-gradient(180deg, rgba(7,8,10,0.45) 0%, rgba(7,8,10,0.15) 35%, rgba(7,8,10,0.55) 75%, var(--ink) 100%)"}}/>
-      <div className="absolute inset-0 grid-bg opacity-40"/>
+      <div className="absolute inset-0 grid-bg opacity-30"/>
       <div className="relative flex-1 flex flex-col justify-end pt-32 sm:pt-36 md:pt-0 pb-14 sm:pb-20 md:pb-28">
         <div className="max-w-[1360px] mx-auto w-full px-5 sm:px-6 md:px-10">
           <Reveal className="absolute top-24 left-6 md:left-10 hide-sm">
@@ -262,32 +261,32 @@ function Hero(){
           </Reveal>
           <Reveal><div className="kicker mb-6">{t("hero.eyebrow")}</div></Reveal>
           <Reveal delay={1}>
-            <h1 className="max-w-full break-words font-display font-black leading-[0.98] bone-glow" style={{fontSize:lang === "en" ? "clamp(34px, 8vw, 76px)" : "clamp(34px, 10.5vw, 92px)", letterSpacing:"0", overflowWrap:"anywhere"}}>
+            <h1 className="max-w-full break-words font-display font-black leading-[0.98]" style={{fontSize:lang === "en" ? "clamp(34px, 8vw, 76px)" : "clamp(34px, 10.5vw, 92px)", letterSpacing:"0", overflowWrap:"anywhere"}}>
               <span data-i18n-key="hero.h1_a">{t("hero.h1_a")}</span><br/>
-              <span className="text-[var(--ember)] ember-glow"><span data-i18n-key="hero.h1_b">{t("hero.h1_b")}</span><br/><span data-i18n-key="hero.h1_c">{t("hero.h1_c")}</span></span>
+              <span className="text-[var(--accent)]"><span data-i18n-key="hero.h1_b">{t("hero.h1_b")}</span><br/><span data-i18n-key="hero.h1_c">{t("hero.h1_c")}</span></span>
             </h1>
           </Reveal>
           <Reveal delay={2} className="mt-7 sm:mt-8 max-w-2xl font-cn text-[15px] sm:text-[16px] md:text-[18px] leading-[1.7] text-[var(--bone-dim)]">
-            {Array.isArray(sub) ? <>{sub[0]}<span className="text-[var(--bone)]">{sub[1]}</span>{sub[2]}<span className="text-[var(--bone)]">{sub[3]}</span>{sub[4]}<span className="text-[var(--bone)]">{sub[5]}</span>{sub[6]}</> : sub}
+            {Array.isArray(sub) ? <>{sub[0]}<span className="text-[var(--ink)]">{sub[1]}</span>{sub[2]}<span className="text-[var(--ink)]">{sub[3]}</span>{sub[4]}<span className="text-[var(--ink)]">{sub[5]}</span>{sub[6]}</> : sub}
           </Reveal>
           <div className="mt-10 sm:mt-16 rule-t rule-b py-6 sm:py-8 grid grid-cols-1 lg:grid-cols-3 gap-7 sm:gap-8 lg:gap-10">
             <Reveal delay={2}>
               <div className="kicker">{publicSummary ? publicCopy.budget : t("hero.stat1.k")}</div>
-              <div className="mt-3 font-display font-black ember-glow tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", color:"var(--ember-soft)", letterSpacing:"-0.03em", lineHeight:0.98}}>
+              <div className="mt-3 font-display font-black tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", color:"var(--accent)", letterSpacing:"-0.03em", lineHeight:0.98}}>
                 <CountUp to={displayStats.totalBudget} decimals={publicSummary ? 2 : 0} />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{publicSummary ? publicCopy.budgetUnit : t("hero.stat1.u")}</div>
             </Reveal>
             <Reveal delay={3} className="pt-6 lg:pt-0 lg:border-l lg:border-[var(--rule)] lg:pl-10">
               <div className="kicker">{publicSummary ? publicCopy.impressions : t("hero.stat2.k")}</div>
-              <div className="mt-3 font-display font-black bone-glow tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", letterSpacing:"-0.03em", lineHeight:0.98}}>
+              <div className="mt-3 font-display font-black tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", color:"var(--ink)", letterSpacing:"-0.03em", lineHeight:0.98}}>
                 <CountUp to={displayStats.totalImp} />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{publicSummary ? publicCopy.impressionsUnit : tp("hero.stat2.u")}</div>
             </Reveal>
             <Reveal delay={4} className="pt-6 lg:pt-0 lg:border-l lg:border-[var(--rule)] lg:pl-10">
               <div className="kicker">{publicSummary ? publicCopy.er : t("hero.stat3.k")}</div>
-              <div className="mt-3 font-display font-black teal-glow tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", color:"var(--teal)", letterSpacing:"-0.03em", lineHeight:0.98}}>
+              <div className="mt-3 font-display font-black tnum whitespace-nowrap" style={{fontSize:"clamp(42px, 7vw, 72px)", color:"var(--accent)", letterSpacing:"-0.03em", lineHeight:0.98}}>
                 <CountUp to={displayStats.peakEr} decimals={2} suffix="%" />
               </div>
               <div className="mt-1 text-[13px] font-mono text-[var(--bone-dim)]">{publicSummary ? publicCopy.erUnit : tp("hero.stat3.u")}</div>
@@ -295,7 +294,7 @@ function Hero(){
           </div>
           <Reveal delay={3} className="mt-10 flex flex-wrap items-center gap-4">
             <a href="#about" className="btn-ember inline-flex justify-center w-full sm:w-auto px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:brightness-110 transition">{t("hero.cta1")}</a>
-            <a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="btn-bone inline-flex justify-center w-full sm:w-auto px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:text-[var(--ember)] transition">{t("hero.cta2")}</a>
+            <a href="https://t.me/xuegaozhanshen" target="_blank" rel="noopener noreferrer" className="btn-bone inline-flex justify-center w-full sm:w-auto px-5 py-2.5 rounded-[2px] text-[12px] font-mono uppercase tracking-[0.2em] hover:text-[var(--accent)] transition">{t("hero.cta2")}</a>
             <div className="basis-full sm:basis-auto text-[11px] font-mono tracking-[0.18em] leading-relaxed text-[var(--bone-dim)] sm:ml-2">{publicSummary ? publicCopy.foot : tp("hero.foot")}</div>
           </Reveal>
           <div className="hidden md:flex items-center gap-3 mt-16 text-[var(--bone-dim)]">
