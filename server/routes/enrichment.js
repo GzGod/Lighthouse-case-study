@@ -25,7 +25,6 @@ module.exports = function mount(pool) {
   // GET /api/enrichment/debug-pending — check pending_campaign_names table state
   router.get('/debug-pending', authMiddleware, async (req, res) => {
     try {
-      // Check table exists
       const { rows: tableCheck } = await pool.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables
@@ -34,17 +33,60 @@ module.exports = function mount(pool) {
       `);
       const tableExists = tableCheck[0]?.exists;
       if (!tableExists) return res.json({ tableExists: false });
-
       const { rows: counts } = await pool.query(
         `SELECT resolved_by, COUNT(*) FROM pending_campaign_names GROUP BY resolved_by`);
       const { rows: total } = await pool.query(`SELECT COUNT(*) FROM pending_campaign_names`);
-      const { rows: sample } = await pool.query(
-        `SELECT * FROM pending_campaign_names LIMIT 5`);
-
+      const { rows: sample } = await pool.query(`SELECT * FROM pending_campaign_names LIMIT 5`);
       res.json({ tableExists: true, total: total[0]?.count, byStatus: counts, sample });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/enrichment/debug-anon-run — directly run anon resolution and return result
+  router.post('/debug-anon-run', authMiddleware, async (req, res) => {
+    try {
+      const { fetchAnonymousCampaignStats, PROJECT_META, SLUG_TO_NAME } = (() => {
+        // inline minimal version for diagnosis
+        return { fetchAnonymousCampaignStats: null, PROJECT_META: null, SLUG_TO_NAME: null };
+      })();
+
+      const { Pool } = require('pg');
+      const cs = process.env.LIGHTHOUSE_SOURCE_DATABASE_URL || process.env.SOURCE_DATABASE_URL || '';
+      if (!cs) return res.json({ error: 'no source DB' });
+      const normalized = cs.replace(/([?&])sslmode=[^&]+&?/i, '$1').replace(/[?&]$/, '');
+      const srcPool = new Pool({ connectionString: normalized, ssl: { rejectUnauthorized: false }, max: 1 });
+
+      // Check ucp columns
+      const { rows: ucpCols } = await srcPool.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='unified_campaign_participants' ORDER BY column_name`);
+      const ucp = new Set(ucpCols.map(r => r.column_name));
+
+      const pViews = ucp.has('views') ? 'p.views' : '0';
+      const pLikes = ucp.has('likes') ? 'p.likes' : '0';
+      const pRetweets = ucp.has('retweets') ? 'p.retweets' : '0';
+      const pReplies = ucp.has('replies') ? 'p.replies' : '0';
+
+      // Run a simplified anon query with LIMIT 10
+      const { rows: anonRows } = await srcPool.query(`
+        SELECT
+          c.id, c."tweetAuthorHandle", c."requiredMentions", c."requiredHashtags",
+          c."targetUsername", c."totalBudget", c."consumedBudget", c."createdAt",
+          COUNT(p.id) as participant_count,
+          COALESCE(SUM(${pViews}), 0) as total_views,
+          COALESCE(SUM(${pLikes} + ${pRetweets} + ${pReplies}), 0) as total_engagement
+        FROM unified_campaigns c
+        LEFT JOIN unified_campaign_participants p ON c.id = p."campaignId"
+        WHERE c.status = 'ENDED'
+          AND (c."projectName" IS NULL OR c."projectName" = '')
+          AND COALESCE(c."consumedBudget"::numeric, 0) > 0
+        GROUP BY c.id
+        ORDER BY total_views DESC NULLS LAST
+        LIMIT 10
+      `);
+
+      await srcPool.end();
+      res.json({ ucp_cols: [...ucp].sort(), anonCount: anonRows.length, sample: anonRows.slice(0, 5) });
+    } catch (e) { res.status(500).json({ error: e.message, stack: e.stack?.slice(0, 500) }); }
   });
 
 
