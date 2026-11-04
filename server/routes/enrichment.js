@@ -132,15 +132,40 @@ module.exports = function mount(pool) {
       const uc = ucCols.map(r => r.column_name);
       const ucp = ucpCols.map(r => r.column_name);
 
-      // Sample 3 anonymous campaigns with their signals
+      // Dump ALL anonymous campaigns with every useful field, sorted by budget desc
       const { rows: sample } = await srcPool.query(`
-        SELECT id, "projectName", "tweetAuthorHandle", "requiredHashtags", "requiredMentions", "targetUsername",
-               "consumedBudget", "totalBudget", status
-        FROM unified_campaigns
-        WHERE status = 'ENDED'
-          AND ("projectName" IS NULL OR "projectName" = '')
-          AND COALESCE("consumedBudget"::numeric, 0) > 0
-        LIMIT 5
+        SELECT
+          c.id,
+          c."createdAt",
+          c."consumedBudget"::numeric AS "consumedBudget",
+          c."totalBudget"::numeric AS "totalBudget",
+          c."projectName",
+          c."tweetAuthorHandle",
+          c."tweetAuthorName",
+          c."tweetId",
+          c."tweetText",
+          c."targetUsername",
+          c."requiredMentions",
+          c."requiredHashtags",
+          c."requiredLinkUrl",
+          c."requiredSellingPoints",
+          c."brief",
+          c."title",
+          c."description",
+          c."keywords",
+          c."mode",
+          c."type",
+          c."poolKind",
+          c."minExposure",
+          c."minEngagement",
+          c."contact",
+          c.status
+        FROM unified_campaigns c
+        WHERE c.status = 'ENDED'
+          AND (c."projectName" IS NULL OR c."projectName" = '')
+          AND COALESCE(c."consumedBudget"::numeric, 0) > 0
+        ORDER BY c."consumedBudget"::numeric DESC
+        LIMIT 200
       `);
 
       // Count status values
