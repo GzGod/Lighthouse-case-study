@@ -17,13 +17,24 @@ module.exports = function adminRoutes(pool) {
           resolved_slug, resolved_name, resolved_by, resolved_at,
           updated_at
         FROM pending_campaign_names
-        ORDER BY
-          CASE WHEN resolved_by = 'pending' THEN 0 ELSE 1 END,
-          total_views DESC
+        WHERE resolved_by = 'pending'
+        ORDER BY total_views DESC
         LIMIT 200
       `);
-      const pending  = rows.filter(r => r.resolved_by === 'pending');
-      const resolved = rows.filter(r => r.resolved_by !== 'pending');
+      const { rows: resolvedRows } = await pool.query(`
+        SELECT
+          id, campaign_id, total_budget, consumed_budget,
+          total_views, total_engagement, participant_count,
+          created_at_source, signals,
+          resolved_slug, resolved_name, resolved_by, resolved_at,
+          updated_at
+        FROM pending_campaign_names
+        WHERE resolved_by IS DISTINCT FROM 'pending'
+        ORDER BY resolved_at DESC NULLS LAST
+        LIMIT 200
+      `);
+      const pending  = rows;
+      const resolved = resolvedRows;
       res.json({ pending, resolved });
     } catch (e) {
       console.error('[admin] pending-campaigns GET error:', e.message);
