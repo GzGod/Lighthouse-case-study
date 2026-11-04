@@ -64,6 +64,7 @@ module.exports = function mount(pool) {
 
       let queryResult = null;
       let queryError = null;
+      let modeSample = null;
       try {
         const { rows } = await srcPool.query(`
           SELECT c.id, ${opt('totalBudget')} AS "totalBudget", ${opt('consumedBudget')} AS "consumedBudget",
@@ -86,6 +87,18 @@ module.exports = function mount(pool) {
       } catch (qe) {
         queryError = qe.message;
       }
+      // Check mode values for anonymous campaigns
+      try {
+        const { rows: mr } = await srcPool.query(`
+          SELECT c."mode", COUNT(*) as cnt
+          FROM unified_campaigns c
+          WHERE c.status = 'ENDED'
+            AND (c."projectName" IS NULL OR c."projectName" = '')
+            AND COALESCE(c."consumedBudget"::numeric, 0) > 0
+          GROUP BY c."mode" ORDER BY cnt DESC
+        `);
+        modeSample = mr;
+      } catch (e2) { modeSample = { error: e2.message }; }
 
       await srcPool.end();
 
@@ -95,7 +108,7 @@ module.exports = function mount(pool) {
       const { rows: total } = await pool.query(`SELECT COUNT(*) FROM pending_campaign_names`);
       const { rows: byStatus } = await pool.query(`SELECT resolved_by, COUNT(*) FROM pending_campaign_names GROUP BY resolved_by`);
 
-      res.json({ directQueryCount: queryResult, queryError, uc_has_consumedBudget: uc.has('consumedBudget'), total: total[0]?.count, byStatus });
+      res.json({ directQueryCount: queryResult, queryError, modeSample, uc_has_consumedBudget: uc.has('consumedBudget'), total: total[0]?.count, byStatus });
     } catch (e) { res.status(500).json({ error: e.message, stack: e.stack?.slice(0, 800) }); }
   });
 
