@@ -641,19 +641,18 @@ async function syncCaseStudy(cmsPool) {
     } catch (e) {
       console.warn(`[sync] resolved names lookup skipped: ${e.message}`);
     }
+    let resolvedApplied = 0;
     if (resolvedMap.size) {
-      let applied = 0;
       for (const row of rows) {
         const cid = String(row.campaignId || '');
         if (cid && resolvedMap.has(cid) && !cleanProjectName(row.projectName)) {
           row.projectName = resolvedMap.get(cid).name;
-          applied++;
+          resolvedApplied++;
         }
       }
-      console.log(`[sync] resolvedMap: ${resolvedMap.size} entries, applied to ${applied} rows`);
-    } else {
-      console.log(`[sync] resolvedMap: empty`);
     }
+    // Expose debug info on the returned payload for diagnosis
+    const _debug = { resolvedMapSize: resolvedMap.size, resolvedApplied, totalRows: rows.length, sampleCampaignIds: rows.slice(0, 3).map(r => ({ campaignId: r.campaignId, projectName: r.projectName })) };
 
     const payload = await enrichProjectLogos(buildSnapshot(rows));
     const client = await cmsPool.connect();
@@ -672,7 +671,7 @@ async function syncCaseStudy(cmsPool) {
     } finally {
       client.release();
     }
-    return payload;
+    return { ...payload, _debug };
   })().finally(() => { syncPromise = null; });
   return syncPromise;
 }
