@@ -653,11 +653,11 @@ async function syncCaseStudy(cmsPool) {
     }
 
     // For anon rows still unresolved, try fetching targetUsername from source DB directly
-    // (these may have a raw projectName like a URL that cleanProjectName strips to empty,
-    //  so fetchAnonymousCampaignStats never picks them up because projectName != NULL)
     const anonRows = rows.filter(r => r.source === 'campaign' && !cleanProjectName(r.projectName));
+    let anonAutoResolved = 0, anonQueryErrors = [];
     if (anonRows.length) {
       const srcPool = getSourcePool();
+      if (!srcPool) anonQueryErrors.push('getSourcePool() returned null');
       const KNOWN_KOLS = new Set([
         'chasewang','bonnazhu','xuegaogx','ximi_btc','btc_alert_','star_okx',
         'violawgmi','web3sweetgirl','leslie_bit','willam7392','billywen_',
@@ -710,12 +710,14 @@ async function syncCaseStudy(cmsPool) {
         if (autoName) {
           row.projectName = autoName;
           resolvedApplied++;
+          anonAutoResolved++;
         }
       }
+      if (anonQueryErrors.length === 0 && !srcPool) anonQueryErrors.push('srcPool null');
     }
 
     // Debug info
-    const _debug = { resolvedMapSize: resolvedMap.size, resolvedApplied, totalRows: rows.length, anonRows: anonRows.length };
+    const _debug = { resolvedMapSize: resolvedMap.size, resolvedApplied, totalRows: rows.length, anonRows: anonRows.length, anonAutoResolved, anonQueryErrors };
 
     const payload = await enrichProjectLogos(buildSnapshot(rows));
     const client = await cmsPool.connect();
