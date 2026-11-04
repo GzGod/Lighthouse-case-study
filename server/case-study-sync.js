@@ -368,6 +368,11 @@ async function readSourceRows() {
     FROM public.cases ca
     LEFT JOIN public.unified_campaigns uc ON uc.id = ca."campaignId"
     WHERE ca."isShow" = TRUE
+      -- Exclude micro direct-invite records: anonymous (no projectName) with budget under 10 USDC
+      AND NOT (
+        (uc."projectName" IS NULL OR uc."projectName" = '')
+        AND COALESCE(ca."totalBudget", 0) < 10
+      )
     ORDER BY ca."createdAt" DESC NULLS LAST, ca.id ASC
   `);
 
@@ -433,14 +438,7 @@ function buildSnapshot(rows) {
   const projectMap = new Map();
   const usedSlugs = new Map();
   const orderedRows = [...rows]
-    .filter(row => {
-      // Always keep legacy rows that have a name
-      if (row.source !== 'campaign') return !!cleanProjectName(row.projectName);
-      // Filter out direct-invite campaigns: tweetAuthorHandle is set but no projectName
-      // These are private KOL commissions (~$2-5 each) not suitable for the public case library
-      if (!cleanProjectName(row.projectName) && row.tweetAuthorHandle) return false;
-      return true;
-    })
+    .filter(row => row.source === 'campaign' || cleanProjectName(row.projectName))
     .sort((a, b) => String(a.id).localeCompare(String(b.id)));
   const projectFor = (row) => {
     const rawName = cleanProjectName(row.projectName);
