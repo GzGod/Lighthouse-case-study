@@ -305,8 +305,8 @@ async function fetchAnonymousCampaignStats(sourcePool) {
         AND (${opt('projectName')} IS NULL OR ${opt('projectName')} = '')
         AND COALESCE(${opt('consumedBudget')}::numeric, 0) > 0
       GROUP BY c.id
-      ORDER BY total_views DESC NULLS LAST
-      LIMIT 100
+      ORDER BY c."consumedBudget"::numeric DESC
+      LIMIT 500
     `);
     console.log(`[enrichment] anonymous campaigns found: ${rows.length}`);
     return rows;
