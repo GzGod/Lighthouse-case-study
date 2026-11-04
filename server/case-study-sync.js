@@ -714,7 +714,11 @@ async function syncCaseStudy(cmsPool) {
                   }
                 }
               }
-              // Also try tweetsData from the cases row itself (already loaded by readSourceRows)
+              // Normalize autoName: strip common TLD-like suffixes so
+              // "dappos_com" maps to "dappos" (same slug as the main project)
+              if (autoName) {
+                autoName = autoName.replace(/[_\-](com|fi|io|ai|xyz|app|net|org|fun|gg)$/i, '');
+              }
               if (!autoName && row.tweetsData) {
                 try {
                   const td = typeof row.tweetsData === 'string' ? JSON.parse(row.tweetsData) : row.tweetsData;

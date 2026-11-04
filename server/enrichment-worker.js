@@ -75,6 +75,7 @@ const SLUG_TO_NAME = {
   'allora': 'Allora', 'maiga': 'Maiga', 'yei-finance': 'Yei Finance',
   'kamino': 'Kamino', 'fight-id': 'Fight.ID', 'sentient': 'Sentient',
   'ff': 'FF', 'lit-protocol': 'Lit Protocol', 'heyelsa': 'HeyElsa',
+  'dappos': 'DAPPOS',
 };
 
 const PROJECT_META = {
@@ -95,6 +96,7 @@ const PROJECT_META = {
   'ff':               { handle: null,               coingecko: null,              symbol: 'FF',      chain: 'bsc', dex_search: 'FF' },
   'lit-protocol':     { handle: 'LitProtocol',      coingecko: 'lit-protocol',    symbol: 'LITKEY',  chain: 'base' },
   'heyelsa':          { handle: 'heyelsaai',        coingecko: null,              symbol: null,      chain: null },
+  'dappos':           { handle: 'dappos_com',       coingecko: null,              symbol: 'DOS',     chain: null },
 };
 
 // ─── CoinGecko: current price + 30d history ─────────────────────────────────
