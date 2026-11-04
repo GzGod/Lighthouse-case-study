@@ -49,7 +49,23 @@ function fetchJson(url, opts = {}) {
   });
 }
 
-// ─── Project metadata: handles, coingecko ids, token symbols ─────────────────
+// ─── Known KOL handles that should NOT be treated as project names ───────────
+// These are personal content creators, not project accounts.
+const KNOWN_KOL_HANDLES = new Set([
+  'chasewang','bonnazhu','queenie_coinup','xuegaogx','ximi_btc','btc_alert_',
+  'star_okx','violawgmi','web3sweetgirl','leslie_bit','willam7392','billywen_',
+  '0xbeyondlee','airdropalchemy','airdropalchemis','captain_kent','zhanweic',
+  'modo1979','stone141319','7777chu','lyzdaodao','gonoyal','mktflywheel',
+  'renmianyihao','zujiu61637','jz_kuku','cryptosociety42','cn_crazylivedao',
+  'hotpot01','billywen_','crycryptor','zerofisher_','bnbgoudan','bnjieran',
+  'smark0428','crypto_dazui','btcpiggy','0xjason','1yes_yes1','xiaoming_web3',
+  'oncoin_live','pvyyu42928466','happyhaha0302','0xaurskyo','blocktvbee',
+  'crypto_ajane','hashkeyrwa','baisircrypto','huoshan007','bbjieran','bclaobai',
+  'xuegaogx','wadezone','garyvgroup','vintcessun','yuanshan0626','menta_sol',
+  '0xtz_defi','xincctnnq','quack_builder','varunlohade1','modo1979','biw',
+]);
+
+
 // All CoinGecko IDs and symbols verified via CoinGecko search API + DexScreener
 // "coingecko: null" = not listed on CoinGecko; dex-only or no TGE
 const SLUG_TO_NAME = {
@@ -551,6 +567,18 @@ async function resolveAnonymousCampaigns(cmsPool) {
 
     if (targetHandle && handleToSlug[targetHandle]) {
       resolvedSlug = handleToSlug[targetHandle]; resolvedBy = 'targetHandle';
+    }
+
+    // If targetUsername is set and not a known KOL, treat it as the project name
+    // (e.g. targetUsername=CottoniaAI → project slug "cottoniaai", name "CottoniaAI")
+    const rawTarget = String(row.targetUsername || '').trim();
+    if (!resolvedSlug && rawTarget && !KNOWN_KOL_HANDLES.has(rawTarget.toLowerCase())) {
+      const autoSlug = rawTarget.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56);
+      if (autoSlug) {
+        resolvedSlug = autoSlug;
+        resolvedName = rawTarget;
+        resolvedBy = 'targetUsername-auto';
+      }
     }
     if (!resolvedSlug) {
       for (const m of reqMentions) {
