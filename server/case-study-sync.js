@@ -669,10 +669,10 @@ async function syncCaseStudy(cmsPool) {
         if (srcPool) {
           try {
             const { rows: ucRows } = await srcPool.query(
-              `SELECT "targetUsername","tweetAuthorHandle","requiredMentions","requiredHashtags","tweetText"
+              `SELECT "projectName","targetUsername","tweetAuthorHandle","requiredMentions","requiredHashtags","tweetText","requiredLinkUrl","brief","description"
                FROM unified_campaigns WHERE id = $1 LIMIT 1`, [cid]);
             if (anonQueryErrors.length < 3) {
-              anonQueryErrors.push({ cid, found: ucRows.length, targetUsername: ucRows[0]?.targetUsername });
+              anonQueryErrors.push({ cid, found: ucRows.length, rawProjectName: ucRows[0]?.projectName, targetUsername: ucRows[0]?.targetUsername, tweetAuthorHandle: ucRows[0]?.tweetAuthorHandle, requiredLinkUrl: ucRows[0]?.requiredLinkUrl });
             }
             if (ucRows[0]) {
               const uc = ucRows[0];
