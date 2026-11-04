@@ -651,9 +651,71 @@ async function syncCaseStudy(cmsPool) {
         }
       }
     }
-    // Expose debug info on the returned payload for diagnosis
+
+    // For anon rows still unresolved, try fetching targetUsername from source DB directly
+    // (these may have a raw projectName like a URL that cleanProjectName strips to empty,
+    //  so fetchAnonymousCampaignStats never picks them up because projectName != NULL)
     const anonRows = rows.filter(r => r.source === 'campaign' && !cleanProjectName(r.projectName));
-    const _debug = { resolvedMapSize: resolvedMap.size, resolvedApplied, totalRows: rows.length, anonRows: anonRows.length, sampleAnonCampaignIds: anonRows.slice(0, 5).map(r => ({ campaignId: r.campaignId, projectName: r.projectName })), sampleResolvedIds: [...resolvedMap.keys()].slice(0, 5) };
+    if (anonRows.length) {
+      const srcPool = getSourcePool();
+      const KNOWN_KOLS = new Set([
+        'chasewang','bonnazhu','xuegaogx','ximi_btc','btc_alert_','star_okx',
+        'violawgmi','web3sweetgirl','leslie_bit','willam7392','billywen_',
+      ]);
+      for (const row of anonRows) {
+        const cid = String(row.campaignId || '');
+        if (!cid || resolvedMap.has(cid)) continue; // already resolved above
+        let autoName = null;
+        if (srcPool) {
+          try {
+            const { rows: ucRows } = await srcPool.query(
+              `SELECT "targetUsername","tweetAuthorHandle","requiredMentions","requiredHashtags","tweetText"
+               FROM unified_campaigns WHERE id = $1 LIMIT 1`, [cid]);
+            if (ucRows[0]) {
+              const uc = ucRows[0];
+              const target = String(uc.targetUsername || '').trim();
+              if (target && !KNOWN_KOLS.has(target.toLowerCase())) {
+                autoName = target;
+              }
+              // Upsert into pending_campaign_names (fire-and-forget)
+              const signals = JSON.stringify({ targetUsername: target, tweetAuthorHandle: uc.tweetAuthorHandle, requiredMentions: uc.requiredMentions, requiredHashtags: uc.requiredHashtags });
+              const autoSlug = autoName ? autoName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56) : null;
+              cmsPool.query(`
+                INSERT INTO pending_campaign_names
+                  (campaign_id, total_budget, consumed_budget, total_views, total_engagement,
+                   participant_count, created_at_source, signals,
+                   resolved_slug, resolved_name, resolved_by, resolved_at, updated_at)
+                VALUES ($1,$2,$3,$4,$5,0,$6,$7,$8,$9,$10,
+                  CASE WHEN $8 IS NOT NULL THEN NOW() ELSE NULL END, NOW())
+                ON CONFLICT (campaign_id) DO UPDATE SET
+                  signals     = EXCLUDED.signals,
+                  resolved_slug = COALESCE(EXCLUDED.resolved_slug, pending_campaign_names.resolved_slug),
+                  resolved_name = COALESCE(EXCLUDED.resolved_name, pending_campaign_names.resolved_name),
+                  resolved_by   = CASE WHEN pending_campaign_names.resolved_by = 'pending' THEN EXCLUDED.resolved_by
+                                       ELSE pending_campaign_names.resolved_by END,
+                  resolved_at   = CASE WHEN pending_campaign_names.resolved_by = 'pending' AND EXCLUDED.resolved_slug IS NOT NULL THEN NOW()
+                                       ELSE pending_campaign_names.resolved_at END,
+                  updated_at  = NOW()
+              `, [
+                cid,
+                Number(row.totalBudget) || 0, Number(row.totalBudget) || 0,
+                Number(row.totalViews) || 0, 0,
+                row.createdAt || null, signals,
+                autoSlug, autoName || null,
+                autoName ? 'targetUsername-auto' : 'pending',
+              ]).catch(e => console.warn('[sync] pending upsert error:', e.message));
+            }
+          } catch { /* ignore per-row errors */ }
+        }
+        if (autoName) {
+          row.projectName = autoName;
+          resolvedApplied++;
+        }
+      }
+    }
+
+    // Debug info
+    const _debug = { resolvedMapSize: resolvedMap.size, resolvedApplied, totalRows: rows.length, anonRows: anonRows.length };
 
     const payload = await enrichProjectLogos(buildSnapshot(rows));
     const client = await cmsPool.connect();
