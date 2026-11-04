@@ -642,12 +642,17 @@ async function syncCaseStudy(cmsPool) {
       console.warn(`[sync] resolved names lookup skipped: ${e.message}`);
     }
     if (resolvedMap.size) {
+      let applied = 0;
       for (const row of rows) {
         const cid = String(row.campaignId || '');
         if (cid && resolvedMap.has(cid) && !cleanProjectName(row.projectName)) {
           row.projectName = resolvedMap.get(cid).name;
+          applied++;
         }
       }
+      console.log(`[sync] resolvedMap: ${resolvedMap.size} entries, applied to ${applied} rows`);
+    } else {
+      console.log(`[sync] resolvedMap: empty`);
     }
 
     const payload = await enrichProjectLogos(buildSnapshot(rows));
