@@ -690,8 +690,31 @@ async function syncCaseStudy(cmsPool) {
               if (target && !KNOWN_KOLS.has(target.toLowerCase())) {
                 autoName = target;
               }
-              // Upsert into pending_campaign_names (fire-and-forget)
-              const signals = JSON.stringify({ targetUsername: target, tweetAuthorHandle: uc.tweetAuthorHandle, requiredMentions: uc.requiredMentions, requiredHashtags: uc.requiredHashtags });
+              // Try requiredLinkUrl domain as a project signal
+              if (!autoName && uc.requiredLinkUrl) {
+                try {
+                  const linkHost = new URL(uc.requiredLinkUrl).hostname.replace('www.', '');
+                  // e.g. gate.com → gate, foresoglobal.com → foresoglobal
+                  const domainName = linkHost.split('.')[0];
+                  if (domainName && domainName.length > 2 && !['google','t','twitter','x','forms','docs'].includes(domainName)) {
+                    autoName = domainName;
+                  }
+                } catch {}
+              }
+              // Try tweet text keyword matching via KOL tweets
+              if (!autoName && tweetTexts.length) {
+                const combined = tweetTexts.join(' ').toLowerCase();
+                // Extract @mentions from tweet text
+                const mentions = [...new Set((combined.match(/@(\w+)/g)||[]).map(m=>m.slice(1).toLowerCase()))];
+                // Check against known project handles
+                for (const m of mentions) {
+                  if (m && !KNOWN_KOLS.has(m) && m.length > 3) {
+                    // Use first @mention that looks like a project handle
+                    autoName = m; break;
+                  }
+                }
+              }
+              const signals = JSON.stringify({ targetUsername: target, tweetAuthorHandle: uc.tweetAuthorHandle, requiredMentions: uc.requiredMentions, requiredHashtags: uc.requiredHashtags, requiredLinkUrl: uc.requiredLinkUrl });
               const autoSlug = autoName ? autoName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56) : null;
               cmsPool.query(`
                 INSERT INTO pending_campaign_names
