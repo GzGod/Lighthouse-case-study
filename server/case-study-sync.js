@@ -671,8 +671,18 @@ async function syncCaseStudy(cmsPool) {
             const { rows: ucRows } = await srcPool.query(
               `SELECT "projectName","targetUsername","tweetAuthorHandle","requiredMentions","requiredHashtags","tweetText","requiredLinkUrl","brief","description"
                FROM unified_campaigns WHERE id = $1 LIMIT 1`, [cid]);
-            if (anonQueryErrors.length < 3) {
-              anonQueryErrors.push({ cid, found: ucRows.length, rawProjectName: ucRows[0]?.projectName, targetUsername: ucRows[0]?.targetUsername, tweetAuthorHandle: ucRows[0]?.tweetAuthorHandle, requiredLinkUrl: ucRows[0]?.requiredLinkUrl });
+            // Also try fetching tweet text from kol_raw_tweets for cross-validation
+            let tweetTexts = [];
+            try {
+              const { rows: twRows } = await srcPool.query(
+                `SELECT krt.tweet_text FROM unified_campaign_participants ucp
+                 JOIN kol_raw_tweets krt ON krt.kol_id::text = ucp."userId"::text
+                 WHERE ucp."campaignId" = $1 AND krt.tweet_text IS NOT NULL AND LENGTH(krt.tweet_text) > 20
+                 LIMIT 5`, [cid]);
+              tweetTexts = twRows.map(r => r.tweet_text);
+            } catch {}
+            if (anonQueryErrors.length < 5) {
+              anonQueryErrors.push({ cid, found: ucRows.length, rawProjectName: ucRows[0]?.projectName, targetUsername: ucRows[0]?.targetUsername, tweetAuthorHandle: ucRows[0]?.tweetAuthorHandle, requiredLinkUrl: ucRows[0]?.requiredLinkUrl, tweetTexts: tweetTexts.map(t => t.slice(0, 120)) });
             }
             if (ucRows[0]) {
               const uc = ucRows[0];
