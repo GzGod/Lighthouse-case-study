@@ -671,6 +671,9 @@ async function syncCaseStudy(cmsPool) {
             const { rows: ucRows } = await srcPool.query(
               `SELECT "targetUsername","tweetAuthorHandle","requiredMentions","requiredHashtags","tweetText"
                FROM unified_campaigns WHERE id = $1 LIMIT 1`, [cid]);
+            if (anonQueryErrors.length < 3) {
+              anonQueryErrors.push({ cid, found: ucRows.length, targetUsername: ucRows[0]?.targetUsername });
+            }
             if (ucRows[0]) {
               const uc = ucRows[0];
               const target = String(uc.targetUsername || '').trim();
