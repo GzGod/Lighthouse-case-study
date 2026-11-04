@@ -362,7 +362,9 @@ async function readSourceRows() {
       ca."tweetsData",
       uc."projectName",
       uc."projectLogo",
-      uc."requiredLinkUrl"
+      uc."requiredLinkUrl",
+      uc."mode",
+      uc."tweetAuthorHandle"
     FROM public.cases ca
     LEFT JOIN public.unified_campaigns uc ON uc.id = ca."campaignId"
     WHERE ca."isShow" = TRUE
@@ -431,7 +433,14 @@ function buildSnapshot(rows) {
   const projectMap = new Map();
   const usedSlugs = new Map();
   const orderedRows = [...rows]
-    .filter(row => row.source === 'campaign' || cleanProjectName(row.projectName))
+    .filter(row => {
+      // Always keep legacy rows that have a name
+      if (row.source !== 'campaign') return !!cleanProjectName(row.projectName);
+      // Filter out direct-invite campaigns: tweetAuthorHandle is set but no projectName
+      // These are private KOL commissions (~$2-5 each) not suitable for the public case library
+      if (!cleanProjectName(row.projectName) && row.tweetAuthorHandle) return false;
+      return true;
+    })
     .sort((a, b) => String(a.id).localeCompare(String(b.id)));
   const projectFor = (row) => {
     const rawName = cleanProjectName(row.projectName);
