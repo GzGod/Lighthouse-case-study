@@ -652,7 +652,8 @@ async function syncCaseStudy(cmsPool) {
       }
     }
     // Expose debug info on the returned payload for diagnosis
-    const _debug = { resolvedMapSize: resolvedMap.size, resolvedApplied, totalRows: rows.length, sampleCampaignIds: rows.slice(0, 3).map(r => ({ campaignId: r.campaignId, projectName: r.projectName })) };
+    const anonRows = rows.filter(r => r.source === 'campaign' && !cleanProjectName(r.projectName));
+    const _debug = { resolvedMapSize: resolvedMap.size, resolvedApplied, totalRows: rows.length, anonRows: anonRows.length, sampleAnonCampaignIds: anonRows.slice(0, 5).map(r => ({ campaignId: r.campaignId, projectName: r.projectName })), sampleResolvedIds: [...resolvedMap.keys()].slice(0, 5) };
 
     const payload = await enrichProjectLogos(buildSnapshot(rows));
     const client = await cmsPool.connect();
