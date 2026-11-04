@@ -714,6 +714,21 @@ async function syncCaseStudy(cmsPool) {
                   }
                 }
               }
+              // Also try tweetsData from the cases row itself (already loaded by readSourceRows)
+              if (!autoName && row.tweetsData) {
+                try {
+                  const td = typeof row.tweetsData === 'string' ? JSON.parse(row.tweetsData) : row.tweetsData;
+                  if (Array.isArray(td)) {
+                    const combined = td.map(t => String(t?.text || t?.tweetText || '')).join(' ').toLowerCase();
+                    const mentions = [...new Set((combined.match(/@(\w+)/g)||[]).map(m=>m.slice(1).toLowerCase()))];
+                    for (const m of mentions) {
+                      if (m && !KNOWN_KOLS.has(m) && m.length > 3 && !['twitter','x','gmail','google','docs','forms','t'].includes(m)) {
+                        autoName = m; break;
+                      }
+                    }
+                  }
+                } catch {}
+              }
               const signals = JSON.stringify({ targetUsername: target, tweetAuthorHandle: uc.tweetAuthorHandle, requiredMentions: uc.requiredMentions, requiredHashtags: uc.requiredHashtags, requiredLinkUrl: uc.requiredLinkUrl });
               const autoSlug = autoName ? autoName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56) : null;
               cmsPool.query(`
