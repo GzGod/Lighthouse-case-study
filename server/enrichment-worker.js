@@ -49,23 +49,6 @@ function fetchJson(url, opts = {}) {
   });
 }
 
-// ─── Known KOL handles that should NOT be treated as project names ───────────
-// These are personal content creators, not project accounts.
-const KNOWN_KOL_HANDLES = new Set([
-  'chasewang','bonnazhu','queenie_coinup','xuegaogx','ximi_btc','btc_alert_',
-  'star_okx','violawgmi','web3sweetgirl','leslie_bit','willam7392','billywen_',
-  '0xbeyondlee','airdropalchemy','airdropalchemis','captain_kent','zhanweic',
-  'modo1979','stone141319','7777chu','lyzdaodao','gonoyal','mktflywheel',
-  'renmianyihao','zujiu61637','jz_kuku','cryptosociety42','cn_crazylivedao',
-  'hotpot01','billywen_','crycryptor','zerofisher_','bnbgoudan','bnjieran',
-  'smark0428','crypto_dazui','btcpiggy','0xjason','1yes_yes1','xiaoming_web3',
-  'oncoin_live','pvyyu42928466','happyhaha0302','0xaurskyo','blocktvbee',
-  'crypto_ajane','hashkeyrwa','baisircrypto','huoshan007','bbjieran','bclaobai',
-  'xuegaogx','wadezone','garyvgroup','vintcessun','yuanshan0626','menta_sol',
-  '0xtz_defi','xincctnnq','quack_builder','varunlohade1','modo1979','biw',
-]);
-
-
 // All CoinGecko IDs and symbols verified via CoinGecko search API + DexScreener
 // "coingecko: null" = not listed on CoinGecko; dex-only or no TGE
 const SLUG_TO_NAME = {
@@ -217,104 +200,6 @@ async function fetchSocialVolume(sourcePool, handle) {
   } catch (e) {
     console.warn(`[enrichment] social volume ${handle}: ${e.message}`);
     return null;
-  }
-}
-
-// ─── Source DB: infer project name from KOL tweet content (cross-validation) ─
-// For campaigns with no projectName, scan KOL tweets for @mentions, hashtags,
-// URLs, and plain-text project name / token symbol keywords.
-// knownProjects: array of { name, symbol, handle, slug }
-async function inferProjectFromTweets(sourcePool, campaignId, knownProjects = []) {
-  if (!sourcePool || !campaignId) return null;
-  try {
-    const { rows } = await sourcePool.query(`
-      SELECT krt.tweet_text
-      FROM unified_campaign_participants ucp
-      JOIN kol_raw_tweets krt ON krt.kol_id::text = ucp."userId"::text
-      WHERE ucp."campaignId" = $1
-        AND krt.tweet_text IS NOT NULL
-        AND LENGTH(krt.tweet_text) > 20
-      LIMIT 30
-    `, [campaignId]);
-    if (!rows.length) return null;
-    const fullText = rows.map(r => r.tweet_text).join(' ');
-    const lower = fullText.toLowerCase();
-
-    const mentions = [...new Set((fullText.match(/@(\w+)/g) || []).map(m => m.slice(1).toLowerCase()))].slice(0, 10);
-    const hashtags = [...new Set((fullText.match(/#(\w+)/g) || []).map(h => h.slice(1).toLowerCase()))].slice(0, 10);
-    const domains  = [...new Set((fullText.match(/https?:\/\/[^\s]+/g) || []).map(u => { try { return new URL(u).hostname.replace('www.', ''); } catch { return null; } }).filter(Boolean))].slice(0, 5);
-
-    // Keyword match: project name / token symbol in tweet text
-    // Returns slug of first project whose name or symbol appears verbatim (word-boundary)
-    let keywordSlug = null;
-    for (const p of knownProjects) {
-      const terms = [p.name, p.symbol].filter(Boolean).map(t => t.toLowerCase());
-      for (const term of terms) {
-        if (term.length < 3) continue;
-        // Simple word-boundary check: surrounded by non-alphanumeric or start/end
-        const re = new RegExp(`(?:^|[^a-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:[^a-z0-9]|$)`);
-        if (re.test(lower)) { keywordSlug = p.slug; break; }
-      }
-      if (keywordSlug) break;
-    }
-
-    return { mentions, hashtags, domains, keywordSlug };
-  } catch { return null; }
-}
-
-// ─── Source DB: aggregate anonymous campaigns (no projectName) with tweet cross-validation ──
-async function fetchAnonymousCampaignStats(sourcePool) {
-  if (!sourcePool) return [];
-  try {
-    // Check which optional columns exist on both tables before querying
-    const { rows: ucCols } = await sourcePool.query(`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_schema='public' AND table_name='unified_campaigns'
-    `);
-    const uc = new Set(ucCols.map(r => r.column_name));
-    const { rows: ucpCols } = await sourcePool.query(`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_schema='public' AND table_name='unified_campaign_participants'
-    `);
-    const ucp = new Set(ucpCols.map(r => r.column_name));
-
-    const opt = (name) => uc.has(name) ? `c."${name}"` : 'NULL';
-    const optJson = (name) => uc.has(name) ? `to_json(c."${name}")::jsonb` : `'[]'::jsonb`;
-    // Participant columns — use COALESCE in case they're missing
-    const pViews = ucp.has('views') ? 'p.views' : '0';
-    const pLikes = ucp.has('likes') ? 'p.likes' : '0';
-    const pRetweets = ucp.has('retweets') ? 'p.retweets' : '0';
-    const pReplies = ucp.has('replies') ? 'p.replies' : '0';
-    const pId = ucp.has('id') ? 'p.id' : 'NULL';
-
-    const { rows } = await sourcePool.query(`
-      SELECT
-        c.id,
-        ${opt('totalBudget')}     AS "totalBudget",
-        ${opt('consumedBudget')}  AS "consumedBudget",
-        ${opt('type')}            AS type,
-        ${opt('createdAt')}       AS "createdAt",
-        ${opt('tweetAuthorHandle')} AS "tweetAuthorHandle",
-        ${optJson('requiredHashtags')}::jsonb AS "requiredHashtags",
-        ${optJson('requiredMentions')}::jsonb AS "requiredMentions",
-        ${opt('targetUsername')}  AS "targetUsername",
-        COUNT(${pId}) as participant_count,
-        COALESCE(SUM(${pViews}), 0) as total_views,
-        COALESCE(SUM(${pLikes} + ${pRetweets} + ${pReplies}), 0) as total_engagement
-      FROM unified_campaigns c
-      LEFT JOIN unified_campaign_participants p ON c.id = p."campaignId"
-      WHERE c.status = 'ENDED'
-        AND (${opt('projectName')} IS NULL OR ${opt('projectName')} = '')
-        AND COALESCE(${opt('consumedBudget')}::numeric, 0) > 0
-      GROUP BY c.id
-      ORDER BY c."consumedBudget"::numeric DESC
-      LIMIT 500
-    `);
-    console.log(`[enrichment] anonymous campaigns found: ${rows.length}`);
-    return rows;
-  } catch (e) {
-    console.warn(`[enrichment] anonymous campaigns query failed: ${e.message}`);
-    return [];
   }
 }
 
@@ -529,128 +414,6 @@ async function runEnrichment(cmsPool) {
   console.log('[enrichment] Main slug loop complete.');
 }
 
-// ─── Standalone anonymous campaign resolution ─────────────────────────────
-// Runs separately so CoinGecko rate-limiting in runEnrichment doesn't block it.
-async function resolveAnonymousCampaigns(cmsPool) {
-  const sourcePool = getSourcePool();
-  console.log('[enrichment] resolveAnonymousCampaigns starting...');
-
-  const handleToSlug = {};
-  const symbolToSlug = {};
-  for (const [slug, meta] of Object.entries(PROJECT_META)) {
-    if (meta.handle) handleToSlug[meta.handle.toLowerCase()] = slug;
-    if (meta.symbol) symbolToSlug[meta.symbol.toLowerCase()] = slug;
-  }
-  const nameToSlug = {};
-  for (const [slug, name] of Object.entries(SLUG_TO_NAME)) {
-    nameToSlug[name.toLowerCase()] = slug;
-  }
-  const knownProjects = Object.entries(PROJECT_META).map(([slug, meta]) => ({
-    slug, name: SLUG_TO_NAME[slug] || slug, symbol: meta.symbol || null, handle: meta.handle || null,
-  }));
-
-  const anonCampaigns = await fetchAnonymousCampaignStats(sourcePool);
-  console.log(`[enrichment] resolveAnonymousCampaigns: ${anonCampaigns.length} campaigns to process`);
-
-  let resolved = 0, pending = 0;
-  for (const row of anonCampaigns) {
-    const campaignId = String(row.id);
-    let resolvedSlug = null;
-    let resolvedName = null;
-    let resolvedBy = 'pending';
-
-    const targetHandle = String(row.tweetAuthorHandle || row.targetUsername || '').toLowerCase().replace(/^@/, '');
-    const reqMentionsRaw = row.requiredMentions;
-    const reqHashtagsRaw = row.requiredHashtags;
-    const reqMentions = Array.isArray(reqMentionsRaw) ? reqMentionsRaw
-      : (typeof reqMentionsRaw === 'string' ? JSON.parse(reqMentionsRaw || '[]') : []);
-    const reqHashtags = Array.isArray(reqHashtagsRaw) ? reqHashtagsRaw
-      : (typeof reqHashtagsRaw === 'string' ? JSON.parse(reqHashtagsRaw || '[]') : []);
-
-    if (targetHandle && handleToSlug[targetHandle]) {
-      resolvedSlug = handleToSlug[targetHandle]; resolvedBy = 'targetHandle';
-    }
-
-    // If targetUsername is set and not a known KOL, treat it as the project name
-    // (e.g. targetUsername=CottoniaAI → project slug "cottoniaai", name "CottoniaAI")
-    const rawTarget = String(row.targetUsername || '').trim();
-    if (!resolvedSlug && rawTarget && !KNOWN_KOL_HANDLES.has(rawTarget.toLowerCase())) {
-      const autoSlug = rawTarget.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56);
-      if (autoSlug) {
-        resolvedSlug = autoSlug;
-        resolvedName = rawTarget;
-        resolvedBy = 'targetUsername-auto';
-      }
-    }
-    if (!resolvedSlug) {
-      for (const m of reqMentions) {
-        const h = String(m).toLowerCase().replace(/^@/, '');
-        if (handleToSlug[h]) { resolvedSlug = handleToSlug[h]; resolvedBy = 'requiredMentions'; break; }
-        if (nameToSlug[h])   { resolvedSlug = nameToSlug[h];   resolvedBy = 'requiredMentions'; break; }
-      }
-    }
-    if (!resolvedSlug) {
-      for (const tag of reqHashtags) {
-        const t = String(tag).toLowerCase().replace(/^#/, '');
-        if (symbolToSlug[t]) { resolvedSlug = symbolToSlug[t]; resolvedBy = 'requiredHashtags'; break; }
-        if (nameToSlug[t])   { resolvedSlug = nameToSlug[t];   resolvedBy = 'requiredHashtags'; break; }
-      }
-    }
-    if (!resolvedSlug && sourcePool) {
-      const signals = await inferProjectFromTweets(sourcePool, row.id, knownProjects).catch(() => null);
-      if (signals) {
-        if (signals.keywordSlug) { resolvedSlug = signals.keywordSlug; resolvedBy = 'tweetKeyword'; }
-        if (!resolvedSlug) for (const m of signals.mentions) {
-          if (handleToSlug[m]) { resolvedSlug = handleToSlug[m]; resolvedBy = 'tweetMentions'; break; }
-          if (nameToSlug[m])   { resolvedSlug = nameToSlug[m];   resolvedBy = 'tweetMentions'; break; }
-        }
-        if (!resolvedSlug) for (const t of signals.hashtags) {
-          if (symbolToSlug[t]) { resolvedSlug = symbolToSlug[t]; resolvedBy = 'tweetHashtags'; break; }
-          if (nameToSlug[t])   { resolvedSlug = nameToSlug[t];   resolvedBy = 'tweetHashtags'; break; }
-        }
-        if (!resolvedSlug) for (const d of signals.domains) {
-          for (const [slug, meta] of Object.entries(PROJECT_META)) {
-            if (meta.handle && d.includes(meta.handle.toLowerCase())) { resolvedSlug = slug; resolvedBy = 'tweetDomain'; break; }
-          }
-          if (resolvedSlug) break;
-        }
-      }
-    }
-
-    const signals = JSON.stringify({ targetHandle, reqMentions, reqHashtags });
-    if (resolvedSlug) {
-      resolvedName = SLUG_TO_NAME[resolvedSlug] || resolvedSlug;
-      resolved++;
-      await cmsPool.query(`
-        INSERT INTO pending_campaign_names
-          (campaign_id, total_budget, consumed_budget, total_views, total_engagement,
-           participant_count, created_at_source, signals, resolved_slug, resolved_name, resolved_by, resolved_at, updated_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())
-        ON CONFLICT (campaign_id) DO UPDATE SET
-          resolved_slug=EXCLUDED.resolved_slug, resolved_name=EXCLUDED.resolved_name,
-          resolved_by=EXCLUDED.resolved_by, resolved_at=NOW(), updated_at=NOW()
-      `, [campaignId, Number(row.totalBudget)||0, Number(row.consumedBudget)||0,
-          Number(row.total_views)||0, Number(row.total_engagement)||0,
-          Number(row.participant_count)||0, row.createdAt||null, signals,
-          resolvedSlug, resolvedName, resolvedBy]).catch(e => console.warn('[enrichment] INSERT resolved error:', e.message));
-    } else {
-      pending++;
-      await cmsPool.query(`
-        INSERT INTO pending_campaign_names
-          (campaign_id, total_budget, consumed_budget, total_views, total_engagement,
-           participant_count, created_at_source, signals, resolved_by, updated_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',NOW())
-        ON CONFLICT (campaign_id) DO UPDATE SET
-          signals=EXCLUDED.signals, updated_at=NOW()
-        WHERE pending_campaign_names.resolved_by='pending'
-      `, [campaignId, Number(row.totalBudget)||0, Number(row.consumedBudget)||0,
-          Number(row.total_views)||0, Number(row.total_engagement)||0,
-          Number(row.participant_count)||0, row.createdAt||null, signals]).catch(e => console.warn('[enrichment] INSERT pending error:', e.message));
-    }
-  }
-  console.log(`[enrichment] resolveAnonymousCampaigns done: ${resolved} resolved, ${pending} pending`);
-}
-
 // ─── Schedule ────────────────────────────────────────────────────────────────
 function startEnrichmentSchedule(cmsPool) {
   // Run immediately on startup (non-blocking)
@@ -659,14 +422,6 @@ function startEnrichmentSchedule(cmsPool) {
   setInterval(() => {
     runEnrichment(cmsPool).catch(e => console.error('[enrichment] Error:', e.message));
   }, 6 * 60 * 60 * 1000);
-  // Run anonymous campaign resolution separately, 5 min after startup then every 2h
-  // (kept separate so CoinGecko rate limiting in the main loop doesn't block it)
-  setTimeout(() => {
-    resolveAnonymousCampaigns(cmsPool).catch(e => console.error('[enrichment] Anon resolve error:', e.message));
-    setInterval(() => {
-      resolveAnonymousCampaigns(cmsPool).catch(e => console.error('[enrichment] Anon resolve error:', e.message));
-    }, 2 * 60 * 60 * 1000);
-  }, 5 * 60 * 1000);
 }
 
-module.exports = { startEnrichmentSchedule, runEnrichment, resolveAnonymousCampaigns };
+module.exports = { startEnrichmentSchedule, runEnrichment };

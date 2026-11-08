@@ -340,15 +340,30 @@ function sanitizeSnapshot(payload) {
   };
 }
 
+// Case study scope: every TWEET-type reward pool on the platform except
+// direct invites (mode = INVITE). Drafts, pools awaiting review and pools
+// that were taken down never ran, so they are left out.
+const EXCLUDED_POOL_STATUSES = ['DRAFT', 'AWAITING_REVIEW_START', 'TAKEN_DOWN'];
+
+function hasValidTweets(value) {
+  return Array.isArray(value) && value.some(t => /\/status\/\d+/.test(String(t?.tweetUrl || '')));
+}
+
 async function readSourceRows() {
   const pool = getSourcePool();
   if (!pool) throw new Error('LIGHTHOUSE_SOURCE_DATABASE_URL is not configured');
-  const { rows } = await pool.query(`
+  const { rows: pools } = await pool.query(`
     SELECT
-      ca.id,
-      ca.source,
-      ca."campaignId",
-      ca."campaignType",
+      c.id AS "campaignId",
+      c."projectName",
+      c.title,
+      c."requiredMentions",
+      c."projectLogo",
+      c."requiredLinkUrl",
+      c."consumedBudget",
+      c."createdAt" AS "campaignCreatedAt",
+      c."updatedAt" AS "campaignUpdatedAt",
+      ca.id AS "caseId",
       ca."totalBudget",
       ca."totalViews",
       ca."totalLikes",
@@ -359,79 +374,167 @@ async function readSourceRows() {
       ca."createdAt",
       ca."updatedAt",
       ca."lastXSyncedAt",
-      ca."tweetsData",
-      uc."projectName",
-      uc."projectLogo",
-      uc."requiredLinkUrl",
-      uc."mode",
-      uc."tweetAuthorHandle"
-    FROM public.cases ca
-    LEFT JOIN public.unified_campaigns uc ON uc.id = ca."campaignId"
-    WHERE ca."isShow" = TRUE
-      -- Exclude micro direct-invite records: anonymous (no projectName) with budget under 10 USDC
-      AND NOT (
-        (uc."projectName" IS NULL OR uc."projectName" = '')
-        AND COALESCE(ca."totalBudget", 0) < 10
-      )
-    ORDER BY ca."createdAt" DESC NULLS LAST, ca.id ASC
-  `);
+      ca."tweetsData"
+    FROM public.unified_campaigns c
+    LEFT JOIN LATERAL (
+      SELECT * FROM public.cases x
+      WHERE x."campaignId" = c.id
+      ORDER BY x."isShow" DESC, x."updatedAt" DESC NULLS LAST
+      LIMIT 1
+    ) ca ON TRUE
+    WHERE c.type = 'TWEET'
+      AND c.mode <> 'INVITE'
+      AND c.status::text <> ALL($1::text[])
+    ORDER BY c."createdAt" DESC NULLS LAST, c.id ASC
+  `, [EXCLUDED_POOL_STATUSES]);
+  if (!pools.length) return [];
 
-  // Fallback: for campaign rows with no tweetsData (or tweetsData with no valid
-  // tweets), fetch top tweets from kol_raw_tweets joined to
-  // unified_campaign_participants. Picks the three highest-view public posts
-  // for each placement so the detail page can show "top posts by reach" even
-  // when the cases table didn't bundle them.
-  const hasValidTweets = (td) => {
-    if (!td) return false;
-    if (!Array.isArray(td)) return false;
-    return td.some(t => Number(t?.views) > 0 || Number(t?.likes) > 0 || String(t?.text || '').trim().length > 0);
-  };
-  const needTweets = rows.filter(row =>
-    row.source === 'campaign' && row.campaignId && !hasValidTweets(row.tweetsData)
-  );
-  if (needTweets.length) {
-    const campaignIds = [...new Set(needTweets.map(r => String(r.campaignId)))];
-    try {
-      const { rows: tweetRows } = await pool.query(`
-        SELECT DISTINCT ON (ucp."campaignId", krt.tweet_url)
-          ucp."campaignId",
-          krt.tweet_url,
-          krt.tweet_text AS text
-        FROM unified_campaign_participants ucp
-        JOIN kol_raw_tweets krt ON krt.kol_id::text = ucp."userId"::text
-        WHERE ucp."campaignId" = ANY($1::bigint[])
-          AND krt.tweet_url IS NOT NULL
-          AND krt.tweet_url ~ '^https://(www\\.)?(x|twitter)\\.com/[a-zA-Z0-9_]+/status/\\d+'
-          AND krt.tweet_text IS NOT NULL
-          AND LENGTH(krt.tweet_text) > 10
-        ORDER BY ucp."campaignId", krt.tweet_url
-      `, [campaignIds.map(Number).filter(Boolean)]);
-      // Group by campaignId, take top 3 per campaign
-      const byCampaign = new Map();
-      for (const t of tweetRows) {
-        const cid = String(t.campaignId);
-        if (!byCampaign.has(cid)) byCampaign.set(cid, []);
-        const arr = byCampaign.get(cid);
-        if (arr.length < 3) arr.push(t);
-      }
-      // Attach to rows, shaped like tweetsData entries
-      for (const row of needTweets) {
-        const cid = String(row.campaignId);
-        const tweets = byCampaign.get(cid) || [];
-        if (tweets.length) {
-          row.tweetsData = tweets.map(t => ({
-            tweetUrl: t.tweet_url,
-            text: t.text,
-            views: 0, likes: 0, replies: 0, retweets: 0,
-          }));
-        }
-      }
-    } catch (e) {
-      console.warn(`[sync] kol_raw_tweets fallback skipped: ${e.message}`);
-    }
+  // Pools without a cases record get their metrics and top posts from the
+  // participant submissions (withdrawn and declined submissions excluded).
+  const ids = pools.map(row => row.campaignId);
+  const participantFilter = `p."campaignId" = ANY($1::text[]) AND p.status::text <> 'WITHDRAWN' AND p."reviewStatus"::text IS DISTINCT FROM 'DECLINE'`;
+  const [{ rows: totals }, { rows: topRows }] = await Promise.all([
+    pool.query(`
+      SELECT p."campaignId", COUNT(*) AS participants,
+        SUM(COALESCE(p.views, 0)) AS views, SUM(COALESCE(p.likes, 0)) AS likes,
+        SUM(COALESCE(p.replies, 0)) AS replies, SUM(COALESCE(p.retweets, 0)) AS retweets
+      FROM public.unified_campaign_participants p
+      WHERE ${participantFilter}
+      GROUP BY p."campaignId"
+    `, [ids]),
+    pool.query(`
+      SELECT * FROM (
+        SELECT p."campaignId", p.submission->>'tweetUrl' AS "tweetUrl",
+          p.views, p.likes, p.replies, p.retweets,
+          ROW_NUMBER() OVER (PARTITION BY p."campaignId" ORDER BY COALESCE(p.views, 0) DESC) AS rank
+        FROM public.unified_campaign_participants p
+        WHERE ${participantFilter} AND p.submission->>'tweetUrl' IS NOT NULL
+      ) ranked
+      WHERE rank <= 3
+    `, [ids]),
+  ]);
+  const totalsById = new Map(totals.map(row => [row.campaignId, row]));
+  const topById = new Map();
+  for (const row of topRows) {
+    if (!topById.has(row.campaignId)) topById.set(row.campaignId, []);
+    topById.get(row.campaignId).push({ tweetUrl: row.tweetUrl, text: '', views: row.views, likes: row.likes, replies: row.replies, retweets: row.retweets });
   }
 
-  return rows;
+  return pools.map(row => {
+    const useCase = row.caseId && number(row.totalViews) > 0;
+    const agg = totalsById.get(row.campaignId) || {};
+    return {
+      id: row.caseId || row.campaignId,
+      source: 'campaign',
+      campaignId: row.campaignId,
+      campaignType: 'TWEET',
+      projectName: row.projectName,
+      title: row.title,
+      requiredMentions: row.requiredMentions,
+      projectLogo: row.projectLogo,
+      requiredLinkUrl: row.requiredLinkUrl,
+      totalBudget: row.caseId ? row.totalBudget : row.consumedBudget,
+      totalViews: useCase ? row.totalViews : agg.views,
+      totalLikes: useCase ? row.totalLikes : agg.likes,
+      totalReplies: useCase ? row.totalReplies : agg.replies,
+      totalRetweets: useCase ? row.totalRetweets : agg.retweets,
+      totalQuotes: useCase ? row.totalQuotes : 0,
+      kolsParticipate: useCase ? row.kolsParticipate : agg.participants,
+      createdAt: row.createdAt || row.campaignCreatedAt,
+      updatedAt: row.updatedAt || row.campaignUpdatedAt,
+      lastXSyncedAt: row.lastXSyncedAt,
+      tweetsData: hasValidTweets(row.tweetsData) ? row.tweetsData : (topById.get(row.campaignId) || []),
+    };
+  });
+}
+
+// ─── Project name resolution for pools without a projectName ────────────────
+// Signals, in order: an admin label, requiredMentions / title matched against
+// projects that do have a name, the first required mention, then the brand
+// word a title starts with. Names are then grouped by a normalized key so
+// "ForegateCN", "Fore_Gate" and "ForeGate" land in one project.
+const NAME_SUFFIXES = /(com|fi|io|ai|xyz|app|network|global|labs|protocol|finance|official|hq|cn|zh)$/;
+
+function nameKey(value) {
+  let key = String(value || '').toLowerCase().replace(/[^a-z0-9一-鿿]+/g, '');
+  for (let next = key.replace(NAME_SUFFIXES, ''); next !== key && next.length >= 3; next = key.replace(NAME_SUFFIXES, '')) key = next;
+  return key;
+}
+
+function mentionHandles(value) {
+  const list = Array.isArray(value) ? value : String(value || '').split(/[\s,，]+/);
+  return list
+    .flatMap(item => String(item || '').match(/@?[A-Za-z0-9_]{2,}/g) || [])
+    .map(handle => handle.replace(/^@/, '').replace(/_+$/, ''))
+    .filter(Boolean);
+}
+
+function titleBrand(title) {
+  const match = String(title || '').match(/^\s*@?([A-Za-z][A-Za-z0-9.]{1,30})/);
+  return match ? match[1] : '';
+}
+
+// "defillama数据分析" → "defillama": a lowercase/latin word fused to CJK text.
+function fusedBrand(title) {
+  const match = String(title || '').match(/^\s*([A-Za-z][A-Za-z0-9]{3,30})(?=[一-鿿])/);
+  return match ? match[1] : '';
+}
+
+function resolveProjectNames(rows, manualNames) {
+  const known = new Map(); // nameKey → display name of a pool that has a projectName
+  for (const row of rows) {
+    const name = cleanProjectName(row.projectName);
+    if (name && !known.has(nameKey(name))) known.set(nameKey(name), name);
+  }
+  const knownKeys = [...known.keys()].filter(key => key.length >= 3);
+  const firstWords = new Map([...known].map(([key, name]) => [nameKey(name.split(/\s+/)[0]), name]));
+  const matchKnown = (key) => key.length >= 3 && (known.get(key) || known.get(knownKeys.find(k => key.startsWith(k) || k.startsWith(key))));
+
+  const brandCounts = new Map();
+  for (const row of rows) {
+    if (cleanProjectName(row.projectName)) continue;
+    const key = nameKey(titleBrand(row.title));
+    if (key) brandCounts.set(key, (brandCounts.get(key) || 0) + 1);
+  }
+
+  const unresolved = [];
+  for (const row of rows) {
+    if (cleanProjectName(row.projectName)) continue;
+    let name = manualNames.get(String(row.campaignId)) || '';
+    const handles = mentionHandles(row.requiredMentions);
+    if (!name) for (const handle of handles) { name = matchKnown(nameKey(handle)); if (name) break; }
+    if (!name) {
+      const title = nameKey(row.title);
+      const hit = knownKeys.filter(key => key.length >= 4 && title.includes(key)).sort((a, b) => b.length - a.length)[0];
+      if (hit) name = known.get(hit);
+    }
+    if (!name && handles.length) name = handles[0];
+    if (!name) {
+      // A title's leading Latin word counts when it matches a known project,
+      // repeats across several unnamed pools ("Gate 24h 净流入", "Gate VIP …"),
+      // or is styled like a brand (CamelCase / all caps). One-off generic
+      // words such as "Test" are left for manual labelling.
+      const brand = titleBrand(row.title);
+      if (brand) {
+        name = firstWords.get(nameKey(brand)) || matchKnown(nameKey(brand))
+          || ((brandCounts.get(nameKey(brand)) || 0) >= 2 || /^[A-Z0-9]{2,}$|[a-z][A-Z]/.test(brand) || fusedBrand(row.title) || /\s(Report|Research|Labs|Protocol|Network|Finance)\b/.test(row.title) ? brand : '');
+      }
+    }
+    if (name) row.projectName = name;
+    else unresolved.push(row);
+  }
+
+  // One display name per normalized key; names from projectName win.
+  const display = new Map();
+  for (const [key, name] of known) display.set(key, name);
+  for (const row of rows) {
+    const name = cleanProjectName(row.projectName);
+    if (!name) continue;
+    const key = nameKey(name);
+    if (!display.has(key)) display.set(key, name);
+    row.projectName = display.get(key);
+  }
+  return unresolved;
 }
 
 function buildSnapshot(rows) {
@@ -619,160 +722,52 @@ async function seedFallbackSnapshot(cmsPool) {
   return true;
 }
 
+// Keep the admin "匿名活动认领" queue equal to the pools that still have no
+// name. Admin labels are never removed.
+async function queueUnresolvedPools(cmsPool, unresolved) {
+  try {
+    const ids = unresolved.map(row => String(row.campaignId));
+    await cmsPool.query(
+      `DELETE FROM pending_campaign_names WHERE resolved_by IS DISTINCT FROM 'manual' AND NOT (campaign_id = ANY($1::text[]))`,
+      [ids]);
+    for (const row of unresolved) {
+      await cmsPool.query(`
+        INSERT INTO pending_campaign_names
+          (campaign_id, total_budget, consumed_budget, total_views, total_engagement,
+           participant_count, created_at_source, signals, resolved_by, updated_at)
+        VALUES ($1, $2, $2, $3, $4, $5, $6, $7, 'pending', NOW())
+        ON CONFLICT (campaign_id) DO UPDATE SET
+          total_budget = EXCLUDED.total_budget, consumed_budget = EXCLUDED.consumed_budget,
+          total_views = EXCLUDED.total_views, total_engagement = EXCLUDED.total_engagement,
+          participant_count = EXCLUDED.participant_count, signals = EXCLUDED.signals, updated_at = NOW()
+      `, [
+        String(row.campaignId), number(row.totalBudget), number(row.totalViews), metricSum(row),
+        number(row.kolsParticipate), row.createdAt || null,
+        JSON.stringify({ title: row.title || '', reqMentions: mentionHandles(row.requiredMentions), link: row.requiredLinkUrl || '' }),
+      ]);
+    }
+  } catch (error) {
+    console.warn(`[sync] pending queue update skipped: ${error.message}`);
+  }
+}
+
 async function syncCaseStudy(cmsPool) {
   if (syncPromise) return syncPromise;
   syncPromise = (async () => {
     const rows = await readSourceRows();
 
-    // Apply resolved names from pending_campaign_names (auto + manual) so
-    // anonymous campaigns show their real project name in the snapshot
-    // instead of "Public campaign <hash>".
-    let resolvedMap = new Map();
+    // Admin labels from the "匿名活动认领" page take priority.
+    const manualNames = new Map();
     try {
-      const { rows: resolvedRows } = await cmsPool.query(`
-        SELECT campaign_id, resolved_name, resolved_slug
-        FROM pending_campaign_names
-        WHERE resolved_by IS DISTINCT FROM 'pending'
-          AND resolved_name IS NOT NULL
-      `);
-      for (const r of resolvedRows) {
-        resolvedMap.set(String(r.campaign_id), { name: r.resolved_name, slug: r.resolved_slug });
-      }
-    } catch (e) {
-      console.warn(`[sync] resolved names lookup skipped: ${e.message}`);
+      const { rows: labelled } = await cmsPool.query(
+        `SELECT campaign_id, resolved_name FROM pending_campaign_names
+         WHERE resolved_by = 'manual' AND resolved_name IS NOT NULL`);
+      for (const row of labelled) manualNames.set(String(row.campaign_id), row.resolved_name);
+    } catch (error) {
+      console.warn(`[sync] admin labels skipped: ${error.message}`);
     }
-    let resolvedApplied = 0;
-    if (resolvedMap.size) {
-      for (const row of rows) {
-        const cid = String(row.campaignId || '');
-        if (cid && resolvedMap.has(cid) && !cleanProjectName(row.projectName)) {
-          row.projectName = resolvedMap.get(cid).name;
-          resolvedApplied++;
-        }
-      }
-    }
-
-    // For anon rows still unresolved, try fetching targetUsername from source DB directly
-    const anonRows = rows.filter(r => r.source === 'campaign' && !cleanProjectName(r.projectName));
-    let anonAutoResolved = 0, anonQueryErrors = [];
-    if (anonRows.length) {
-      const srcPool = getSourcePool();
-      if (!srcPool) anonQueryErrors.push('getSourcePool() returned null');
-      const KNOWN_KOLS = new Set([
-        'chasewang','bonnazhu','xuegaogx','ximi_btc','btc_alert_','star_okx',
-        'violawgmi','web3sweetgirl','leslie_bit','willam7392','billywen_',
-      ]);
-      for (const row of anonRows) {
-        const cid = String(row.campaignId || '');
-        if (!cid || resolvedMap.has(cid)) continue; // already resolved above
-        let autoName = null;
-        if (srcPool) {
-          try {
-            const { rows: ucRows } = await srcPool.query(
-              `SELECT "projectName","targetUsername","tweetAuthorHandle","requiredMentions","requiredHashtags","tweetText","requiredLinkUrl","brief","description"
-               FROM unified_campaigns WHERE id = $1 LIMIT 1`, [cid]);
-            // Also try fetching tweet text from kol_raw_tweets for cross-validation
-            let tweetTexts = [];
-            try {
-              const { rows: twRows } = await srcPool.query(
-                `SELECT krt.tweet_text FROM unified_campaign_participants ucp
-                 JOIN kol_raw_tweets krt ON krt.kol_id::text = ucp."userId"::text
-                 WHERE ucp."campaignId" = $1 AND krt.tweet_text IS NOT NULL AND LENGTH(krt.tweet_text) > 20
-                 LIMIT 5`, [cid]);
-              tweetTexts = twRows.map(r => r.tweet_text);
-            } catch {}
-            if (anonQueryErrors.length < 5) {
-              anonQueryErrors.push({ cid, found: ucRows.length, rawProjectName: ucRows[0]?.projectName, targetUsername: ucRows[0]?.targetUsername, tweetAuthorHandle: ucRows[0]?.tweetAuthorHandle, requiredLinkUrl: ucRows[0]?.requiredLinkUrl, tweetTexts: tweetTexts.map(t => t.slice(0, 120)) });
-            }
-            if (ucRows[0]) {
-              const uc = ucRows[0];
-              const target = String(uc.targetUsername || '').trim();
-              if (target && !KNOWN_KOLS.has(target.toLowerCase())) {
-                autoName = target;
-              }
-              // Try requiredLinkUrl domain as a project signal
-              if (!autoName && uc.requiredLinkUrl) {
-                try {
-                  const linkHost = new URL(uc.requiredLinkUrl).hostname.replace('www.', '');
-                  // e.g. gate.com → gate, foresoglobal.com → foresoglobal
-                  const domainName = linkHost.split('.')[0];
-                  if (domainName && domainName.length > 2 && !['google','t','twitter','x','forms','docs'].includes(domainName)) {
-                    autoName = domainName;
-                  }
-                } catch {}
-              }
-              // Try tweet text keyword matching via KOL tweets
-              if (!autoName && tweetTexts.length) {
-                const combined = tweetTexts.join(' ').toLowerCase();
-                // Extract @mentions from tweet text
-                const mentions = [...new Set((combined.match(/@(\w+)/g)||[]).map(m=>m.slice(1).toLowerCase()))];
-                // Check against known project handles
-                for (const m of mentions) {
-                  if (m && !KNOWN_KOLS.has(m) && m.length > 3) {
-                    // Use first @mention that looks like a project handle
-                    autoName = m; break;
-                  }
-                }
-              }
-              // Normalize autoName: strip common TLD-like suffixes so
-              // "dappos_com" maps to "dappos" (same slug as the main project)
-              if (autoName) {
-                autoName = autoName.replace(/[_\-](com|fi|io|ai|xyz|app|net|org|fun|gg)$/i, '');
-              }
-              if (!autoName && row.tweetsData) {
-                try {
-                  const td = typeof row.tweetsData === 'string' ? JSON.parse(row.tweetsData) : row.tweetsData;
-                  if (Array.isArray(td)) {
-                    const combined = td.map(t => String(t?.text || t?.tweetText || '')).join(' ').toLowerCase();
-                    const mentions = [...new Set((combined.match(/@(\w+)/g)||[]).map(m=>m.slice(1).toLowerCase()))];
-                    for (const m of mentions) {
-                      if (m && !KNOWN_KOLS.has(m) && m.length > 3 && !['twitter','x','gmail','google','docs','forms','t'].includes(m)) {
-                        autoName = m; break;
-                      }
-                    }
-                  }
-                } catch {}
-              }
-              const signals = JSON.stringify({ targetUsername: target, tweetAuthorHandle: uc.tweetAuthorHandle, requiredMentions: uc.requiredMentions, requiredHashtags: uc.requiredHashtags, requiredLinkUrl: uc.requiredLinkUrl });
-              const autoSlug = autoName ? autoName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56) : null;
-              cmsPool.query(`
-                INSERT INTO pending_campaign_names
-                  (campaign_id, total_budget, consumed_budget, total_views, total_engagement,
-                   participant_count, created_at_source, signals,
-                   resolved_slug, resolved_name, resolved_by, resolved_at, updated_at)
-                VALUES ($1,$2,$3,$4,$5,0,$6,$7,$8,$9,$10,
-                  CASE WHEN $8 IS NOT NULL THEN NOW() ELSE NULL END, NOW())
-                ON CONFLICT (campaign_id) DO UPDATE SET
-                  signals     = EXCLUDED.signals,
-                  resolved_slug = COALESCE(EXCLUDED.resolved_slug, pending_campaign_names.resolved_slug),
-                  resolved_name = COALESCE(EXCLUDED.resolved_name, pending_campaign_names.resolved_name),
-                  resolved_by   = CASE WHEN pending_campaign_names.resolved_by = 'pending' THEN EXCLUDED.resolved_by
-                                       ELSE pending_campaign_names.resolved_by END,
-                  resolved_at   = CASE WHEN pending_campaign_names.resolved_by = 'pending' AND EXCLUDED.resolved_slug IS NOT NULL THEN NOW()
-                                       ELSE pending_campaign_names.resolved_at END,
-                  updated_at  = NOW()
-              `, [
-                cid,
-                Number(row.totalBudget) || 0, Number(row.totalBudget) || 0,
-                Number(row.totalViews) || 0, 0,
-                row.createdAt || null, signals,
-                autoSlug, autoName || null,
-                autoName ? 'targetUsername-auto' : 'pending',
-              ]).catch(e => console.warn('[sync] pending upsert error:', e.message));
-            }
-          } catch { /* ignore per-row errors */ }
-        }
-        if (autoName) {
-          row.projectName = autoName;
-          resolvedApplied++;
-          anonAutoResolved++;
-        }
-      }
-      if (anonQueryErrors.length === 0 && !srcPool) anonQueryErrors.push('srcPool null');
-    }
-
-    // Debug info
-    const _debug = { resolvedMapSize: resolvedMap.size, resolvedApplied, totalRows: rows.length, anonRows: anonRows.length, anonAutoResolved, anonQueryErrors };
+    const unresolved = resolveProjectNames(rows, manualNames);
+    await queueUnresolvedPools(cmsPool, unresolved);
 
     const payload = await enrichProjectLogos(buildSnapshot(rows));
     const client = await cmsPool.connect();
@@ -791,7 +786,7 @@ async function syncCaseStudy(cmsPool) {
     } finally {
       client.release();
     }
-    return { ...payload, _debug };
+    return payload;
   })().finally(() => { syncPromise = null; });
   return syncPromise;
 }
@@ -825,4 +820,4 @@ async function syncStatus(cmsPool) {
   };
 }
 
-module.exports = { SNAPSHOT_KEY, syncCaseStudy, latestSnapshot, syncStatus, buildSnapshot, readSourceRows, seedFallbackSnapshot, sanitizeSnapshot };
+module.exports = { SNAPSHOT_KEY, syncCaseStudy, latestSnapshot, syncStatus, buildSnapshot, readSourceRows, resolveProjectNames, seedFallbackSnapshot, sanitizeSnapshot };

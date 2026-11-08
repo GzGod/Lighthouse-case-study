@@ -125,7 +125,7 @@ router.get('/sync-status', authMiddleware, async (req, res, next) => {
 router.post('/sync', authMiddleware, async (req, res, next) => {
   try {
     const payload = await syncCaseStudy(req.app.locals.cmsPool);
-    res.json({ ok: true, meta: payload.meta, metrics: payload.metrics, _debug: payload._debug });
+    res.json({ ok: true, meta: payload.meta, metrics: payload.metrics });
   } catch (error) {
     res.status(502).json({ error: `Source sync failed: ${error.message}` });
   }

@@ -1273,6 +1273,8 @@ function PendingCampaignsPage() {
                   <span>参与 <b>{fmt(row.participant_count)}</b></span>
                 </div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:10,fontSize:12}}>
+                  {sig.title && <span className="tag">{sig.title}</span>}
+                  {sig.link && <span className="tag">{sig.link}</span>}
                   {sig.targetHandle && <span className="tag">@target: {sig.targetHandle}</span>}
                   {(sig.reqMentions || []).map((m,i) => <span key={i} className="tag">@{m}</span>)}
                   {(sig.reqHashtags || []).map((h,i) => <span key={'h'+i} className="tag">#{h}</span>)}

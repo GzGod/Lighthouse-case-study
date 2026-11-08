@@ -1,9 +1,11 @@
 'use strict';
 
 const express = require('express');
+const { authMiddleware } = require('../auth');
 
 module.exports = function adminRoutes(pool) {
   const router = express.Router();
+  router.use(authMiddleware);
 
   // ─── GET /api/admin/pending-campaigns ───────────────────────────────────
   // Returns all campaigns that couldn't be auto-resolved + already-resolved ones
@@ -46,17 +48,18 @@ module.exports = function adminRoutes(pool) {
   // Returns slug → name map so the admin UI can show a dropdown
   router.get('/pending-campaigns/known-slugs', async (req, res) => {
     try {
+      // Project names come from the latest public snapshot, so labels use the
+      // same names the case library shows.
       const { rows } = await pool.query(`
-        SELECT slug, name FROM projects WHERE is_visible = true ORDER BY name
+        SELECT payload FROM case_study_snapshots
+        WHERE snapshot_key = 'public-v1' AND status = 'ready'
+        ORDER BY generated_at DESC LIMIT 1
       `);
-      // Also pull from project_enrichment for any enrichment-only slugs
-      const { rows: enrichRows } = await pool.query(`
-        SELECT slug, COALESCE(project_name, slug) AS name
-        FROM project_enrichment
-        ORDER BY project_name
-      `);
+      const projects = rows[0]?.payload?.projects || [];
       const map = {};
-      for (const r of [...enrichRows, ...rows]) map[r.slug] = r.name;
+      for (const project of projects) {
+        if (!String(project.slug || '').startsWith('public-campaign-')) map[project.slug] = project.name;
+      }
       res.json(map);
     } catch (e) {
       res.status(500).json({ error: e.message });
@@ -103,19 +106,9 @@ module.exports = function adminRoutes(pool) {
         WHERE id = $1
       `, [id, slug, resolvedName]);
 
-      // Merge the campaign's metrics into project_enrichment
-      await pool.query(`
-        INSERT INTO project_enrichment (slug, project_name, campaign_count, total_budget, consumed_budget, during_views, during_engagement, enriched_at)
-        VALUES ($1, $2, 1, $3, $4, $5, $6, NOW())
-        ON CONFLICT (slug) DO UPDATE SET
-          campaign_count    = project_enrichment.campaign_count + 1,
-          total_budget      = project_enrichment.total_budget   + EXCLUDED.total_budget,
-          consumed_budget   = project_enrichment.consumed_budget + EXCLUDED.consumed_budget,
-          during_views      = project_enrichment.during_views   + EXCLUDED.during_views,
-          during_engagement = project_enrichment.during_engagement + EXCLUDED.during_engagement,
-          enriched_at       = NOW()
-      `, [slug, resolvedName, row.total_budget || 0, row.consumed_budget || 0,
-          row.total_views || 0, row.total_engagement || 0]);
+      // Rebuild the public snapshot so the label shows up in the case library.
+      const { syncCaseStudy } = require('../case-study-sync');
+      syncCaseStudy(pool).catch(e => console.warn('[admin] resync after label failed:', e.message));
 
       res.json({ ok: true, slug, name: resolvedName });
     } catch (e) {
