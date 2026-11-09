@@ -358,6 +358,8 @@ async function readSourceRows() {
       c."projectName",
       c.title,
       c."requiredMentions",
+      c.brief,
+      c.description,
       c."projectLogo",
       c."requiredLinkUrl",
       c."consumedBudget",
@@ -414,6 +416,14 @@ async function readSourceRows() {
     `, [ids]),
   ]);
   const totalsById = new Map(totals.map(row => [row.campaignId, row]));
+  const unnamedIds = pools.filter(row => !cleanProjectName(row.projectName)).map(row => row.campaignId);
+  const { rows: textRows } = unnamedIds.length ? await pool.query(`
+    SELECT p."campaignId", string_agg(LEFT(COALESCE(p.submission->>'text', p."workingDraftText", ''), 600), ' ') AS text
+    FROM public.unified_campaign_participants p
+    WHERE p."campaignId" = ANY($1::text[])
+    GROUP BY p."campaignId"
+  `, [unnamedIds]) : { rows: [] };
+  const submittedTextById = new Map(textRows.map(row => [row.campaignId, row.text || '']));
   const topById = new Map();
   for (const row of topRows) {
     if (!topById.has(row.campaignId)) topById.set(row.campaignId, []);
@@ -431,6 +441,8 @@ async function readSourceRows() {
       projectName: row.projectName,
       title: row.title,
       requiredMentions: row.requiredMentions,
+      brief: row.brief,
+      description: row.description,
       projectLogo: row.projectLogo,
       requiredLinkUrl: row.requiredLinkUrl,
       totalBudget: row.caseId ? row.totalBudget : row.consumedBudget,
@@ -444,6 +456,7 @@ async function readSourceRows() {
       updatedAt: row.updatedAt || row.campaignUpdatedAt,
       lastXSyncedAt: row.lastXSyncedAt,
       tweetsData: hasValidTweets(row.tweetsData) ? row.tweetsData : (topById.get(row.campaignId) || []),
+      submittedText: submittedTextById.get(row.campaignId) || '',
     };
   });
 }
@@ -480,6 +493,58 @@ function fusedBrand(title) {
   return match ? match[1] : '';
 }
 
+// Last resort for unnamed pools: read the brief, description and the posts
+// creators submitted, and take the brand they mention most. @handles and
+// $tickers count double; known project names are matched first. Lighthouse's
+// own account and the big media/news handles never count as the client.
+const NOT_A_CLIENT = new Set([
+  'lighthouse', 'lighthousetw', 'kol', 'mod', 'bd', 'web3', 'crypto', 'tradfi', 'qdii', 'cd', 'ai', 'agent', 'meme',
+  'cointelegraph', 'coindesk', 'theblock', 'wublockchain', 'binance', 'okx',
+  'btc', 'eth', 'usdt', 'usdc', 'sol', 'bnb', 'bitcoin', 'ethereum',
+  'x', 'twitter', 'google', 'docs', 'forms', 'gmail', 'youtube', 'telegram', 'discord',
+]);
+
+// "https://www.gate.com/zh/proof-of-reserves" → Gate (only when it matches a
+// project that already has a name, so generic hosts like docs.google.com never count).
+function linkBrand(text, matchKnown) {
+  for (const [, host] of String(text || '').matchAll(/https?:\/\/(?:www\.)?([a-z0-9-]+)\.[a-z.]+/gi)) {
+    const known = matchKnown(nameKey(host));
+    if (known) return known;
+  }
+  return '';
+}
+
+function contentBrand(row, matchKnown) {
+  const text = [row.brief, row.description, row.submittedText].map(value => String(value || '')).join(' ');
+  if (!text.trim()) return '';
+
+  const scores = new Map();
+  const add = (word, weight) => {
+    const key = nameKey(word);
+    if (key.length < 3 || NOT_A_CLIENT.has(key)) return;
+    const entry = scores.get(key) || { word, score: 0 };
+    entry.score += weight;
+    scores.set(key, entry);
+  };
+  for (const [, handle] of text.matchAll(/@([A-Za-z0-9_]{3,30})/g)) add(handle.replace(/_+$/, ''), 2);
+  for (const [, ticker] of text.matchAll(/\$([A-Za-z][A-Za-z0-9]{1,10})\b/g)) add(ticker, 2);
+  for (const [, phrase] of text.matchAll(/\b([A-Z][A-Za-z0-9]+(?:\s(?:Network|Protocol|Labs|Finance|Exchange|AI|Chain))?)\b/g)) add(phrase, 1);
+  // Count every mention of each candidate across the whole text (plain words
+  // too) and take the most mentioned, using the known spelling if it has one.
+  const lower = text.toLowerCase();
+  for (const [key, entry] of scores) {
+    const plain = (lower.match(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+    entry.score = Math.max(entry.score, plain);
+    entry.known = matchKnown(key);
+  }
+  const ranked = [...scores.values()].sort((a, b) => b.score - a.score);
+  const top = ranked[0];
+  // One mention is enough for a project we already know; an unknown word has
+  // to come up at least three times before it is treated as the client.
+  if (!top || top.score < (top.known ? 1 : 3)) return '';
+  return top.known || top.word;
+}
+
 function resolveProjectNames(rows, manualNames) {
   const known = new Map(); // nameKey → display name of a pool that has a projectName
   for (const row of rows) {
@@ -498,6 +563,7 @@ function resolveProjectNames(rows, manualNames) {
   }
 
   const unresolved = [];
+  const learn = (name) => { const key = nameKey(name); if (key && !known.has(key)) { known.set(key, name); knownKeys.push(key); } };
   for (const row of rows) {
     if (cleanProjectName(row.projectName)) continue;
     let name = manualNames.get(String(row.campaignId)) || '';
@@ -520,6 +586,19 @@ function resolveProjectNames(rows, manualNames) {
           || ((brandCounts.get(nameKey(brand)) || 0) >= 2 || /^[A-Z0-9]{2,}$|[a-z][A-Z]/.test(brand) || fusedBrand(row.title) || /\s(Report|Research|Labs|Protocol|Network|Finance)\b/.test(row.title) ? brand : '');
       }
     }
+    if (name) { row.projectName = name; learn(name); }
+    else unresolved.push(row);
+  }
+
+  // Second pass over what is left: links and post content, now that names
+  // from titles (e.g. the Gate pools) are known too.
+  for (const row of unresolved.splice(0)) {
+    // "选项1 … 选项2 …" briefs cover several projects at once and each creator
+    // picks one, so the pool can't be credited to a single project.
+    const multiProject = /选项\s*[2二]/.test(`${row.brief || ''} ${row.description || ''}`);
+    // Free text only counts exact name matches; prefix matching would turn "ALL IN" into AllScale.
+    const matchExact = (key) => key.length >= 3 && known.get(key);
+    const name = multiProject ? '' : linkBrand(row.requiredLinkUrl, matchKnown) || linkBrand(row.description, matchKnown) || contentBrand(row, matchExact);
     if (name) row.projectName = name;
     else unresolved.push(row);
   }
