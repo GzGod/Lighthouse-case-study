@@ -802,12 +802,12 @@ async function seedFallbackSnapshot(cmsPool) {
 }
 
 // Keep the admin "匿名活动认领" queue equal to the pools that still have no
-// name. Admin labels are never removed.
+// name. Admin labels and hidden pools are never removed.
 async function queueUnresolvedPools(cmsPool, unresolved) {
   try {
     const ids = unresolved.map(row => String(row.campaignId));
     await cmsPool.query(
-      `DELETE FROM pending_campaign_names WHERE resolved_by IS DISTINCT FROM 'manual' AND NOT (campaign_id = ANY($1::text[]))`,
+      `DELETE FROM pending_campaign_names WHERE resolved_by NOT IN ('manual', 'hidden') AND NOT (campaign_id = ANY($1::text[]))`,
       [ids]);
     for (const row of unresolved) {
       await cmsPool.query(`
@@ -835,20 +835,26 @@ async function syncCaseStudy(cmsPool) {
   syncPromise = (async () => {
     const rows = await readSourceRows();
 
-    // Admin labels from the "匿名活动认领" page take priority.
+    // Admin decisions from the "匿名活动认领" page: labels take priority over
+    // automatic names, and hidden pools are left out of the case study.
     const manualNames = new Map();
+    const hiddenIds = new Set();
     try {
-      const { rows: labelled } = await cmsPool.query(
-        `SELECT campaign_id, resolved_name FROM pending_campaign_names
-         WHERE resolved_by = 'manual' AND resolved_name IS NOT NULL`);
-      for (const row of labelled) manualNames.set(String(row.campaign_id), row.resolved_name);
+      const { rows: decided } = await cmsPool.query(
+        `SELECT campaign_id, resolved_name, resolved_by FROM pending_campaign_names
+         WHERE resolved_by IN ('manual', 'hidden')`);
+      for (const row of decided) {
+        if (row.resolved_by === 'hidden') hiddenIds.add(String(row.campaign_id));
+        else if (row.resolved_name) manualNames.set(String(row.campaign_id), row.resolved_name);
+      }
     } catch (error) {
-      console.warn(`[sync] admin labels skipped: ${error.message}`);
+      console.warn(`[sync] admin decisions skipped: ${error.message}`);
     }
-    const unresolved = resolveProjectNames(rows, manualNames);
+    const visibleRows = rows.filter(row => !hiddenIds.has(String(row.campaignId)));
+    const unresolved = resolveProjectNames(visibleRows, manualNames);
     await queueUnresolvedPools(cmsPool, unresolved);
 
-    const payload = await enrichProjectLogos(buildSnapshot(rows));
+    const payload = await enrichProjectLogos(buildSnapshot(visibleRows));
     const client = await cmsPool.connect();
     try {
       await client.query('BEGIN');

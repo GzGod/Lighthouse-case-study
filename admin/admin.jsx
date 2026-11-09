@@ -1230,10 +1230,18 @@ function PendingCampaignsPage() {
     }).then(() => load()).catch(e => setError(e.message)).finally(() => setBusy(null));
   };
 
-  const discard = (row) => {
-    if (!confirm('Discard this campaign? It will be removed from the pending list.')) return;
+  const hide = (row) => {
+    if (!confirm('不在案例库展示这个奖池？之后可以在下方「已隐藏」里恢复。')) return;
     setBusy(row.id);
-    api(`/admin/pending-campaigns/${row.id}`, { method: 'DELETE' })
+    api(`/admin/pools/${encodeURIComponent(row.campaign_id)}/hide`, {
+      method: 'POST',
+      body: JSON.stringify({ title: row.signals?.title || '' }),
+    }).then(() => load()).catch(e => setError(e.message)).finally(() => setBusy(null));
+  };
+
+  const unhide = (row) => {
+    setBusy(row.id);
+    api(`/admin/pools/${encodeURIComponent(row.campaign_id)}/unhide`, { method: 'POST' })
       .then(() => load()).catch(e => setError(e.message)).finally(() => setBusy(null));
   };
 
@@ -1303,7 +1311,7 @@ function PendingCampaignsPage() {
                     {busy === row.id ? '认领中…' : '认领'}
                   </button>
                   <button className="btn btn-ghost" disabled={busy === row.id}
-                    onClick={() => discard(row)}>丢弃</button>
+                    onClick={() => hide(row)}>不展示</button>
                 </div>
               </div>
             </div>
@@ -1333,6 +1341,22 @@ function PendingCampaignsPage() {
             </div>
           </div>;
         })}
+      </div>
+    </>}
+
+    {data.hidden?.length > 0 && <>
+      <h3 style={{marginTop:24}}>已隐藏 ({data.hidden.length})</h3>
+      <p style={{color:'#888',fontSize:12,marginTop:0}}>这些奖池不会出现在案例库里。</p>
+      <div style={{display:'grid',gap:8,marginBottom:24}}>
+        {data.hidden.map(row => <div key={row.id} className="card" style={{padding:12,opacity:0.7}}>
+          <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center',flexWrap:'wrap'}}>
+            <div style={{fontSize:13}}>
+              <b>{(row.signals?.title || '').trim() || '(无标题)'}</b>{' '}
+              <span style={{color:'#888',fontFamily:'monospace',fontSize:11}}>campaign #{row.campaign_id}</span>
+            </div>
+            <button className="btn btn-ghost btn-sm" disabled={busy === row.id} onClick={() => unhide(row)}>恢复展示</button>
+          </div>
+        </div>)}
       </div>
     </>}
   </div>;

@@ -31,13 +31,19 @@ module.exports = function adminRoutes(pool) {
           resolved_slug, resolved_name, resolved_by, resolved_at,
           updated_at
         FROM pending_campaign_names
-        WHERE resolved_by IS DISTINCT FROM 'pending'
+        WHERE resolved_by NOT IN ('pending', 'hidden')
         ORDER BY resolved_at DESC NULLS LAST
         LIMIT 200
       `);
+      const { rows: hidden } = await pool.query(`
+        SELECT id, campaign_id, total_budget, total_views, signals, resolved_at
+        FROM pending_campaign_names
+        WHERE resolved_by = 'hidden'
+        ORDER BY resolved_at DESC NULLS LAST
+      `);
       const pending  = rows;
       const resolved = resolvedRows;
-      res.json({ pending, resolved });
+      res.json({ pending, resolved, hidden });
     } catch (e) {
       console.error('[admin] pending-campaigns GET error:', e.message);
       res.status(500).json({ error: e.message });
@@ -117,11 +123,38 @@ module.exports = function adminRoutes(pool) {
     }
   });
 
-  // ─── DELETE /api/admin/pending-campaigns/:id ────────────────────────────
-  // Discard a row (e.g. spam/test campaign)
-  router.delete('/pending-campaigns/:id', async (req, res) => {
+  // ─── POST /api/admin/pools/:campaignId/hide | /unhide ────────────────
+  // Hide a reward pool from the public case study (e.g. a KOL praising a
+  // KOL, or Lighthouse's own internal pools). Works for any pool, named or
+  // not; unhide puts it back on the next sync.
+  const resync = () => {
+    const { syncCaseStudy } = require('../case-study-sync');
+    syncCaseStudy(pool).catch(e => console.warn('[admin] resync failed:', e.message));
+  };
+
+  router.post('/pools/:campaignId/hide', async (req, res) => {
+    const { campaignId } = req.params;
+    const { title = '', name = '' } = req.body || {};
     try {
-      await pool.query('DELETE FROM pending_campaign_names WHERE id = $1', [req.params.id]);
+      await pool.query(`
+        INSERT INTO pending_campaign_names (campaign_id, signals, resolved_name, resolved_by, resolved_at, updated_at)
+        VALUES ($1, $2, $3, 'hidden', NOW(), NOW())
+        ON CONFLICT (campaign_id) DO UPDATE SET
+          resolved_by = 'hidden', resolved_at = NOW(), updated_at = NOW(),
+          signals = CASE WHEN EXCLUDED.signals->>'title' = '' THEN pending_campaign_names.signals ELSE EXCLUDED.signals END,
+          resolved_name = COALESCE(NULLIF(EXCLUDED.resolved_name, ''), pending_campaign_names.resolved_name)
+      `, [campaignId, JSON.stringify({ title }), name]);
+      resync();
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  router.post('/pools/:campaignId/unhide', async (req, res) => {
+    try {
+      await pool.query(`DELETE FROM pending_campaign_names WHERE campaign_id = $1 AND resolved_by = 'hidden'`, [req.params.campaignId]);
+      resync();
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ error: e.message });
